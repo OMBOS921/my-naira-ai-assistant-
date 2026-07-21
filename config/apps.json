@@ -1,0 +1,634 @@
+{
+  "chrome": {
+    "target": "chrome",
+    "aliases": [
+      "chrome", "google chrome", "browser", "googlechrome", "crome", "chrom", "gogle chrome",
+      "क्रोम", "गूगल क्रोम", "ब्राउज़र", "वेब ब्राउज़र",
+      "chrome kholo", "browser kholo", "google chrome open karo"
+    ],
+    "exe_names": ["chrome.exe"],
+    "install_paths": [
+      "%ProgramFiles%\\Google\\Chrome\\Application",
+      "%ProgramFiles(x86)%\\Google\\Chrome\\Application",
+      "%LOCALAPPDATA%\\Google\\Chrome\\Application"
+    ]
+  },
+  "msedge": {
+    "target": "msedge",
+    "aliases": [
+      "edge", "microsoft edge", "ms edge", "msedge", "ege", "edg",
+      "एज", "माइक्रोसॉफ्ट एज", "एम एस एज",
+      "edge kholo", "edge browser"
+    ],
+    "exe_names": ["msedge.exe"],
+    "install_paths": [
+      "%ProgramFiles(x86)%\\Microsoft\\Edge\\Application",
+      "%ProgramFiles%\\Microsoft\\Edge\\Application"
+    ]
+  },
+  "firefox": {
+    "target": "firefox",
+    "aliases": [
+      "firefox", "mozilla firefox", "mozilla", "ff", "fire fox", "fierefox", "fierfox", "firefoxx",
+      "फायरफॉक्स", "मोज़िला", "मोजिला फायरफॉक्स",
+      "firefox kholo"
+    ],
+    "exe_names": ["firefox.exe"],
+    "install_paths": [
+      "%ProgramFiles%\\Mozilla Firefox",
+      "%ProgramFiles(x86)%\\Mozilla Firefox"
+    ]
+  },
+  "brave": {
+    "target": "brave",
+    "aliases": [
+      "brave", "brave browser", "brav", "bravebrowser",
+      "ब्रेव", "ब्रेव ब्राउज़र",
+      "brave kholo"
+    ],
+    "exe_names": ["brave.exe"],
+    "install_paths": [
+      "%ProgramFiles%\\BraveSoftware\\Brave-Browser\\Application",
+      "%LOCALAPPDATA%\\BraveSoftware\\Brave-Browser\\Application"
+    ]
+  },
+  "opera": {
+    "target": "opera",
+    "aliases": [
+      "opera", "opera browser", "opera gx", "operagx", "opra",
+      "ओपेरा", "ओपेरा ब्राउज़र",
+      "opera kholo"
+    ],
+    "exe_names": ["opera.exe", "launcher.exe"],
+    "install_paths": [
+      "%LOCALAPPDATA%\\Programs\\Opera",
+      "%LOCALAPPDATA%\\Programs\\Opera GX"
+    ]
+  },
+  "code": {
+    "target": "code",
+    "aliases": [
+      "vscode", "vs code", "visual studio code", "code", "vs kode", "vscod", "viscode", "vsc",
+      "वीएस कोड", "कोड", "विजुअल स्टूडियो कोड",
+      "code kholo", "vscode kholo", "vs code chalao"
+    ],
+    "exe_names": ["Code.exe", "code.cmd"],
+    "install_paths": [
+      "%LOCALAPPDATA%\\Programs\\Microsoft VS Code",
+      "%ProgramFiles%\\Microsoft VS Code"
+    ]
+  },
+  "devenv": {
+    "target": "devenv",
+    "aliases": [
+      "visual studio", "vs", "visualstudio", "devenv", "vs 2022", "vs2022", "vs 2019",
+      "विजुअल स्टूडियो", "वीएस",
+      "visual studio kholo"
+    ],
+    "exe_names": ["devenv.exe"],
+    "install_paths": [
+      "%ProgramFiles%\\Microsoft Visual Studio\\2022\\Community",
+      "%ProgramFiles%\\Microsoft Visual Studio\\2022\\Professional",
+      "%ProgramFiles%\\Microsoft Visual Studio\\2022\\Enterprise",
+      "%ProgramFiles(x86)%\\Microsoft Visual Studio\\2019\\Community"
+    ]
+  },
+  "notepad": {
+    "target": "notepad",
+    "aliases": [
+      "notepad", "note pad", "notpad", "ntpad", "text editor",
+      "नोटपैड", "टेक्स्ट एडिटर",
+      "notepad kholo"
+    ],
+    "exe_names": ["notepad.exe"],
+    "install_paths": []
+  },
+  "notepad++": {
+    "target": "notepad++",
+    "aliases": [
+      "notepad++", "notepad plus", "notepadplus", "npp", "notepad plus plus", "notepadplusplus",
+      "नोटपैड प्लस प्लस", "नोटपैड++",
+      "notepad++ kholo"
+    ],
+    "exe_names": ["notepad++.exe"],
+    "install_paths": [
+      "%ProgramFiles%\\Notepad++",
+      "%ProgramFiles(x86)%\\Notepad++"
+    ]
+  },
+  "calc": {
+    "target": "calc",
+    "aliases": [
+      "calculator", "calc", "calulator", "calculater", "calcualtor", "kalculator",
+      "कैलकुलेटर", "कैल्क", "कैल्कुलेटर",
+      "calculator kholo", "calc kholo"
+    ],
+    "exe_names": ["calc.exe", "Calculator.exe"],
+    "install_paths": []
+  },
+  "mspaint": {
+    "target": "mspaint",
+    "aliases": [
+      "paint", "ms paint", "mspaint", "microsoft paint", "pint", "paynt",
+      "पेंट", "एम एस पेंट", "माइक्रोसॉफ्ट पेंट",
+      "paint kholo"
+    ],
+    "exe_names": ["mspaint.exe"],
+    "install_paths": []
+  },
+  "paint3d": {
+    "target": "ms-paint:",
+    "aliases": [
+      "paint 3d", "paint3d", "3d paint", "3dpaint", "paint three d",
+      "पेंट 3डी", "पेंट थ्री डी", "थ्री डी पेंट",
+      "paint 3d kholo"
+    ],
+    "exe_names": ["PaintStudio.View.exe"],
+    "install_paths": []
+  },
+  "winword": {
+    "target": "winword",
+    "aliases": [
+      "word", "microsoft word", "ms word", "msword", "winword", "wrd", "woord",
+      "वर्ड", "माइक्रोसॉफ्ट वर्ड", "एम एस वर्ड",
+      "word kholo", "ms word kholo"
+    ],
+    "exe_names": ["WINWORD.EXE"],
+    "install_paths": [
+      "%ProgramFiles%\\Microsoft Office\\root\\Office16",
+      "%ProgramFiles(x86)%\\Microsoft Office\\root\\Office16",
+      "%ProgramFiles%\\Microsoft Office\\Office16"
+    ]
+  },
+  "excel": {
+    "target": "excel",
+    "aliases": [
+      "excel", "microsoft excel", "ms excel", "msexcel", "exel", "excell", "exsel",
+      "एक्सेल", "माइक्रोसॉफ्ट एक्सेल", "एम एस एक्सेल",
+      "excel kholo", "ms excel kholo"
+    ],
+    "exe_names": ["EXCEL.EXE"],
+    "install_paths": [
+      "%ProgramFiles%\\Microsoft Office\\root\\Office16",
+      "%ProgramFiles(x86)%\\Microsoft Office\\root\\Office16"
+    ]
+  },
+  "powerpnt": {
+    "target": "powerpnt",
+    "aliases": [
+      "powerpoint", "power point", "ppt", "microsoft powerpoint", "ms powerpoint", "mspowerpoint",
+      "powerpnt", "powepoint", "pawer point",
+      "पावरपॉइंट", "पीपीटी", "माइक्रोसॉफ्ट पावरपॉइंट", "एम एस पावरपॉइंट",
+      "powerpoint kholo", "ppt kholo"
+    ],
+    "exe_names": ["POWERPNT.EXE"],
+    "install_paths": [
+      "%ProgramFiles%\\Microsoft Office\\root\\Office16",
+      "%ProgramFiles(x86)%\\Microsoft Office\\root\\Office16"
+    ]
+  },
+  "outlook": {
+    "target": "outlook",
+    "aliases": [
+      "outlook", "microsoft outlook", "ms outlook", "msoutlook", "outook", "outlok", "email app",
+      "आउटलुक", "माइक्रोसॉफ्ट आउटलुक", "एम एस आउटलुक", "ईमेल",
+      "outlook kholo", "email kholo"
+    ],
+    "exe_names": ["OUTLOOK.EXE"],
+    "install_paths": [
+      "%ProgramFiles%\\Microsoft Office\\root\\Office16",
+      "%ProgramFiles(x86)%\\Microsoft Office\\root\\Office16"
+    ]
+  },
+  "teams": {
+    "target": "ms-teams:",
+    "aliases": [
+      "teams", "microsoft teams", "ms teams", "msteams", "tems", "teems",
+      "टीम्स", "माइक्रोसॉफ्ट टीम्स", "एम एस टीम्स",
+      "teams kholo"
+    ],
+    "exe_names": ["ms-teams.exe", "Teams.exe"],
+    "install_paths": [
+      "%LOCALAPPDATA%\\Microsoft\\Teams",
+      "%LOCALAPPDATA%\\Microsoft\\WindowsApps"
+    ]
+  },
+  "onenote": {
+    "target": "onenote",
+    "aliases": [
+      "onenote", "one note", "microsoft onenote", "ms onenote", "onenot", "1note",
+      "वननोट", "माइक्रोसॉफ्ट वननोट", "एम एस वननोट", "वन नोट",
+      "onenote kholo"
+    ],
+    "exe_names": ["ONENOTE.EXE", "onenoteim.exe"],
+    "install_paths": [
+      "%ProgramFiles%\\Microsoft Office\\root\\Office16",
+      "%ProgramFiles(x86)%\\Microsoft Office\\root\\Office16"
+    ]
+  },
+  "onedrive": {
+    "target": "onedrive",
+    "aliases": [
+      "onedrive", "one drive", "microsoft onedrive", "ms onedrive", "ondriv", "1drive",
+      "वनड्राइव", "माइक्रोसॉफ्ट वनड्राइव", "वन ड्राइव",
+      "onedrive kholo"
+    ],
+    "exe_names": ["OneDrive.exe"],
+    "install_paths": [
+      "%LOCALAPPDATA%\\Microsoft\\OneDrive",
+      "%ProgramFiles%\\Microsoft OneDrive"
+    ]
+  },
+  "msaccess": {
+    "target": "msaccess",
+    "aliases": [
+      "access", "microsoft access", "ms access", "msaccess", "acces", "acccess",
+      "एक्सेस", "माइक्रोसॉफ्ट एक्सेस", "एम एस एक्सेस",
+      "access kholo"
+    ],
+    "exe_names": ["MSACCESS.EXE"],
+    "install_paths": [
+      "%ProgramFiles%\\Microsoft Office\\root\\Office16",
+      "%ProgramFiles(x86)%\\Microsoft Office\\root\\Office16"
+    ]
+  },
+  "whatsapp": {
+    "target": "whatsapp:",
+    "aliases": [
+      "whatsapp", "whats app", "wa", "watsapp", "whatsap", "whtasapp", "whatapp",
+      "व्हाट्सएप", "वॉट्सऐप", "व्हाट्सऐप",
+      "whatsapp kholo", "wa kholo"
+    ],
+    "exe_names": ["WhatsApp.exe"],
+    "install_paths": [
+      "%LOCALAPPDATA%\\WhatsApp",
+      "%LOCALAPPDATA%\\Programs\\whatsapp-desktop"
+    ]
+  },
+  "telegram": {
+    "target": "telegram",
+    "aliases": [
+      "telegram", "tg", "telgram", "telagram", "telegarm", "telegram desktop",
+      "टेलीग्राम", "टेलिग्राम",
+      "telegram kholo", "tg kholo"
+    ],
+    "exe_names": ["Telegram.exe"],
+    "install_paths": [
+      "%USERPROFILE%\\AppData\\Roaming\\Telegram Desktop"
+    ]
+  },
+  "discord": {
+    "target": "discord",
+    "aliases": [
+      "discord", "disc", "discrod", "dicord", "disocrd", "ds",
+      "डिस्कॉर्ड", "डिस्कोर्ड",
+      "discord kholo"
+    ],
+    "exe_names": ["Discord.exe", "Update.exe"],
+    "install_paths": [
+      "%LOCALAPPDATA%\\Discord"
+    ]
+  },
+  "zoom": {
+    "target": "zoom",
+    "aliases": [
+      "zoom", "zoom meeting", "zoom app", "zum", "zom",
+      "ज़ूम", "जूम", "ज़ूम मीटिंग",
+      "zoom kholo"
+    ],
+    "exe_names": ["Zoom.exe"],
+    "install_paths": [
+      "%APPDATA%\\Zoom\\bin",
+      "%ProgramFiles%\\Zoom\\bin"
+    ]
+  },
+  "slack": {
+    "target": "slack",
+    "aliases": [
+      "slack", "slak", "slck",
+      "स्लैक",
+      "slack kholo"
+    ],
+    "exe_names": ["slack.exe"],
+    "install_paths": [
+      "%LOCALAPPDATA%\\slack"
+    ]
+  },
+  "spotify": {
+    "target": "spotify",
+    "aliases": [
+      "spotify", "spotfy", "spotifiy", "sptoify", "music app",
+      "स्पॉटिफाई", "स्पोटिफाई", "म्यूजिक ऐप",
+      "spotify kholo", "music kholo"
+    ],
+    "exe_names": ["Spotify.exe"],
+    "install_paths": [
+      "%APPDATA%\\Spotify",
+      "%LOCALAPPDATA%\\Microsoft\\WindowsApps"
+    ]
+  },
+  "vlc": {
+    "target": "vlc",
+    "aliases": [
+      "vlc", "vlc player", "vlc media player", "media player", "vlcplayer",
+      "वीएलसी", "वीएलसी प्लेयर", "मीडिया प्लेयर",
+      "vlc kholo"
+    ],
+    "exe_names": ["vlc.exe"],
+    "install_paths": [
+      "%ProgramFiles%\\VideoLAN\\VLC",
+      "%ProgramFiles(x86)%\\VideoLAN\\VLC"
+    ]
+  },
+  "wmplayer": {
+    "target": "wmplayer",
+    "aliases": [
+      "windows media player", "wmp", "wmplayer", "media player classic",
+      "विंडोज मीडिया प्लेयर", "डब्ल्यू एम पी",
+      "media player kholo"
+    ],
+    "exe_names": ["wmplayer.exe"],
+    "install_paths": [
+      "%ProgramFiles%\\Windows Media Player",
+      "%ProgramFiles(x86)%\\Windows Media Player"
+    ]
+  },
+  "obs": {
+    "target": "obs64",
+    "aliases": [
+      "obs", "obs studio", "obsstudio", "obs64", "screen recorder", "recording app",
+      "ओबीएस", "ओबीएस स्टूडियो", "स्क्रीन रिकॉर्डर",
+      "obs kholo", "recording kholo"
+    ],
+    "exe_names": ["obs64.exe", "obs32.exe"],
+    "install_paths": [
+      "%ProgramFiles%\\obs-studio\\bin\\64bit",
+      "%ProgramFiles(x86)%\\obs-studio\\bin\\64bit"
+    ]
+  },
+  "steam": {
+    "target": "steam",
+    "aliases": [
+      "steam", "steam app", "steem", "stm", "valve steam",
+      "स्टीम", "स्टीम ऐप",
+      "steam kholo", "games kholo"
+    ],
+    "exe_names": ["steam.exe"],
+    "install_paths": [
+      "%ProgramFiles(x86)%\\Steam",
+      "%ProgramFiles%\\Steam"
+    ]
+  },
+  "epicgames": {
+    "target": "com.epicgames.launcher:",
+    "aliases": [
+      "epic games", "epic", "epic games launcher", "epicgames", "epic store", "epik games",
+      "एपिक गेम्स", "एपिक", "एपिक गेम्स लॉन्चर",
+      "epic games kholo", "epic kholo"
+    ],
+    "exe_names": ["EpicGamesLauncher.exe"],
+    "install_paths": [
+      "%ProgramFiles(x86)%\\Epic Games\\Launcher\\Portal\\Binaries\\Win64",
+      "%ProgramFiles(x86)%\\Epic Games\\Launcher\\Portal\\Binaries\\Win32"
+    ]
+  },
+  "acrord32": {
+    "target": "acrord32",
+    "aliases": [
+      "adobe reader", "acrobat reader", "acrobat", "pdf reader", "adobe acrobat", "acrord32",
+      "adobereader", "adob reader", "pdf viewer",
+      "एडोब रीडर", "पीडीएफ रीडर", "एक्रोबैट रीडर", "एडोबी रीडर",
+      "adobe reader kholo", "pdf kholo"
+    ],
+    "exe_names": ["AcroRd32.exe", "Acrobat.exe"],
+    "install_paths": [
+      "%ProgramFiles%\\Adobe\\Acrobat Reader DC\\Reader",
+      "%ProgramFiles(x86)%\\Adobe\\Acrobat Reader DC\\Reader",
+      "%ProgramFiles%\\Adobe\\Acrobat DC\\Acrobat"
+    ]
+  },
+  "photoshop": {
+    "target": "photoshop",
+    "aliases": [
+      "photoshop", "adobe photoshop", "ps", "fotoshop", "photo shop", "photshop",
+      "फोटोशॉप", "एडोब फोटोशॉप", "फोटो शॉप",
+      "photoshop kholo"
+    ],
+    "exe_names": ["Photoshop.exe"],
+    "install_paths": [
+      "%ProgramFiles%\\Adobe\\Adobe Photoshop 2024",
+      "%ProgramFiles%\\Adobe\\Adobe Photoshop 2023",
+      "%ProgramFiles%\\Adobe\\Adobe Photoshop CC"
+    ]
+  },
+  "explorer": {
+    "target": "explorer",
+    "aliases": [
+      "explorer", "file explorer", "my computer", "this pc", "fileexplorer", "file manager",
+      "एक्सप्लोरर", "फाइल एक्सप्लोरर", "माय कंप्यूटर", "दिस पीसी", "फाइल मैनेजर",
+      "explorer kholo", "file explorer kholo"
+    ],
+    "exe_names": ["explorer.exe"],
+    "install_paths": []
+  },
+  "ms-settings:": {
+    "target": "ms-settings:",
+    "aliases": [
+      "settings", "setting", "windows settings", "system settings", "win settings",
+      "सेटिंग्स", "सेटिंग", "विंडोज सेटिंग्स", "सिस्टम सेटिंग्स",
+      "settings kholo", "setting kholo"
+    ],
+    "exe_names": [],
+    "install_paths": []
+  },
+  "control": {
+    "target": "control",
+    "aliases": [
+      "control panel", "controlpanel", "control", "cp", "cpl",
+      "कंट्रोल पैनल", "कण्ट्रोल पैनल",
+      "control panel kholo"
+    ],
+    "exe_names": ["control.exe"],
+    "install_paths": []
+  },
+  "cmd": {
+    "target": "cmd",
+    "aliases": [
+      "cmd", "command prompt", "commandprompt", "command line", "cli", "dos", "terminal cmd",
+      "कमांड प्रॉम्प्ट", "सीएमडी", "कमांड लाइन",
+      "cmd kholo"
+    ],
+    "exe_names": ["cmd.exe"],
+    "install_paths": []
+  },
+  "powershell": {
+    "target": "powershell",
+    "aliases": [
+      "powershell", "power shell", "ps1", "pwsh", "powershel", "powersell",
+      "पावरशेल", "पावर शेल",
+      "powershell kholo"
+    ],
+    "exe_names": ["powershell.exe", "pwsh.exe"],
+    "install_paths": [
+      "%ProgramFiles%\\PowerShell\\7"
+    ]
+  },
+  "wt": {
+    "target": "wt",
+    "aliases": [
+      "windows terminal", "wt", "terminal", "win terminal", "new terminal",
+      "विंडोज टर्मिनल", "टर्मिनल",
+      "terminal kholo"
+    ],
+    "exe_names": ["wt.exe", "WindowsTerminal.exe"],
+    "install_paths": []
+  },
+  "taskmgr": {
+    "target": "taskmgr",
+    "aliases": [
+      "task manager", "taskmgr", "taskmanager", "task mgr", "tsk manager", "tskmgr",
+      "टास्क मैनेजर", "टास्क मेनेजर",
+      "task manager kholo"
+    ],
+    "exe_names": ["Taskmgr.exe"],
+    "install_paths": []
+  },
+  "devmgmt.msc": {
+    "target": "devmgmt.msc",
+    "aliases": [
+      "device manager", "devicemanager", "devmgmt", "dev manager", "device mgr",
+      "डिवाइस मैनेजर", "डिवाइस मेनेजर",
+      "device manager kholo"
+    ],
+    "exe_names": ["devmgmt.msc"],
+    "install_paths": []
+  },
+  "regedit": {
+    "target": "regedit",
+    "aliases": [
+      "registry editor", "regedit", "registryeditor", "reg edit", "registry",
+      "रजिस्ट्री एडिटर", "रेजिस्ट्री", "रेजएडिट",
+      "regedit kholo", "registry kholo"
+    ],
+    "exe_names": ["regedit.exe"],
+    "install_paths": []
+  },
+  "snippingtool": {
+    "target": "snippingtool",
+    "aliases": [
+      "snipping tool", "snippingtool", "snip", "screenshot tool", "screen capture",
+      "snip and sketch", "snip & sketch",
+      "स्निपिंग टूल", "स्क्रीनशॉट टूल", "स्क्रीन कैप्चर",
+      "snipping tool kholo", "screenshot kholo"
+    ],
+    "exe_names": ["SnippingTool.exe", "ScreenSketch.exe"],
+    "install_paths": []
+  },
+  "ms-clock:": {
+    "target": "ms-clock:",
+    "aliases": [
+      "clock", "alarm", "alarms", "timer", "stopwatch", "alarms and clock",
+      "घड़ी", "अलार्म", "टाइमर", "स्टॉपवॉच",
+      "clock kholo", "alarm kholo", "timer kholo"
+    ],
+    "exe_names": [],
+    "install_paths": []
+  },
+  "microsoft.windows.camera:": {
+    "target": "microsoft.windows.camera:",
+    "aliases": [
+      "camera", "webcam", "cam", "web camera",
+      "कैमरा", "वेबकैम", "कैम",
+      "camera kholo"
+    ],
+    "exe_names": [],
+    "install_paths": []
+  },
+  "ms-photos:": {
+    "target": "ms-photos:",
+    "aliases": [
+      "photos", "photo viewer", "microsoft photos", "ms photos", "photo app", "fotos",
+      "फोटोज", "फोटो व्यूअर", "माइक्रोसॉफ्ट फोटोज", "फोटो ऐप",
+      "photos kholo", "photo kholo"
+    ],
+    "exe_names": [],
+    "install_paths": []
+  },
+  "stikynot": {
+    "target": "stikynot",
+    "aliases": [
+      "sticky notes", "stickynotes", "sticky note", "stikynot", "sticknotes",
+      "स्टिकी नोट्स", "स्टिकी नोट",
+      "sticky notes kholo"
+    ],
+    "exe_names": [],
+    "install_paths": []
+  },
+  "git": {
+    "target": "git-bash",
+    "aliases": [
+      "git", "git bash", "gitbash", "git terminal",
+      "गिट", "गिट बैश",
+      "git kholo"
+    ],
+    "exe_names": ["git-bash.exe", "git.exe"],
+    "install_paths": [
+      "%ProgramFiles%\\Git",
+      "%ProgramFiles(x86)%\\Git"
+    ]
+  },
+  "youtube": {
+    "target": "https://youtube.com",
+    "aliases": [
+      "youtube", "yt", "you tube", "utube", "youtub", "yutub",
+      "यूट्यूब", "यू ट्यूब",
+      "youtube kholo", "yt kholo"
+    ],
+    "exe_names": [],
+    "install_paths": []
+  },
+  "github": {
+    "target": "https://github.com",
+    "aliases": [
+      "github", "git hub", "gh",
+      "गिटहब", "गिट हब",
+      "github kholo"
+    ],
+    "exe_names": [],
+    "install_paths": []
+  },
+  "google": {
+    "target": "https://google.com",
+    "aliases": [
+      "google", "google search", "googl", "gogle",
+      "गूगल", "गूगल सर्च",
+      "google kholo"
+    ],
+    "exe_names": [],
+    "install_paths": []
+  },
+  "gmail": {
+    "target": "https://mail.google.com",
+    "aliases": [
+      "gmail", "google mail", "gmal", "g mail",
+      "जीमेल", "गूगल मेल",
+      "gmail kholo"
+    ],
+    "exe_names": [],
+    "install_paths": []
+  },
+  "chatgpt": {
+    "target": "chatgpt",
+    "aliases": [
+      "chatgpt", "chat gpt", "gpt", "openai chatgpt", "chatgpt app",
+      "चैटजीपीटी", "चैट जीपीटी",
+      "chatgpt kholo", "chat gpt kholo"
+    ],
+    "exe_names": ["ChatGPT.exe"],
+    "install_paths": [
+      "%LOCALAPPDATA%\\Programs\\ChatGPT",
+      "%ProgramFiles%\\ChatGPT"
+    ]
+  }
+}
+

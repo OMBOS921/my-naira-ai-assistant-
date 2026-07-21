@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = [
+    "testing",
+]
+pythonpath = ["."]
+markers = [
+    "unit: unit test (no external I/O)",
+    "integration: integration test (may use test database)",
+    "slow: marks a test as slow (skip with -m 'not slow')",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "F",   # Pyflakes
+    "E",   # Pycodestyle errors
+    "W",   # Pycodestyle warnings
+    "I",   # isort
+    "N",   # pep8-naming
+    "B",   # flake8-bugbear
+    "ANN", # flake8-annotations (public API)
+    "SIM", # flake8-simplify
+]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"testing/**" = ["ANN001", "ANN201", "ANN202", "ANN401"]   # test helpers and local functions need not be annotated
+"backend/modules/context_intelligence/**" = ["ANN401"]  # CI layer uses Any for flexibility
+"backend/modules/context_intelligence/ports/*" = ["ANN401"]
+"backend/modules/context_intelligence/providers/*" = ["ANN401"]
+"backend/modules/coding_agent/coding_agent_module.py" = ["ANN401"]  # callback params use Any for flexibility
+"backend/modules/coding_agent/**" = ["ANN202"]  # private services, no public API annotation requirement

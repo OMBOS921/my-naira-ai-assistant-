@@ -1,0 +1,23 @@
+{
+  "browser": {
+    "enabled": true,
+    "default_timeout": 30.0
+  },
+  "pc_control": {
+    "enabled": true,
+    "default_timeout": 30.0,
+    "sandbox_enabled": false,
+    "allowed_commands": [],
+    "max_retries": 2,
+    "retry_base_delay": 0.5,
+    "retry_max_delay": 30.0
+  },
+  "voice": {
+    "enabled": true,
+    "active_stt_provider": "faster-whisper",
+    "stt_fallback_chain": ["faster-whisper", "whisper"]
+  },
+  "vision": {
+    "enabled": true
+  }
+}

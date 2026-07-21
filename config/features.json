@@ -1,0 +1,10 @@
+{
+  "vision": true,
+  "voice": true,
+  "browser": true,
+  "avatar_3d": false,
+  "file_manager": false,
+  "pc_control": true,
+  "security": false,
+  "coding_agent": false
+}

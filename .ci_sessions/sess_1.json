@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "session_id": "sess_1",
+  "created_at": 1784558516.6451268,
+  "updated_at": 1784558516.6451387,
+  "metadata": {
+    "user": "test"
+  },
+  "context_data": {
+    "files": [
+      "a.py"
+    ]
+  },
+  "state_data": {}
+}

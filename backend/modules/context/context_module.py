@@ -1,0 +1,200 @@
+"""
+ContextManager — the single public class for the context module.
+
+07_Module_Design.md §2.D — Context Manager responsibilities.
+19_Request_Lifecycle.md §3 — Phase 3: Context Assembly.
+21_System_Contracts.md §4.2 — ModuleInterface protocol.
+"""
+
+from __future__ import annotations
+
+import logging
+
+from backend.exceptions import ModuleDegradedError
+from backend.modules.context._builder import ContextBuilder
+from backend.modules.context._conversation import ConversationContext
+from backend.types import Context, Message
+
+_LOG = logging.getLogger("naira.context")
+
+
+class ContextManager:
+    """Central context manager — session-aware, in-memory.
+
+    Owns a collection of ``ConversationContext`` instances keyed by
+    ``session_id``.  Builds immutable ``Context`` payloads for the
+    LLM pipeline via ``build_context()``.
+
+    Conforms to ``ModuleInterface`` (``backend/types.py``).
+
+    Parameters
+    ----------
+    config : Any | None
+        Application configuration (``AppConfig`` or compatible).
+    logger : logging.Logger | None
+        Module-scoped logger.  If ``None``, a default logger is used.
+    max_tokens : int
+        Default token budget for sliding-window truncation.
+    memory_port : MemoryPort | None
+        Optional ``MemoryPort`` adapter injected at boot for
+        long-term persistence (20_Dependency_Rules.md §2).
+    """
+
+    def __init__(
+        self,
+        *,
+        config: object | None = None,
+        logger: logging.Logger | None = None,
+        max_tokens: int = 4096,
+        memory_port: object | None = None,
+        event_bus: object | None = None,
+    ) -> None:
+        self._config = config
+        self._logger = logger or _LOG
+        self._max_tokens = max_tokens
+        self._memory_port = memory_port
+        self._event_bus = event_bus
+        self._sessions: dict[str, ConversationContext] = {}
+        self._degraded: bool = False
+
+    # ------------------------------------------------------------------
+    # Module lifecycle  (ModuleInterface protocol)
+    # ------------------------------------------------------------------
+
+    async def async_init(self) -> None:
+        """Initialise the context manager.
+
+        No heavyweight setup required for in-memory operation.
+        """
+        self._logger.info(
+            "Context manager initialised — max_tokens=%d", self._max_tokens
+        )
+
+    async def async_shutdown(self) -> None:
+        """Release all session state."""
+        self._sessions.clear()
+        self._degraded = False
+        self._logger.info("Context manager shut down.")
+
+    def degrade(self) -> None:
+        """Release resources and mark as degraded."""
+        self._sessions.clear()
+        self._degraded = True
+        self._logger.warning("Context manager marked degraded")
+
+    @property
+    def degraded(self) -> bool:
+        return self._degraded
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def build_context(
+        self, session_id: str, text: str, system_prompt: str = ""
+    ) -> Context:
+        """Build a ``Context`` for LLM inference.
+
+        19_Request_Lifecycle.md §3 (Phase 3: Context Assembly).
+
+        1. Retrieves or creates a ``ConversationContext`` for the session.
+        2. Appends the current user message.
+        3. Applies the sliding window if the token budget is exceeded.
+        4. Returns an immutable ``Context`` dataclass.
+
+        Parameters
+        ----------
+        session_id : str
+            Active session identifier.
+        text : str
+            The current user message.
+        system_prompt : str
+            System prompt for this session.
+
+        Returns
+        -------
+        Context
+            Immutable context payload ready for prompt compilation.
+
+        Raises
+        ------
+        ModuleDegradedError
+            If the manager is in a degraded state.
+        """
+        self._ensure_not_degraded()
+
+        conv = self._get_or_create_session(session_id)
+
+        user_msg = Message(role="user", content=text)
+        conv.add_message(user_msg)
+
+        conv.apply_sliding_window()
+
+        return ContextBuilder.build(
+            system_prompt=system_prompt,
+            messages=conv.messages,
+            max_tokens=self._max_tokens,
+        )
+
+    def add_assistant_message(self, session_id: str, content: str) -> None:
+        """Add an assistant response message to session context history."""
+        conv = self._get_or_create_session(session_id)
+        conv.add_message(Message(role="assistant", content=content))
+
+    def get_session(self, session_id: str) -> ConversationContext | None:
+        """Retrieve a session's ``ConversationContext``.
+
+        Returns ``None`` if the session does not exist.
+        """
+        return self._sessions.get(session_id)
+
+    def get_or_create_session(self, session_id: str) -> ConversationContext:
+        """Get an existing session or create a new one."""
+        return self._get_or_create_session(session_id)
+
+    def reset_session(self, session_id: str) -> None:
+        """Clear all messages for a session.
+
+        The session remains active with an empty history.
+        """
+        conv = self._sessions.get(session_id)
+        if conv is not None:
+            conv.clear()
+            self._logger.info("Session reset: %s", session_id)
+
+    def remove_session(self, session_id: str) -> None:
+        """Remove a session entirely."""
+        self._sessions.pop(session_id, None)
+        self._logger.info("Session removed: %s", session_id)
+
+    @property
+    def active_sessions(self) -> list[str]:
+        """Return a list of active session IDs."""
+        return list(self._sessions.keys())
+
+    @property
+    def session_count(self) -> int:
+        """Return the number of active sessions."""
+        return len(self._sessions)
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _get_or_create_session(self, session_id: str) -> ConversationContext:
+        conv = self._sessions.get(session_id)
+        if conv is None:
+            conv = ConversationContext(
+                session_id=session_id,
+                max_tokens=self._max_tokens,
+            )
+            self._sessions[session_id] = conv
+            self._logger.debug("Created new session: %s", session_id)
+        return conv
+
+    def _ensure_not_degraded(self) -> None:
+        if self._degraded:
+            raise ModuleDegradedError(
+                "ContextManager is degraded",
+                context={"module": "context"},
+            )

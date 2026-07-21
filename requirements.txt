@@ -1,0 +1,37 @@
+# Google GenAI SDK — official Gemini API client
+google-genai>=2.0.0
+
+# Image loading and processing
+Pillow>=11.0
+
+# Browser automation
+playwright>=1.40
+
+# OS automation (PC Control)
+pyautogui>=0.9.54
+psutil>=5.9.0
+mss>=9.0.0
+pywin32>=306
+pynput>=1.7.6
+pycaw>=20181226
+comtypes>=1.4.0
+
+# Voice processing (optional - enable for STT/TTS/Wake Word capabilities)
+# Speech-to-Text
+faster-whisper>=0.10.0    # Optimized Whisper (preferred)
+# Text-to-Speech
+# TTS>=0.22.0               # Coqui TTS
+# elevenlabs>=1.0.0         # ElevenLabs cloud TTS (requires API key)
+# piper-tts>=1.2.0          # Piper offline TTS (when available)
+# Wake Word Detection
+# pvporcupine>=3.0.0        # Porcupine wake word (requires access key)
+# Audio I/O & Hotkey Listening
+keyboard>=0.13.5
+SpeechRecognition>=3.10.0
+pyaudio>=0.2.14
+# sounddevice>=0.4.6        # Audio recording/playback
+# soundfile>=0.12.1         # Audio file I/O
+
+# Testing
+pytest>=8.0
+pytest-asyncio>=0.24

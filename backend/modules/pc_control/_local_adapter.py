@@ -1,0 +1,255 @@
+"""LocalPCControlAdapter — placeholder PC-control adapter.
+
+Returns ``is_available=False`` and raises ``PCControlNotImplementedError``
+on every operation.  This adapter is used when no real OS automation
+library (pyautogui, psutil, pynput, etc.) has been configured.
+
+When a real adapter is wired in, ``PCControlManager`` will use it
+in place of this placeholder with zero code changes.
+"""
+
+from __future__ import annotations
+
+import logging
+
+from backend.modules.pc_control._exceptions import PCControlNotImplementedError
+from backend.modules.pc_control._types import (
+    ApplicationLaunchResult,
+    ClipboardContent,
+    DisplayInfo,
+    FileEntry,
+    Point,
+    ProcessInfo,
+    ScreenshotResult,
+    ScreenSize,
+    VolumeInfo,
+    WindowInfo,
+)
+from backend.modules.pc_control.ports.pc_control_port import PCControlPort
+
+_LOG = logging.getLogger("naira.pc_control.adapter")
+
+
+class LocalPCControlAdapter(PCControlPort):
+    """Placeholder adapter that signals that no real OS automation
+    driver is available.
+    """
+
+    def __init__(self, logger: logging.Logger | None = None) -> None:
+        self._logger = logger or _LOG
+
+    @property
+    def is_available(self) -> bool:
+        return False
+
+    # ------------------------------------------------------------------
+    # Mouse
+    # ------------------------------------------------------------------
+
+    async def mouse_get_position(self) -> Point:
+        raise PCControlNotImplementedError(context={"operation": "mouse_get_position"})
+
+    async def mouse_move_to(self, x: int, y: int, duration: float = 0.0) -> None:
+        raise PCControlNotImplementedError(context={"operation": "mouse_move_to", "x": x, "y": y})
+
+    async def mouse_click(self, x: int | None = None, y: int | None = None) -> None:
+        raise PCControlNotImplementedError(context={"operation": "mouse_click"})
+
+    async def mouse_double_click(self, x: int | None = None, y: int | None = None) -> None:
+        raise PCControlNotImplementedError(context={"operation": "mouse_double_click"})
+
+    async def mouse_right_click(self, x: int | None = None, y: int | None = None) -> None:
+        raise PCControlNotImplementedError(context={"operation": "mouse_right_click"})
+
+    async def mouse_drag(
+        self,
+        start_x: int,
+        start_y: int,
+        end_x: int,
+        end_y: int,
+        duration: float = 0.5,
+    ) -> None:
+        raise PCControlNotImplementedError(context={"operation": "mouse_drag"})
+
+    async def mouse_scroll(self, clicks: int, x: int | None = None, y: int | None = None) -> None:
+        raise PCControlNotImplementedError(context={"operation": "mouse_scroll"})
+
+    # ------------------------------------------------------------------
+    # Keyboard
+    # ------------------------------------------------------------------
+
+    async def keyboard_type_text(self, text: str, interval: float = 0.0) -> None:
+        raise PCControlNotImplementedError(context={"operation": "keyboard_type_text"})
+
+    async def keyboard_press_key(self, key: str) -> None:
+        raise PCControlNotImplementedError(context={"operation": "keyboard_press_key", "key": key})
+
+    async def keyboard_hotkey(self, *keys: str) -> None:
+        raise PCControlNotImplementedError(context={"operation": "keyboard_hotkey", "keys": keys})
+
+    # ------------------------------------------------------------------
+    # Clipboard
+    # ------------------------------------------------------------------
+
+    async def clipboard_get_text(self) -> ClipboardContent:
+        raise PCControlNotImplementedError(context={"operation": "clipboard_get_text"})
+
+    async def clipboard_set_text(self, text: str) -> None:
+        raise PCControlNotImplementedError(context={"operation": "clipboard_set_text"})
+
+    async def clipboard_clear(self) -> None:
+        raise PCControlNotImplementedError(context={"operation": "clipboard_clear"})
+
+    # ------------------------------------------------------------------
+    # Filesystem
+    # ------------------------------------------------------------------
+
+    async def filesystem_list_directory(self, path: str) -> list[FileEntry]:
+        raise PCControlNotImplementedError(
+            context={"operation": "filesystem_list_directory", "path": path}
+        )
+
+    async def filesystem_read_file(self, path: str, encoding: str = "utf-8") -> str:
+        raise PCControlNotImplementedError(
+            context={"operation": "filesystem_read_file", "path": path}
+        )
+
+    async def filesystem_write_file(self, path: str, content: str, encoding: str = "utf-8") -> None:
+        raise PCControlNotImplementedError(
+            context={"operation": "filesystem_write_file", "path": path}
+        )
+
+    async def filesystem_delete_file(self, path: str) -> None:
+        raise PCControlNotImplementedError(
+            context={"operation": "filesystem_delete_file", "path": path}
+        )
+
+    async def filesystem_create_directory(self, path: str) -> None:
+        raise PCControlNotImplementedError(
+            context={"operation": "filesystem_create_directory", "path": path}
+        )
+
+    async def filesystem_delete_directory(self, path: str, recursive: bool = False) -> None:
+        raise PCControlNotImplementedError(
+            context={"operation": "filesystem_delete_directory", "path": path}
+        )
+
+    # ------------------------------------------------------------------
+    # Windows
+    # ------------------------------------------------------------------
+
+    async def window_list(self) -> list[WindowInfo]:
+        raise PCControlNotImplementedError(context={"operation": "window_list"})
+
+    async def window_get_active(self) -> WindowInfo | None:
+        raise PCControlNotImplementedError(context={"operation": "window_get_active"})
+
+    async def window_focus(self, handle: int) -> None:
+        raise PCControlNotImplementedError(context={"operation": "window_focus"})
+
+    async def window_minimize(self, handle: int) -> None:
+        raise PCControlNotImplementedError(context={"operation": "window_minimize"})
+
+    async def window_maximize(self, handle: int) -> None:
+        raise PCControlNotImplementedError(context={"operation": "window_maximize"})
+
+    async def window_close(self, handle: int) -> None:
+        raise PCControlNotImplementedError(context={"operation": "window_close"})
+
+    async def window_resize(self, handle: int, width: int, height: int) -> None:
+        raise PCControlNotImplementedError(context={"operation": "window_resize"})
+
+    async def window_move(self, handle: int, x: int, y: int) -> None:
+        raise PCControlNotImplementedError(context={"operation": "window_move"})
+
+    # ------------------------------------------------------------------
+    # Processes
+    # ------------------------------------------------------------------
+
+    async def process_list(self) -> list[ProcessInfo]:
+        raise PCControlNotImplementedError(context={"operation": "process_list"})
+
+    async def process_kill(self, pid: int, force: bool = False) -> None:
+        raise PCControlNotImplementedError(context={"operation": "process_kill"})
+
+    # ------------------------------------------------------------------
+    # Application launcher
+    # ------------------------------------------------------------------
+
+    async def launch_application(
+        self,
+        app_path: str,
+        args: tuple[str, ...] = (),
+        working_dir: str | None = None,
+    ) -> ApplicationLaunchResult:
+        raise PCControlNotImplementedError(
+            context={"operation": "launch_application", "app_path": app_path}
+        )
+
+    # ------------------------------------------------------------------
+    # Notifications
+    # ------------------------------------------------------------------
+
+    async def notification_show(
+        self,
+        title: str,
+        message: str,
+        duration: float = 5.0,
+    ) -> None:
+        raise PCControlNotImplementedError(context={"operation": "notification_show"})
+
+    # ------------------------------------------------------------------
+    # Power
+    # ------------------------------------------------------------------
+
+    async def power_shutdown(self) -> None:
+        raise PCControlNotImplementedError(context={"operation": "power_shutdown"})
+
+    async def power_restart(self) -> None:
+        raise PCControlNotImplementedError(context={"operation": "power_restart"})
+
+    async def power_sleep(self) -> None:
+        raise PCControlNotImplementedError(context={"operation": "power_sleep"})
+
+    async def power_hibernate(self) -> None:
+        raise PCControlNotImplementedError(context={"operation": "power_hibernate"})
+
+    async def power_lock(self) -> None:
+        raise PCControlNotImplementedError(context={"operation": "power_lock"})
+
+    # ------------------------------------------------------------------
+    # Volume
+    # ------------------------------------------------------------------
+
+    async def volume_get(self) -> VolumeInfo:
+        raise PCControlNotImplementedError(context={"operation": "volume_get"})
+
+    async def volume_set(self, level: float) -> None:
+        raise PCControlNotImplementedError(context={"operation": "volume_set"})
+
+    async def volume_mute(self, muted: bool) -> None:
+        raise PCControlNotImplementedError(context={"operation": "volume_mute"})
+
+    # ------------------------------------------------------------------
+    # Screen
+    # ------------------------------------------------------------------
+
+    async def screen_get_size(self) -> ScreenSize:
+        raise PCControlNotImplementedError(context={"operation": "screen_get_size"})
+
+    async def screen_capture(
+        self,
+        region: tuple[int, int, int, int] | None = None,
+        save_path: str | None = None,
+    ) -> ScreenshotResult:
+        raise PCControlNotImplementedError(context={"operation": "screen_capture"})
+
+    async def screen_list_displays(self) -> list[DisplayInfo]:
+        raise PCControlNotImplementedError(context={"operation": "screen_list_displays"})
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
+
+    async def close(self) -> None:
+        self._logger.debug("LocalPCControlAdapter.close() — no-op")
