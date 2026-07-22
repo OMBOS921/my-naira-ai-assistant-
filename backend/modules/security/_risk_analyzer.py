@@ -15,6 +15,7 @@ _HIGH_RISK_TOOLS: frozenset[str] = frozenset({
     "registry_write",
     "registry_delete",
     "format_drive",
+    "fcr_kill_process",
 })
 
 _MEDIUM_RISK_TOOLS: frozenset[str] = frozenset({
@@ -24,6 +25,8 @@ _MEDIUM_RISK_TOOLS: frozenset[str] = frozenset({
     "pc_volume",
     "browser_navigate",
     "browser_extract",
+    "fcr_window_close",
+    "fcr_run_cmd_safe",
 })
 
 _DANGEROUS_ARGUMENTS: dict[str, frozenset[str]] = {
@@ -32,6 +35,7 @@ _DANGEROUS_ARGUMENTS: dict[str, frozenset[str]] = {
     "pc_power": frozenset({"shutdown", "restart", "sleep", "hibernate", "lock"}),
     "pc_keyboard": frozenset({"type_text", "press_key", "hotkey"}),
     "pc_clipboard": frozenset({"set_text", "clear"}),
+    "fcr_run_cmd_safe": frozenset({"run"}),
 }
 
 

@@ -10,18 +10,22 @@ import asyncio
 import json
 import logging
 import os
+import socket
 import time
 import uuid
 from typing import Any
 
 import requests
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 from backend.exceptions import LLMError, ProviderAuthError, ProviderRateLimitError, ProviderTimeoutError
 from backend.modules.llm.provider_base import ProviderBase
 from backend.types import LLMResponse, Message, TokenUsage, ToolCall, ToolDef
 
-load_dotenv()
 _LOG = logging.getLogger("naira.llm.gemini")
 
 
@@ -154,28 +158,104 @@ class GeminiProvider(ProviderBase):
                 })
             payload["tools"] = [{"function_declarations": func_decls}]
 
+        request_id = str(uuid.uuid4())
+        raw_timeout = self._timeout if (self._timeout is not None and isinstance(self._timeout, (int, float))) else 30
+        timeout_val = max(1, raw_timeout)
+
         models_to_try = [self._model] + [m for m in self._fallback_models if m != self._model]
         last_error_text = ""
         response = None
 
-        for current_model in models_to_try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{current_model}:generateContent?key={api_key}"
+        for idx, current_model in enumerate(models_to_try):
+            if idx > 0:
+                await asyncio.sleep(0)
+
+            clean_url = f"https://generativelanguage.googleapis.com/v1beta/models/{current_model}:generateContent"
+            url = f"{clean_url}?key={api_key}"
             headers = {"Content-Type": "application/json"}
 
             def _make_request(req_url: str) -> requests.Response:
-                return requests.post(req_url, json=payload, headers=headers, timeout=self._timeout)
+                return requests.post(req_url, json=payload, headers=headers, timeout=timeout_val)
 
             try:
                 resp = await asyncio.to_thread(_make_request, url)
-            except requests.Timeout as exc:
+            except asyncio.CancelledError:
+                raise
+            except (requests.Timeout, socket.timeout, TimeoutError) as exc:
+                elapsed_ms = (time.monotonic() - start_time) * 1000
                 raise ProviderTimeoutError(
-                    f"Gemini request timed out after {self._timeout}s",
-                    context={"provider": "gemini", "timeout": self._timeout},
+                    f"Gemini request timed out after {timeout_val}s",
+                    context={
+                        "request_id": request_id,
+                        "provider": "gemini",
+                        "model": current_model,
+                        "elapsed_ms": elapsed_ms,
+                        "endpoint_without_key": clean_url,
+                        "url": clean_url,
+                        "timeout": timeout_val,
+                        "error": str(exc),
+                        "original_exception": type(exc).__name__,
+                    },
+                ) from exc
+            except requests.ConnectionError as exc:
+                elapsed_ms = (time.monotonic() - start_time) * 1000
+                raise LLMError(
+                    f"Gemini connection error: {exc}",
+                    context={
+                        "request_id": request_id,
+                        "provider": "gemini",
+                        "model": current_model,
+                        "elapsed_ms": elapsed_ms,
+                        "endpoint_without_key": clean_url,
+                        "url": clean_url,
+                        "error": str(exc),
+                        "original_exception": type(exc).__name__,
+                    },
+                ) from exc
+            except requests.HTTPError as exc:
+                elapsed_ms = (time.monotonic() - start_time) * 1000
+                raise LLMError(
+                    f"Gemini HTTP error: {exc}",
+                    context={
+                        "request_id": request_id,
+                        "provider": "gemini",
+                        "model": current_model,
+                        "elapsed_ms": elapsed_ms,
+                        "endpoint_without_key": clean_url,
+                        "url": clean_url,
+                        "error": str(exc),
+                        "original_exception": type(exc).__name__,
+                    },
+                ) from exc
+            except requests.RequestException as exc:
+                elapsed_ms = (time.monotonic() - start_time) * 1000
+                raise LLMError(
+                    f"Gemini request error: {exc}",
+                    context={
+                        "request_id": request_id,
+                        "provider": "gemini",
+                        "model": current_model,
+                        "elapsed_ms": elapsed_ms,
+                        "endpoint_without_key": clean_url,
+                        "url": clean_url,
+                        "error": str(exc),
+                        "original_exception": type(exc).__name__,
+                    },
                 ) from exc
             except Exception as exc:
+                elapsed_ms = (time.monotonic() - start_time) * 1000
                 raise LLMError(
                     f"Gemini network/request error: {exc}",
-                    context={"provider": "gemini"},
+                    context={
+                        "request_id": request_id,
+                        "provider": "gemini",
+                        "model": current_model,
+                        "elapsed_ms": elapsed_ms,
+                        "endpoint_without_key": clean_url,
+                        "url": clean_url,
+                        "error": str(exc),
+                        "original_exception": type(exc).__name__,
+                    },
                 ) from exc
 
             if resp.status_code == 200:
@@ -187,22 +267,51 @@ class GeminiProvider(ProviderBase):
                 last_error_text = resp.text
                 continue
             else:
-                self._logger.error("Gemini API failed (status %d): %s", resp.status_code, resp.text)
+                elapsed_ms = (time.monotonic() - start_time) * 1000
+                self._logger.error("Gemini API failed with status %d", resp.status_code)
+                err_context = {
+                    "request_id": request_id,
+                    "provider": "gemini",
+                    "model": current_model,
+                    "elapsed_ms": elapsed_ms,
+                    "endpoint_without_key": clean_url,
+                    "status": resp.status_code,
+                }
                 if resp.status_code in (401, 403):
-                    raise ProviderAuthError(f"Gemini auth failed: {resp.text}", context={"status": resp.status_code})
+                    raise ProviderAuthError(f"Gemini auth failed (status {resp.status_code})", context=err_context)
                 if resp.status_code == 429:
-                    raise ProviderRateLimitError(f"Gemini rate limit: {resp.text}", context={"status": resp.status_code})
-                raise LLMError(f"Gemini API error: {resp.text}", context={"status": resp.status_code})
+                    raise ProviderRateLimitError(f"Gemini rate limit exceeded (status {resp.status_code})", context=err_context)
+                raise LLMError(f"Gemini API error (status {resp.status_code})", context=err_context)
 
         if response is None:
-            raise LLMError(f"Gemini API all models returned 404. Last error: {last_error_text}")
+            elapsed_ms = (time.monotonic() - start_time) * 1000
+            raise LLMError(
+                "Gemini API all models returned 404.",
+                context={
+                    "request_id": request_id,
+                    "provider": "gemini",
+                    "model": self._model,
+                    "elapsed_ms": elapsed_ms,
+                },
+            )
 
         try:
             data = response.json()
             candidate = data["candidates"][0]
             parts = candidate.get("content", {}).get("parts", [])
         except (ValueError, KeyError, IndexError) as exc:
-            raise LLMError(f"Gemini response parsing failed: {exc} | Raw response: {response.text}") from exc
+            elapsed_ms = (time.monotonic() - start_time) * 1000
+            raise LLMError(
+                f"Gemini response parsing failed: {exc}",
+                context={
+                    "request_id": request_id,
+                    "provider": "gemini",
+                    "model": self._model,
+                    "elapsed_ms": elapsed_ms,
+                    "error": str(exc),
+                    "original_exception": type(exc).__name__,
+                },
+            ) from exc
 
         text_parts = []
         tool_calls = []

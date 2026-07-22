@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from backend.modules.analytics import AnalyticsManager
 from backend.modules.browser import BrowserManager
 from backend.modules.browser._playwright_adapter import _HAS_PLAYWRIGHT
 from backend.modules.capability import CapabilityManager
@@ -21,6 +22,7 @@ from backend.modules.coding_agent import CodingAgentManager
 from backend.modules.context import ContextManager
 from backend.modules.context_intelligence import ContextIntelligenceManager
 from backend.modules.conversation import ConversationManager
+from backend.modules.decision import DecisionManager
 from backend.modules.llm import LLMManager
 from backend.modules.memory import MemoryManager
 from backend.modules.pc_control import PCControlManager
@@ -33,6 +35,7 @@ from backend.modules.pc_control._production_adapter import (
 from backend.modules.pc_control._production_adapter import (
     _HAS_PYWIN32 as _PC_HAS_PYWIN32,
 )
+from backend.modules.planning import PlanningManager
 from backend.modules.prompt import PromptManager
 from backend.modules.security import SecurityManager
 from backend.modules.settings import AppConfig, SettingsManager
@@ -61,20 +64,23 @@ def _check_pc_control_deps() -> dict[str, bool]:
     }
 
 _SHUTDOWN_ORDER: tuple[str, ...] = (
-    "context_intelligence",
     "runtime",
+    "context_intelligence",
     "conversation",
     "prompt",
     "llm",
+    "decision",
+    "planning",
+    "coding_agent",
+    "pc_control",
     "voice",
     "vision",
     "browser",
-    "pc_control",
-    "coding_agent",
     "security",
     "tools",
     "capability",
     "context",
+    "analytics",
     "memory",
     "settings",
 )
@@ -82,6 +88,7 @@ _SHUTDOWN_ORDER: tuple[str, ...] = (
 _BOOT_ORDER: tuple[str, ...] = (
     "settings",
     "memory",
+    "analytics",
     "context",
     "capability",
     "tools",
@@ -91,6 +98,8 @@ _BOOT_ORDER: tuple[str, ...] = (
     "voice",
     "pc_control",
     "coding_agent",
+    "planning",
+    "decision",
     "llm",
     "prompt",
     "conversation",
@@ -167,6 +176,21 @@ async def boot_core_modules(
         if getattr(memory_mgr, "degraded", False):
             degraded_modules.append("memory")
         _LOG.info("[BOOT] Memory initialised")
+
+        # 7b2 – AnalyticsManager (Layer 5 — Infrastructure)
+        _LOG.info("[BOOT]   Initialising AnalyticsManager ...")
+        analytics_mgr = AnalyticsManager(
+            config=config,
+            event_bus=event_bus,
+            db_path=memory_dir / "naira_analytics.db",
+        )
+        await analytics_mgr.async_init()
+        modules["analytics"] = analytics_mgr
+        container.register("analytics_manager", analytics_mgr)
+        orchestrator.register_module("analytics", analytics_mgr)
+        if getattr(analytics_mgr, "degraded", False):
+            degraded_modules.append("analytics")
+        _LOG.info("[BOOT] Analytics initialised")
 
         # 7c – ContextManager (Layer 3 — AI Core) with MemoryPort wiring
         _LOG.info("[BOOT]   Initialising ContextManager ...")
@@ -563,6 +587,41 @@ async def boot_core_modules(
             degraded_modules.append("coding_agent")
         _LOG.info("[BOOT] CodingAgent initialised")
 
+        # 7j2 – PlanningManager (Layer 4 — Orchestration)
+        _LOG.info("[BOOT]   Initialising PlanningManager ...")
+        planning_mgr = PlanningManager(
+            config=config,
+            event_bus=event_bus,
+            tool_manager=tool_mgr,
+            pc_control_manager=pc_control_mgr,
+            security_manager=security_mgr if 'security_mgr' in locals() else None,
+        )
+        await planning_mgr.async_init()
+        modules["planning"] = planning_mgr
+        container.register("planning_manager", planning_mgr)
+        orchestrator.register_module("planning", planning_mgr)
+        if getattr(planning_mgr, "degraded", False):
+            degraded_modules.append("planning")
+        _LOG.info("[BOOT] Planning initialised")
+
+        # 7j3 – DecisionManager (Layer 4 — Orchestration)
+        _LOG.info("[BOOT]   Initialising DecisionManager ...")
+        decision_mgr = DecisionManager(
+            config=config,
+            event_bus=event_bus,
+            analytics=analytics_mgr,
+            fast_command_router=None,
+            planning_manager=planning_mgr,
+            coding_agent_manager=coding_agent_mgr,
+        )
+        await decision_mgr.async_init()
+        modules["decision"] = decision_mgr
+        container.register("decision_manager", decision_mgr)
+        orchestrator.register_module("decision", decision_mgr)
+        if getattr(decision_mgr, "degraded", False):
+            degraded_modules.append("decision")
+        _LOG.info("[BOOT] Decision initialised")
+
         # 7k – LLMManager (Layer 3 — AI Core)
         _LOG.info("[BOOT]   Initialising LLMManager ...")
         llm_providers: dict[str, object] = {}
@@ -693,6 +752,9 @@ async def boot_core_modules(
             conversation_manager=conversation_mgr,
             context_intelligence_manager=context_intel_mgr,
             pc_control_manager=pc_control_mgr,
+            decision_manager=decision_mgr,
+            analytics_manager=analytics_mgr,
+            planning_manager=planning_mgr,
             event_bus=event_bus,
             max_tool_iterations=config.tools.max_retries + 1,
         )

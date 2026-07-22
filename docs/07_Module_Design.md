@@ -121,3 +121,12 @@ This document defines the strict boundaries, single responsibilities, and lightw
   * Receives user interaction events from the renderer and forwards them to the Orchestrator.
 * **Constraint:** The avatar module must not perform AI inference, access the database, or execute system commands. All data is opaque payloads; interpretation is the Orchestrator's responsibility.
 * **RAM Optimization:** The renderer runs as a separate process. The Python module itself handles only socket I/O. The module is lazy-loaded and implemented when Phase 6 begins.
+
+---
+
+## 5. Execution & Logic Layer Modules
+
+Detailed design specifications for Layer 4/5 execution and routing engines are defined in [22_Execution_Logic.md](file:///c:/Users/user/Desktop/Project-AIF-main/docs/22_Execution_Logic.md):
+- **Analytics Engine (`backend/modules/analytics/`)**: Offline usage tracking, FCR effectiveness, and SQLite WAL persistence.
+- **Planning Engine (`backend/modules/planning/`)**: Rule-based task decomposition and topological step execution.
+- **Decision Engine (`backend/modules/decision/`)**: Intelligent subsystem routing with analytics-based route demotion.

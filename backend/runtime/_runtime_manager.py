@@ -6,6 +6,7 @@ Conforms to ``ModuleInterface`` (``backend/types.py``).
 
 from __future__ import annotations
 
+import inspect
 import json
 import logging
 import time
@@ -13,6 +14,8 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from backend.exceptions import ModuleDegradedError
+from backend.modules.analytics import AnalyticsEvent, EventType
+from backend.modules.decision import RouteTarget
 from backend.runtime._request_context import RequestContext
 from backend.runtime._tool_loop import MAX_TOOL_ITERATIONS, run_tool_loop
 from backend.runtime.fast_command_router import FastCommandRouter
@@ -32,43 +35,18 @@ class RuntimeManager:
     """Orchestrates the end-to-end AI execution pipeline.
 
     Owns the full request lifecycle:
-    1. Session resolution (via ConversationManager)
-    2. Context assembly (via ContextManager)
-    3. Prompt compilation (via PromptManager)
-    4. LLM generation with tool calling (via LLMManager + ToolManager)
-    5. Tool execution loop
-    6. Memory persistence (via MemoryManager)
-    7. Streaming response generation
-    8. Event emission (via EventBus)
+    1. Decision & Routing resolution (via DecisionManager / FastCommandRouter)
+    2. Task Planning for multi-step requests (via PlanningManager)
+    3. Session resolution (via ConversationManager)
+    4. Context assembly (via ContextManager)
+    5. Prompt compilation (via PromptManager)
+    6. LLM generation with tool calling (via LLMManager + ToolManager)
+    7. Analytics event recording (via AnalyticsManager)
+    8. Memory persistence (via MemoryManager)
+    9. Streaming response generation
+    10. Event emission (via EventBus)
 
     Conforms to ``ModuleInterface`` (``backend/types.py``).
-
-    Parameters
-    ----------
-    config : object | None
-        Application configuration.
-    logger : logging.Logger | None
-        Module-scoped logger.
-    context_manager : Any | None
-        ``ContextManager`` instance.
-    prompt_manager : Any | None
-        ``PromptManager`` instance.
-    llm_manager : Any | None
-        ``LLMManager`` instance.
-    tool_manager : Any | None
-        ``ToolManager`` instance.
-    memory_manager : Any | None
-        ``MemoryManager`` instance.
-    conversation_manager : Any | None
-        ``ConversationManager`` instance (for session resolution).
-    context_intelligence_manager : Any | None
-        ``ContextIntelligenceManager`` instance for rich context assembly.
-    pc_control_manager : Any | None
-        ``PCControlManager`` instance for fast desktop execution.
-    event_bus : Any | None
-        ``EventBus`` instance.
-    max_tool_iterations : int
-        Maximum iterations for the tool-calling loop (default 10).
     """
 
     def __init__(
@@ -84,6 +62,9 @@ class RuntimeManager:
         conversation_manager: object | None = None,
         context_intelligence_manager: object | None = None,
         pc_control_manager: object | None = None,
+        decision_manager: object | None = None,
+        analytics_manager: object | None = None,
+        planning_manager: object | None = None,
         event_bus: object | None = None,
         max_tool_iterations: int = MAX_TOOL_ITERATIONS,
     ) -> None:
@@ -97,6 +78,9 @@ class RuntimeManager:
         self._conversation_manager = conversation_manager
         self._context_intelligence_manager = context_intelligence_manager
         self._pc_control_manager = pc_control_manager
+        self._decision_manager = decision_manager
+        self._analytics_manager = analytics_manager
+        self._planning_manager = planning_manager
         self._event_bus = event_bus
         self._max_tool_iterations = max_tool_iterations
         self._degraded: bool = False
@@ -106,6 +90,12 @@ class RuntimeManager:
             pc_control_manager=pc_control_manager,
             logger=self._logger,
         )
+
+        # Wire FastCommandRouter into DecisionManager if decision manager is supplied
+        if self._decision_manager is not None and hasattr(
+            self._decision_manager, "_fast_command_router"
+        ):
+            self._decision_manager._fast_command_router = self._fast_command_router
 
     # ------------------------------------------------------------------
     # Module lifecycle  (ModuleInterface protocol)
@@ -137,23 +127,7 @@ class RuntimeManager:
     # ------------------------------------------------------------------
 
     async def process_request(self, request: UserRequest) -> UserResponse:
-        """Process a single user request end-to-end.
-
-        Parameters
-        ----------
-        request : UserRequest
-            The immutable inbound request.
-
-        Returns
-        -------
-        UserResponse
-            The outbound response.
-
-        Raises
-        ------
-        ModuleDegradedError
-            If the manager is in a degraded state.
-        """
+        """Process a single user request end-to-end."""
         self._ensure_not_degraded()
 
         ctx = RequestContext(
@@ -176,22 +150,45 @@ class RuntimeManager:
                 "request_id": str(ctx.request_id),
             })
 
-            # Stage 0: Fast Command Engine bypass check (deterministic desktop commands)
-            router_exists = self._fast_command_router is not None
-            is_fast = self._fast_command_router.is_fast_command(request.text) if router_exists else False
-            self._logger.info(
-                "[ROUTING] FastCommandRouter check — router_exists=%s is_fast=%s text=%r",
-                router_exists, is_fast, request.text,
-            )
+            # Decision Engine Routing
+            target_route = RouteTarget.LLM_CONVERSATION
+            if self._decision_manager is not None:
+                decide_fn = getattr(self._decision_manager, "decide", None)
+                if callable(decide_fn):
+                    decision = await decide_fn(request.text, request.metadata)
+                    target_route = decision.target
+                    self._logger.info(
+                        "[ROUTING] DecisionManager target=%s confidence=%.2f reason=%s",
+                        decision.target, decision.confidence, decision.reason,
+                    )
 
-            if is_fast:
-                self._logger.info("[ROUTING] [MATCH] Fast Command Router MATCHED: '%s' -- executing directly (bypassing Gemini)", request.text)
-                fast_result = await self._fast_command_router.execute_fast_command(request.text)
-                duration_ms = (time.time() - ctx.start_time) * 1000
+            if (
+                target_route == RouteTarget.LLM_CONVERSATION
+                and self._fast_command_router is not None
+                and self._fast_command_router.is_fast_command(request.text)
+            ):
+                target_route = RouteTarget.FAST_COMMAND_ROUTER
+
+            # Route 1: FAST_COMMAND_ROUTER
+            fcr = self._fast_command_router
+            if target_route == RouteTarget.FAST_COMMAND_ROUTER and fcr is not None:
                 self._logger.info(
-                    "[ROUTING] [OK] Fast command executed in %.1fms -- result: %s",
-                    duration_ms, fast_result[:200],
+                    "[ROUTING] [MATCH] Fast Command Router MATCHED: '%s'", request.text
                 )
+                fast_result = await fcr.execute_fast_command(request.text)
+                duration_ms = (time.time() - ctx.start_time) * 1000
+
+                if self._analytics_manager is not None:
+                    rec_fn = getattr(self._analytics_manager, "record", None)
+                    if callable(rec_fn):
+                        rec_fn(
+                            AnalyticsEvent(
+                                event_type=EventType.FCR_HIT,
+                                duration_ms=duration_ms,
+                                success=True,
+                                payload={"request": request.text, "target": "fcr"},
+                            )
+                        )
 
                 token_usage = self._estimate_token_usage("", fast_result)
                 final_response = LLMResponse(
@@ -203,16 +200,6 @@ class RuntimeManager:
                     duration_ms=duration_ms,
                 )
                 await self._store_turn(ctx, final_response)
-                await self._emit_event("runtime.request_complete", {
-                    "session_id": ctx.session_id,
-                    "request_id": str(ctx.request_id),
-                    "duration_ms": duration_ms,
-                    "token_usage": {
-                        "prompt_tokens": token_usage.prompt_tokens,
-                        "completion_tokens": token_usage.completion_tokens,
-                        "total_tokens": token_usage.total_tokens,
-                    },
-                })
                 return UserResponse(
                     request_id=request.id,
                     text=fast_result,
@@ -220,7 +207,71 @@ class RuntimeManager:
                     duration_ms=duration_ms,
                 )
 
-            self._logger.info("[ROUTING] [NO-MATCH] Fast command NOT matched -- falling through to Gemini LLM for text=%r", request.text)
+            # Route 2: PLANNING_ENGINE
+            if target_route == RouteTarget.PLANNING_ENGINE and self._planning_manager is not None:
+                self._logger.info("[ROUTING] Routing request to PlanningEngine: %r", request.text)
+                plan_fn = getattr(self._planning_manager, "plan", None)
+                exec_plan_fn = getattr(self._planning_manager, "execute_plan", None)
+
+                if callable(plan_fn) and callable(exec_plan_fn):
+                    plan = await plan_fn(request.text, request.metadata)
+                    plan_res = await exec_plan_fn(plan)
+                    duration_ms = (time.time() - ctx.start_time) * 1000
+
+                    step_cnt = len(plan_res.executed_steps)
+                    if plan_res.success:
+                        res_text = f"Executed multi-step plan successfully ({step_cnt} steps)."
+                    else:
+                        res_text = (
+                            f"Plan execution failed at step {plan_res.failed_step}: "
+                            f"{plan_res.error}"
+                        )
+
+                    if self._analytics_manager is not None:
+                        rec_fn = getattr(self._analytics_manager, "record", None)
+                        if callable(rec_fn):
+                            rec_fn(
+                                AnalyticsEvent(
+                                    event_type=EventType.TOOL_CALL,
+                                    duration_ms=duration_ms,
+                                    success=plan_res.success,
+                                    payload={"request": request.text, "plan_id": plan.plan_id},
+                                )
+                            )
+
+                    token_usage = self._estimate_token_usage("", res_text)
+                    final_response = LLMResponse(
+                        text=res_text,
+                        tool_calls=None,
+                        finish_reason="stop",
+                        token_usage=token_usage,
+                        provider="planning_engine",
+                        duration_ms=duration_ms,
+                    )
+                    await self._store_turn(ctx, final_response)
+                    return UserResponse(
+                        request_id=request.id,
+                        text=res_text,
+                        source=request.source,
+                        duration_ms=duration_ms,
+                    )
+
+            # Route 3: Standard LLM_CONVERSATION
+            self._logger.info(
+                "[ROUTING] Falling through to LLM conversation pipeline for text=%r", request.text
+            )
+
+            if self._analytics_manager is not None:
+                rec_fn = getattr(self._analytics_manager, "record", None)
+                if callable(rec_fn):
+                    rec_fn(
+                        AnalyticsEvent(
+                            event_type=EventType.LLM_FALLBACK,
+                            duration_ms=0.0,
+                            success=True,
+                            payload={"request": request.text},
+                        )
+                    )
 
             ctx.current_stage = "session"
             await self._resolve_session(ctx)
@@ -285,22 +336,7 @@ class RuntimeManager:
         self,
         request: UserRequest,
     ) -> AsyncIterator[str]:
-        """Process a request and stream the response tokens.
-
-        Tool execution is handled transparently: if the LLM issues tool
-        calls during streaming, they are executed and the results are fed
-        back to the LLM before streaming continues.
-
-        Yields
-        ------
-        str
-            Successive text chunks from the LLM.
-
-        Raises
-        ------
-        ModuleDegradedError
-            If the manager is in a degraded state.
-        """
+        """Process a request and stream the response tokens."""
         self._ensure_not_degraded()
 
         ctx = RequestContext(
@@ -323,22 +359,28 @@ class RuntimeManager:
                 "request_id": str(ctx.request_id),
             })
 
-            # Stage 0: Fast Command Engine bypass check (deterministic desktop commands)
-            router_exists = self._fast_command_router is not None
-            is_fast = self._fast_command_router.is_fast_command(request.text) if router_exists else False
-            self._logger.info(
-                "[ROUTING] FastCommandRouter check (stream) -- router_exists=%s is_fast=%s text=%r",
-                router_exists, is_fast, request.text,
-            )
+            # Stage 0: Decision Engine Routing
+            target_route = RouteTarget.LLM_CONVERSATION
+            if self._decision_manager is not None:
+                decide_fn = getattr(self._decision_manager, "decide", None)
+                if callable(decide_fn):
+                    decision = await decide_fn(request.text, request.metadata)
+                    target_route = decision.target
 
-            if is_fast:
-                self._logger.info("[ROUTING] [MATCH] Fast Command Router MATCHED (stream): '%s' -- executing directly (bypassing Gemini)", request.text)
-                fast_result = await self._fast_command_router.execute_fast_command(request.text)
-                duration_ms = (time.time() - ctx.start_time) * 1000
+            if (
+                target_route == RouteTarget.LLM_CONVERSATION
+                and self._fast_command_router is not None
+                and self._fast_command_router.is_fast_command(request.text)
+            ):
+                target_route = RouteTarget.FAST_COMMAND_ROUTER
+
+            fcr = self._fast_command_router
+            if target_route == RouteTarget.FAST_COMMAND_ROUTER and fcr is not None:
                 self._logger.info(
-                    "[ROUTING] [OK] Fast command executed in %.1fms -- result: %s",
-                    duration_ms, fast_result[:200],
+                    "[ROUTING] [MATCH] Fast Command Router MATCHED (stream): '%s'", request.text
                 )
+                fast_result = await fcr.execute_fast_command(request.text)
+                duration_ms = (time.time() - ctx.start_time) * 1000
 
                 yield fast_result
 
@@ -352,19 +394,7 @@ class RuntimeManager:
                     duration_ms=duration_ms,
                 )
                 await self._store_turn(ctx, final_response)
-                await self._emit_event("runtime.request_complete", {
-                    "session_id": ctx.session_id,
-                    "request_id": str(ctx.request_id),
-                    "duration_ms": duration_ms,
-                    "token_usage": {
-                        "prompt_tokens": token_usage.prompt_tokens,
-                        "completion_tokens": token_usage.completion_tokens,
-                        "total_tokens": token_usage.total_tokens,
-                    },
-                })
                 return
-
-            self._logger.info("[ROUTING] [NO-MATCH] Fast command NOT matched (stream) -- falling through to Gemini LLM for text=%r", request.text)
 
             await self._resolve_session(ctx)
 
@@ -382,7 +412,6 @@ class RuntimeManager:
                 accumulated_text += chunk
                 yield chunk
 
-            # Build a synthetic LLMResponse for storage
             token_usage = self._estimate_token_usage(
                 ctx.system_prompt, accumulated_text
             )
@@ -397,27 +426,10 @@ class RuntimeManager:
 
             await self._store_turn(ctx, final_response)
 
-            await self._emit_event("runtime.request_complete", {
-                "session_id": ctx.session_id,
-                "request_id": str(ctx.request_id),
-                "duration_ms": final_response.duration_ms,
-                "token_usage": {
-                    "prompt_tokens": token_usage.prompt_tokens,
-                    "completion_tokens": token_usage.completion_tokens,
-                    "total_tokens": token_usage.total_tokens,
-                },
-            })
-
         except Exception as exc:
             self._logger.error(
                 "Runtime stream error at stage '%s': %s", ctx.current_stage, exc
             )
-            await self._emit_event("runtime.request_error", {
-                "session_id": ctx.session_id,
-                "request_id": str(ctx.request_id),
-                "error": str(exc),
-                "stage": ctx.current_stage,
-            })
             yield f"\n[Error: {exc}]"
 
     # ------------------------------------------------------------------
@@ -428,13 +440,46 @@ class RuntimeManager:
         """Resolve the session via the conversation manager."""
         if self._conversation_manager is None:
             return None
+
         resolve = getattr(self._conversation_manager, "process_request", None)
-        if resolve is None:
-            route = getattr(self._conversation_manager, "router", None)
-            if route is not None:
-                route_fn = getattr(route, "route", None)
-                if route_fn is not None:
-                    return route_fn(ctx.session_id)
+        if callable(resolve):
+            try:
+                req = UserRequest(
+                    id=ctx.request_id,
+                    session_id=ctx.session_id,
+                    text=ctx.user_text,
+                    source=ctx.source,
+                    metadata=ctx.metadata,
+                )
+                try:
+                    result = resolve(req)
+                except TypeError:
+                    try:
+                        result = resolve(ctx)
+                    except TypeError:
+                        result = resolve(ctx.session_id)
+
+                if inspect.isawaitable(result):
+                    result = await result
+                return result
+            except Exception as exc:
+                self._logger.warning(
+                    "ConversationManager process_request failed: %s", exc
+                )
+
+        route = getattr(self._conversation_manager, "router", None)
+        if route is not None:
+            route_fn = getattr(route, "route", None)
+            if callable(route_fn):
+                try:
+                    result = route_fn(ctx.session_id)
+                    if inspect.isawaitable(result):
+                        result = await result
+                    return result
+                except Exception as exc:
+                    self._logger.warning(
+                        "ConversationManager router route failed: %s", exc
+                    )
         return None
 
     def _compile_prompt(self) -> str:
@@ -488,14 +533,13 @@ class RuntimeManager:
             return await generate(system_prompt, context_messages)
         return _empty_llm_response()
 
-
     async def _stream_with_tools(
         self,
         system_prompt: str,
         context_messages: list[Message],
         tool_defs: list[ToolDef],
     ) -> AsyncIterator[str]:
-        """Stream response tokens with native multi-iteration tool execution and clean error handling."""
+        """Stream response tokens with native multi-iteration tool execution."""
         if self._llm_manager is None:
             yield "Action failed"
             return
@@ -517,17 +561,14 @@ class RuntimeManager:
                     tools=tool_defs if tool_defs else None,
                 )
             except Exception as exc:
-                self._logger.error("LLM generation error in stream loop (iteration %d): %s", iterations, exc)
+                self._logger.error(
+                    "LLM generation error in stream loop (iter %d): %s", iterations, exc
+                )
                 if not final_text_yielded:
                     yield "Action failed"
                 return
 
             if response.tool_calls:
-                self._logger.info(
-                    "Native tool call detected (iter %d) — executing %d tools.",
-                    iterations,
-                    len(response.tool_calls),
-                )
                 assistant_msg = Message(
                     role="assistant",
                     content=response.text or "",
@@ -559,10 +600,8 @@ class RuntimeManager:
                             tool_call_id=tc.id,
                         )
                     )
-                # Continue loop to allow LLM to issue next tool call or final text
                 continue
             else:
-                # No tool calls — return natural language response directly
                 text_content = response.text or ""
                 if text_content.strip():
                     yield text_content
@@ -580,8 +619,10 @@ class RuntimeManager:
         ctx: RequestContext,
         response: LLMResponse,
     ) -> None:
-        """Persist both sides of the conversation turn via ContextManager and MemoryManager."""
-        asst_text = response.text if (response and response.text) else "Action executed successfully."
+        """Persist both sides of the conversation turn."""
+        asst_text = (
+            response.text if (response and response.text) else "Action executed successfully."
+        )
 
         if self._context_manager is not None:
             add_asst = getattr(self._context_manager, "add_assistant_message", None)

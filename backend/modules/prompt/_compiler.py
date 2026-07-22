@@ -14,6 +14,11 @@ from typing import Final
 
 from backend.modules.prompt._template import PromptTemplate
 
+try:
+    import jinja2
+except ImportError:
+    jinja2 = None
+
 _PLACEHOLDER_RE: Final[re.Pattern[str]] = re.compile(r"\{\{\s*([\w.]+)\s*\}\}")
 
 
@@ -21,12 +26,29 @@ class PromptCompileError(ValueError):
     """Raised when a template cannot be compiled (missing variables, etc.)."""
 
 
+def _expand_dots(d: dict[str, object]) -> dict[str, object]:
+    res: dict[str, object] = {}
+    for k, v in d.items():
+        res[k] = v
+        if "." in k:
+            parts = k.split(".")
+            curr: dict[str, object] = res
+            for part in parts[:-1]:
+                if part not in curr or not isinstance(curr[part], dict):
+                    new_d: dict[str, object] = {}
+                    curr[part] = new_d
+                    curr = new_d
+                else:
+                    curr = curr[part]  # type: ignore[assignment]
+            curr[parts[-1]] = v
+    return res
+
+
 class PromptCompiler:
     """Compiles ``PromptTemplate`` instances by substituting placeholders.
 
     Recognises ``{{ variable_name }}`` patterns (dots allowed in names)
-    and replaces them with values from the *variables* dict.  Unresolved
-    placeholders after substitution are treated as an error.
+    and Jinja2 logic templates, replacing them with values from *variables*.
     """
 
     @staticmethod
@@ -34,33 +56,29 @@ class PromptCompiler:
         template: PromptTemplate,
         variables: dict[str, str] | None = None,
     ) -> str:
-        """Render *template* with *variables* and return the result.
+        vars_dict: dict[str, object] = dict(variables or {})
 
-        Parameters
-        ----------
-        template : PromptTemplate
-            The template to render.
-        variables : dict[str, str] | None
-            Mapping of placeholder name → replacement text.
-
-        Returns
-        -------
-        str
-            The fully compiled prompt text.
-
-        Raises
-        ------
-        PromptCompileError
-            If any required placeholder is missing from *variables*.
-        """
-        vars_dict: dict[str, str] = variables or {}
+        if jinja2 is not None:
+            try:
+                env = jinja2.Environment(
+                    undefined=jinja2.StrictUndefined,
+                    autoescape=False,
+                )
+                j2_template = env.from_string(template.content)
+                return j2_template.render(**_expand_dots(vars_dict))
+            except jinja2.UndefinedError as exc:
+                msg = f"Missing variable '{exc}' in template '{template.name}'"
+                raise PromptCompileError(msg) from exc
+            except jinja2.TemplateError as exc:
+                msg = f"Failed to compile template '{template.name}': {exc}"
+                raise PromptCompileError(msg) from exc
 
         def _replace(match: re.Match[str]) -> str:
             name = match.group(1)
             if name not in vars_dict:
                 msg = f"Missing variable '{name}' in template '{template.name}'"
                 raise PromptCompileError(msg)
-            return vars_dict[name]
+            return str(vars_dict[name])
 
         result = _PLACEHOLDER_RE.sub(_replace, template.content)
 

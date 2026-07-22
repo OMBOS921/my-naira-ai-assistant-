@@ -9,6 +9,7 @@ preservation, structured errors).
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from typing import Any
@@ -72,7 +73,9 @@ class LLMManager:
         self._generation_config = generation_config or GenerationConfig()
         self._safety_config = safety_config or SafetyConfig()
         self._active_provider_name = active_provider
-        self._fallback_chain = fallback_chain
+        self._fallback_chain = tuple(dict.fromkeys(fallback_chain))
+        self._provider_success_count: dict[str, int] = {}
+        self._provider_failure_count: dict[str, int] = {}
         self._degraded: bool = False
         self._initialized: bool = False
 
@@ -216,6 +219,18 @@ class LLMManager:
                     "is_healthy": stats.is_healthy,
                 }
 
+        provider_runtime_metrics = {
+            provider_name: {
+                "success_count": self._provider_success_count.get(provider_name, 0),
+                "failure_count": self._provider_failure_count.get(provider_name, 0),
+            }
+            for provider_name in dict.fromkeys(
+                list(self._providers.keys())
+                + list(self._provider_success_count.keys())
+                + list(self._provider_failure_count.keys())
+            )
+        }
+
         return {
             "active_provider": self._active_provider_name,
             "registered_providers": list(self._providers.keys()),
@@ -223,6 +238,7 @@ class LLMManager:
             "degraded": self._degraded,
             "provider_statistics": provider_stats,
             "available_providers": available_providers,
+            "provider_runtime_metrics": provider_runtime_metrics,
         }
 
     # ------------------------------------------------------------------
@@ -272,6 +288,9 @@ class LLMManager:
 
             try:
                 response = await provider.generate(prompt, context, tools)
+                self._provider_success_count[provider_name] = (
+                    self._provider_success_count.get(provider_name, 0) + 1
+                )
                 self._logger.info(
                     "Generated response — provider=%s tokens=%d duration=%.0fms",
                     provider_name,
@@ -279,9 +298,14 @@ class LLMManager:
                     response.duration_ms,
                 )
                 return response
+            except asyncio.CancelledError:
+                raise
             except ProviderAuthError:
                 raise
             except (ProviderTimeoutError, ProviderRateLimitError, LLMError) as exc:
+                self._provider_failure_count[provider_name] = (
+                    self._provider_failure_count.get(provider_name, 0) + 1
+                )
                 errors[provider_name] = exc
                 self._logger.warning(
                     "Provider '%s' failed (%s), %d provider(s) remaining in chain",
@@ -343,10 +367,18 @@ class LLMManager:
             try:
                 async for chunk in provider.generate_stream(prompt, context, tools):
                     yield chunk
+                self._provider_success_count[provider_name] = (
+                    self._provider_success_count.get(provider_name, 0) + 1
+                )
                 return
+            except asyncio.CancelledError:
+                raise
             except ProviderAuthError:
                 raise
             except (ProviderTimeoutError, ProviderRateLimitError, LLMError) as exc:
+                self._provider_failure_count[provider_name] = (
+                    self._provider_failure_count.get(provider_name, 0) + 1
+                )
                 errors[provider_name] = exc
                 self._logger.warning(
                     "Stream provider '%s' failed (%s), falling back",

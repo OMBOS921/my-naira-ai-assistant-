@@ -5,6 +5,6 @@
   "avatar_3d": false,
   "file_manager": false,
   "pc_control": true,
-  "security": false,
+  "security": true,
   "coding_agent": false
 }

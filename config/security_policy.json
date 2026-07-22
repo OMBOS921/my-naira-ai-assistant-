@@ -1,0 +1,31 @@
+{
+  "version": "1.0",
+  "default_policy": "allow",
+  "max_risk": "critical",
+  "rules": [
+    {
+      "tool_pattern": "fcr_*",
+      "mode": "allow",
+      "risk_level": "medium",
+      "require_approval": false
+    },
+    {
+      "tool_pattern": "fcr_kill_process",
+      "mode": "confirm",
+      "risk_level": "high",
+      "require_approval": true
+    },
+    {
+      "tool_pattern": "pc_power",
+      "mode": "admin",
+      "risk_level": "critical",
+      "require_approval": true
+    },
+    {
+      "tool_pattern": "format_drive",
+      "mode": "deny",
+      "risk_level": "critical",
+      "require_approval": true
+    }
+  ]
+}

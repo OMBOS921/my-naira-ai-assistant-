@@ -8,19 +8,35 @@ Target execution latency: < 10 ms.
 from __future__ import annotations
 
 import asyncio
+import datetime
 import json
 import logging
 import os
 import re
 import shutil
+import socket
 import subprocess
 import time
+import urllib.parse
+import webbrowser
 from enum import Enum, auto
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Set
 
+try:
+    import mss
+    import psutil
+    import pyperclip
+except ImportError:
+    pass
+
 if os.name == "nt":
     import winreg
+    try:
+        import win32gui
+        import win32con
+    except ImportError:
+        pass
 
 _LOG = logging.getLogger("naira.runtime.fast_command_router")
 
@@ -75,6 +91,15 @@ class CommandIntent(Enum):
     OPEN_FILE = auto()
     RENAME_FILE = auto()
     UNKNOWN = auto()
+    SCREENSHOT = auto()
+    SYSTEM_INFO = auto()
+    WINDOW_MINIMIZE = auto()
+    WINDOW_MAXIMIZE = auto()
+    WINDOW_CLOSE = auto()
+    KILL_PROCESS = auto()
+    WEB_SEARCH = auto()
+    CLIPBOARD_OP = auto()
+    RUN_CMD_SAFE = auto()
 
 
 # ----------------------------------------------------------------------
@@ -93,7 +118,9 @@ class WakeWordCleaner:
         "karo", "do", "karde", "kar", "dijiye", "bhaiya", "bhaiya",
         # Devanagari Hindi
         "हेलो", "हाय", "हे", "नायरा", "प्लीज", "मेरा", "मेरी", "मेरे", "जरा", "एक", "भाई",
-        "सुनो", "सुन", "करो", "दो", "कर", "दीजिये", "दीजिए", "नायर"
+        "सुनो", "सुन", "करो", "दो", "कर", "दीजिये", "दीजिए", "नायर",
+        # Additional trigger noise words
+        "screenshot", "capture", "screengrab", "force", "kill"
     }
 
     _CLEAN_RE = re.compile(r"^[^\w\u0900-\u097F]+|[^\w\u0900-\u097F]+$", flags=re.UNICODE)
@@ -293,7 +320,7 @@ class AppDiscoveryEngine:
     """Scans the local Windows system to discover installed applications.
 
     Discovery sources (in order):
-    1. Windows Registry  App Paths
+    1. Windows Registry App Paths
     2. Start Menu shortcuts (.lnk filename matching)
     3. Desktop shortcuts (.lnk filename matching)
     4. Explicit install_paths from apps.json entries
@@ -543,6 +570,24 @@ class IntentEngine:
         if match:
             return match
 
+        # ----------------------------------------------------------------------
+        # New Intent Engine Matchers
+        # ----------------------------------------------------------------------
+        match = self._match_screenshot(cleaned_text, lowered_raw)
+        if match: return match
+        match = self._match_system_info(cleaned_text, lowered_raw)
+        if match: return match
+        match = self._match_window_control(cleaned_text, lowered_raw)
+        if match: return match
+        match = self._match_kill_process(cleaned_text, lowered_raw)
+        if match: return match
+        match = self._match_web_search(cleaned_text, lowered_raw)
+        if match: return match
+        match = self._match_clipboard(cleaned_text, lowered_raw)
+        if match: return match
+        match = self._match_run_cmd(cleaned_text, lowered_raw)
+        if match: return match
+
         # 7. Fallback Open match (including invalid target classification)
         if match:
             return match
@@ -781,6 +826,197 @@ class IntentEngine:
                 params={"old": m.group(1).strip(), "new": m.group(2).strip()}
             )
 
+        return None
+
+    # ----------------------------------------------------------------------
+    # New Private Matcher Methods (STEP 3)
+    # ----------------------------------------------------------------------
+
+    def _match_screenshot(self, cleaned: str, lowered_raw: str) -> RouteMatch | None:
+        text = f"{cleaned} {lowered_raw}"
+        triggers = (
+            "screenshot", "capture screen", "screen capture", "screengrab", "snap screen",
+            "स्क्रीनशॉट", "स्क्रीन कैप्चर",
+            "screenshot lo", "screenshot le", "screen capture karo", "screengrab lo"
+        )
+        if any(tr in text for tr in triggers):
+            return RouteMatch(
+                intent=CommandIntent.SCREENSHOT,
+                target="desktop_screenshot",
+                confidence=1.0,
+                handler_name="Screenshot",
+            )
+        return None
+
+    def _match_system_info(self, cleaned: str, lowered_raw: str) -> RouteMatch | None:
+        text = f"{cleaned} {lowered_raw}"
+        tokens = set(text.split())
+
+        if any(tr in text for tr in ("battery kitni", "charging", "चार्ज", "बैटरी")) or any(t in tokens for t in ("battery", "battry")):
+            sub_name = "battery"
+        elif any(tr in text for tr in ("kitne baje", "samay", "wakt", "वक्त", "समय")) or "time" in tokens:
+            sub_name = "time"
+        elif any(tr in text for tr in ("aaj kya date", "aaj ki date", "तारीख")) or "date" in tokens:
+            sub_name = "date"
+        elif any(tr in text for tr in ("ip address", "mera ip", "network address")) or "ip" in tokens:
+            sub_name = "ip"
+        elif any(tr in text for tr in ("kitni ram", "memory", "रैम", "मेमोरी")) or "ram" in tokens:
+            sub_name = "ram"
+        elif any(tr in text for tr in ("processor", "सीपीयू")) or "cpu" in tokens:
+            sub_name = "cpu"
+        elif any(tr in text for tr in ("disk space", "storage", "डिस्क")) or "disk" in tokens:
+            sub_name = "disk"
+        else:
+            return None
+
+        return RouteMatch(
+            intent=CommandIntent.SYSTEM_INFO,
+            target=sub_name,
+            confidence=1.0,
+            handler_name="SystemInfo",
+            params={"sub": sub_name},
+        )
+
+    def _match_window_control(self, cleaned: str, lowered_raw: str) -> RouteMatch | None:
+        text = lowered_raw.strip()
+
+        # Minimize
+        m_min = (
+            re.search(r"(?:minimize|chota)\s+(?:karo|kar|the window)?\s*(.+)", text, re.IGNORECASE)
+            or re.search(r"(.+?)\s+(?:minimize|chota)\s+(?:karo|kar)", text, re.IGNORECASE)
+        )
+        if m_min:
+            app_name = m_min.group(1).strip()
+            if app_name and app_name.lower() not in ("window", "the window"):
+                return RouteMatch(
+                    intent=CommandIntent.WINDOW_MINIMIZE,
+                    target=app_name,
+                    confidence=1.0,
+                    handler_name="WindowControl",
+                    params={"action": "minimize", "app_name": app_name},
+                )
+
+        # Maximize
+        m_max = (
+            re.search(r"(?:maximize|bada|fullscreen)\s+(?:karo|kar|the window)?\s*(.+)", text, re.IGNORECASE)
+            or re.search(r"(.+?)\s+(?:maximize|bada|fullscreen)\s+(?:karo|kar)", text, re.IGNORECASE)
+        )
+        if m_max:
+            app_name = m_max.group(1).strip()
+            if app_name and app_name.lower() not in ("window", "the window"):
+                return RouteMatch(
+                    intent=CommandIntent.WINDOW_MAXIMIZE,
+                    target=app_name,
+                    confidence=1.0,
+                    handler_name="WindowControl",
+                    params={"action": "maximize", "app_name": app_name},
+                )
+
+        # Close
+        m_close = (
+            re.search(r"(?:close|band)\s+(?:karo|kar|the window)?\s*(.+)", text, re.IGNORECASE)
+            or re.search(r"(.+?)\s+(?:close|band)\s+(?:karo|kar)", text, re.IGNORECASE)
+        )
+        if m_close:
+            app_name = m_close.group(1).strip()
+            if app_name and app_name.lower() not in ("window", "the window", "karo", "kar", ""):
+                return RouteMatch(
+                    intent=CommandIntent.WINDOW_CLOSE,
+                    target=app_name,
+                    confidence=1.0,
+                    handler_name="WindowControl",
+                    params={"action": "close", "app_name": app_name},
+                )
+
+        return None
+
+    def _match_kill_process(self, cleaned: str, lowered_raw: str) -> RouteMatch | None:
+        text = lowered_raw.strip()
+        m = (
+            re.search(r"(?:force close|force quit|force band|kill)\s+(.+)", text, re.IGNORECASE)
+            or re.search(r"(.+?)\s+(?:ko force close karo|force band karo|kill karo|kill kar)", text, re.IGNORECASE)
+        )
+        if m:
+            app_name = m.group(1).strip()
+            if app_name:
+                return RouteMatch(
+                    intent=CommandIntent.KILL_PROCESS,
+                    target=app_name,
+                    confidence=1.0,
+                    handler_name="KillProcess",
+                    params={"app_name": app_name},
+                )
+        return None
+
+    def _match_web_search(self, cleaned: str, lowered_raw: str) -> RouteMatch | None:
+        text = lowered_raw.strip()
+
+        m1 = re.search(r"(youtube|google)\s+(?:pe|mein|par)?\s*(.+?)\s+(?:search karo|dhundho)", text, re.IGNORECASE)
+        if m1:
+            platform = m1.group(1).lower()
+            query = m1.group(2).strip()
+        else:
+            m2 = re.search(r"search\s+(.+?)\s+on\s+(youtube|google)", text, re.IGNORECASE)
+            if m2:
+                query = m2.group(1).strip()
+                platform = m2.group(2).lower()
+            else:
+                m3 = re.search(r"(youtube|google)\s+search\s+(.+)", text, re.IGNORECASE)
+                if m3:
+                    platform = m3.group(1).lower()
+                    query = m3.group(2).strip()
+                else:
+                    return None
+
+        if not query:
+            return None
+
+        base_url = (
+            "https://www.youtube.com/results?search_query="
+            if platform == "youtube"
+            else "https://www.google.com/search?q="
+        )
+        encoded_query = urllib.parse.quote_plus(query)
+        encoded_full_url = f"{base_url}{encoded_query}"
+
+        return RouteMatch(
+            intent=CommandIntent.WEB_SEARCH,
+            target=encoded_full_url,
+            confidence=1.0,
+            handler_name="WebSearch",
+            params={"query": query, "platform": platform},
+        )
+
+    def _match_clipboard(self, cleaned: str, lowered_raw: str) -> RouteMatch | None:
+        text = f"{cleaned} {lowered_raw}"
+        triggers = ("clipboard clear karo", "clipboard saaf karo", "clear clipboard", "clipboard खाली करो")
+        if any(tr in text for tr in triggers):
+            return RouteMatch(
+                intent=CommandIntent.CLIPBOARD_OP,
+                target="clear",
+                confidence=1.0,
+                handler_name="ClipboardOp",
+                params={"action": "clear"},
+            )
+        return None
+
+    def _match_run_cmd(self, cleaned: str, lowered_raw: str) -> RouteMatch | None:
+        text = lowered_raw.strip()
+        m = (
+            re.search(r"(?:run|execute|chalao)\s+([a-zA-Z0-9_ \-\/]+)", text, re.IGNORECASE)
+            or re.search(r"([a-zA-Z0-9_ \-\/]+)\s+(?:run karo|chalao)", text, re.IGNORECASE)
+        )
+        if m:
+            extracted_cmd = m.group(1).strip()
+            SAFE_PREFIXES = ("ipconfig", "ping ", "tracert ", "netstat", "tasklist", "systeminfo", "whoami", "hostname", "ver", "dir")
+            if any(extracted_cmd.lower().startswith(prefix) for prefix in SAFE_PREFIXES):
+                return RouteMatch(
+                    intent=CommandIntent.RUN_CMD_SAFE,
+                    target=extracted_cmd,
+                    confidence=1.0,
+                    handler_name="RunCmdSafe",
+                    params={"cmd": extracted_cmd},
+                )
         return None
 
 
@@ -1111,6 +1347,21 @@ class FastCommandRouter:
                 CommandIntent.CREATE_FILE, CommandIntent.DELETE_FILE, CommandIntent.OPEN_FILE, CommandIntent.RENAME_FILE
             ):
                 return await self._execute_filesystem(match, text, start_time)
+
+            if match.intent == CommandIntent.SCREENSHOT:
+                return await self._execute_screenshot(match, start_time)
+            if match.intent == CommandIntent.SYSTEM_INFO:
+                return await self._execute_system_info(match, start_time)
+            if match.intent in (CommandIntent.WINDOW_MINIMIZE, CommandIntent.WINDOW_MAXIMIZE, CommandIntent.WINDOW_CLOSE):
+                return await self._execute_window_control(match, start_time)
+            if match.intent == CommandIntent.KILL_PROCESS:
+                return await self._execute_kill_process(match, start_time)
+            if match.intent == CommandIntent.WEB_SEARCH:
+                return await self._execute_web_search(match, start_time)
+            if match.intent == CommandIntent.CLIPBOARD_OP:
+                return await self._execute_clipboard(match, start_time)
+            if match.intent == CommandIntent.RUN_CMD_SAFE:
+                return await self._execute_run_cmd(match, start_time)
 
             return self._format_error(
                 summary=f"Unhandled intent: {match.intent.name}",
@@ -1621,6 +1872,225 @@ class FastCommandRouter:
             final_status="FAILED"
         )
 
+    # ----------------------------------------------------------------------
+    # New Private Execute Handlers (STEP 6)
+    # ----------------------------------------------------------------------
+
+    async def _execute_screenshot(self, match: RouteMatch, start_time: float) -> str:
+        try:
+            import mss
+            screenshot_dir = Path.home() / "Desktop" / "Screenshots"
+            screenshot_dir.mkdir(parents=True, exist_ok=True)
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            file_path = screenshot_dir / f"naira_{timestamp}.png"
+
+            def _take_screenshot():
+                with mss.mss() as sct:
+                    sct.shot(output=str(file_path))
+
+            await asyncio.to_thread(_take_screenshot)
+
+            duration_ms = (time.time() - start_time) * 1000
+            return f"SUCCESS: Captured screenshot to {file_path.name}. [Fast Execution: {duration_ms:.1f}ms]"
+        except Exception as exc:
+            return self._format_error(
+                summary="Failed to capture screenshot",
+                root_cause=f"Screenshot error: {exc}",
+                tool_name="Screenshot",
+                exception=f"{type(exc).__name__}: {exc}",
+                recovery="Attempted mss library screenshot",
+                final_status="FAILED",
+            )
+
+    async def _execute_system_info(self, match: RouteMatch, start_time: float) -> str:
+        sub = match.params.get("sub", "")
+        try:
+            import psutil
+
+            details = ""
+            if sub == "battery":
+                batt = psutil.sensors_battery()
+                if batt:
+                    status = "Plugged in" if batt.power_plugged else "Discharging"
+                    details = f"Battery is at {batt.percent:.0f}% ({status})"
+                else:
+                    details = "Battery information unavailable"
+            elif sub == "time":
+                details = f"Current time is {datetime.datetime.now().strftime('%I:%M %p')}"
+            elif sub == "date":
+                details = f"Today's date is {datetime.datetime.now().strftime('%A, %B %d, %Y')}"
+            elif sub == "ip":
+                hostname = socket.gethostname()
+                ip_addr = socket.gethostbyname(hostname)
+                details = f"IP Address: {ip_addr} (Host: {hostname})"
+            elif sub == "ram":
+                mem = psutil.virtual_memory()
+                details = f"RAM Usage: {mem.percent}% ({mem.used // (1024**2)} MB / {mem.total // (1024**2)} MB)"
+            elif sub == "cpu":
+                cpu_pct = psutil.cpu_percent(interval=None)
+                details = f"CPU Utilization: {cpu_pct}% ({psutil.cpu_count(logical=True)} cores)"
+            elif sub == "disk":
+                disk = psutil.disk_usage("/")
+                details = f"Disk Usage: {disk.percent}% ({disk.free // (1024**3)} GB free of {disk.total // (1024**3)} GB)"
+            else:
+                details = f"System info option '{sub}' not recognized"
+
+            duration_ms = (time.time() - start_time) * 1000
+            return f"INFO: {details}. [Fast Execution: {duration_ms:.1f}ms]"
+        except Exception as exc:
+            return self._format_error(
+                summary=f"Failed to get system info for '{sub}'",
+                root_cause=f"System info error: {exc}",
+                tool_name="SystemInfo",
+                exception=f"{type(exc).__name__}: {exc}",
+                recovery="Attempted psutil/socket query",
+                final_status="FAILED",
+            )
+
+    async def _execute_window_control(self, match: RouteMatch, start_time: float) -> str:
+        action = match.params.get("action", "")
+        app_name = match.params.get("app_name", "").lower()
+        try:
+            def _control_window():
+                if os.name != "nt":
+                    return False, "Window control is only supported on Windows"
+                import win32gui
+                import win32con
+
+                matched_hwnd = None
+                matched_title = None
+
+                def enum_cb(hwnd, _):
+                    nonlocal matched_hwnd, matched_title
+                    if win32gui.IsWindowVisible(hwnd):
+                        txt = win32gui.GetWindowText(hwnd)
+                        if txt and app_name in txt.lower():
+                            matched_hwnd = hwnd
+                            matched_title = txt
+                            return False
+                    return True
+
+                win32gui.EnumWindows(enum_cb, None)
+                if not matched_hwnd:
+                    return False, f"No open window matching '{app_name}' found"
+
+                if action == "minimize":
+                    win32gui.ShowWindow(matched_hwnd, win32con.SW_MINIMIZE)
+                    return True, f"Minimized window '{matched_title}'"
+                elif action == "maximize":
+                    win32gui.ShowWindow(matched_hwnd, win32con.SW_MAXIMIZE)
+                    win32gui.SetForegroundWindow(matched_hwnd)
+                    return True, f"Maximized window '{matched_title}'"
+                elif action == "close":
+                    win32gui.PostMessage(matched_hwnd, win32con.WM_CLOSE, 0, 0)
+                    return True, f"Closed window '{matched_title}'"
+                return False, f"Unknown window action '{action}'"
+
+            success, msg = await asyncio.to_thread(_control_window)
+            duration_ms = (time.time() - start_time) * 1000
+            if success:
+                return f"SUCCESS: {msg}. [Fast Execution: {duration_ms:.1f}ms]"
+            else:
+                return f"INVALID_TARGET: {msg}. [Fast Execution: {duration_ms:.1f}ms]"
+        except Exception as exc:
+            return self._format_error(
+                summary=f"Failed window control '{action}' for '{app_name}'",
+                root_cause=f"Window control API error: {exc}",
+                tool_name="WindowControl",
+                exception=f"{type(exc).__name__}: {exc}",
+                recovery="Attempted win32gui EnumWindows",
+                final_status="FAILED",
+            )
+
+    async def _execute_kill_process(self, match: RouteMatch, start_time: float) -> str:
+        app_name = match.params.get("app_name", "").lower()
+        try:
+            def _kill():
+                import psutil
+                killed_count = 0
+                for p in psutil.process_iter(['pid', 'name']):
+                    try:
+                        p_name = (p.info.get('name') or '').lower()
+                        if app_name and (app_name in p_name or p_name.startswith(app_name)):
+                            p.kill()
+                            killed_count += 1
+                    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                        continue
+                return killed_count
+
+            count = await asyncio.to_thread(_kill)
+            duration_ms = (time.time() - start_time) * 1000
+            if count > 0:
+                return f"SUCCESS: Killed {count} process(es) matching '{app_name}'. [Fast Execution: {duration_ms:.1f}ms]"
+            else:
+                return f"INVALID_TARGET: No active processes found matching '{app_name}'. [Fast Execution: {duration_ms:.1f}ms]"
+        except Exception as exc:
+            return self._format_error(
+                summary=f"Failed to kill process '{app_name}'",
+                root_cause=f"Process kill error: {exc}",
+                tool_name="KillProcess",
+                exception=f"{type(exc).__name__}: {exc}",
+                recovery="Attempted psutil process termination",
+                final_status="FAILED",
+            )
+
+    async def _execute_web_search(self, match: RouteMatch, start_time: float) -> str:
+        try:
+            url = match.target
+            platform = match.params.get("platform", "web").title()
+            query = match.params.get("query", "")
+            webbrowser.open(url)
+            duration_ms = (time.time() - start_time) * 1000
+            return f"SUCCESS: Searched '{query}' on {platform}. [Fast Execution: {duration_ms:.1f}ms]"
+        except Exception as exc:
+            return self._format_error(
+                summary="Failed to open web search",
+                root_cause=f"Webbrowser error: {exc}",
+                tool_name="WebSearch",
+                exception=f"{type(exc).__name__}: {exc}",
+                recovery="Attempted webbrowser open",
+                final_status="FAILED",
+            )
+
+    async def _execute_clipboard(self, match: RouteMatch, start_time: float) -> str:
+        try:
+            import pyperclip
+            pyperclip.copy('')
+            duration_ms = (time.time() - start_time) * 1000
+            return f"SUCCESS: Cleared system clipboard. [Fast Execution: {duration_ms:.1f}ms]"
+        except Exception as exc:
+            return self._format_error(
+                summary="Failed to clear clipboard",
+                root_cause=f"Pyperclip error: {exc}",
+                tool_name="ClipboardOp",
+                exception=f"{type(exc).__name__}: {exc}",
+                recovery="Attempted pyperclip.copy empty string",
+                final_status="FAILED",
+            )
+
+    async def _execute_run_cmd(self, match: RouteMatch, start_time: float) -> str:
+        cmd = match.params.get("cmd", match.target)
+        try:
+            def _run():
+                res = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
+                out = res.stdout or res.stderr or ""
+                return out.strip()
+
+            output = await asyncio.to_thread(_run)
+            if len(output) > 800:
+                output = output[:800] + "... (truncated)"
+            duration_ms = (time.time() - start_time) * 1000
+            return f"SUCCESS: Executed command '{cmd}'. Output: {output} [Fast Execution: {duration_ms:.1f}ms]"
+        except Exception as exc:
+            return self._format_error(
+                summary=f"Failed to execute safe command '{cmd}'",
+                root_cause=f"Subprocess execution error: {exc}",
+                tool_name="RunCmdSafe",
+                exception=f"{type(exc).__name__}: {exc}",
+                recovery="Attempted subprocess.run shell execution",
+                final_status="FAILED",
+            )
+
     def _format_error(
         self,
         summary: str,
@@ -1639,4 +2109,3 @@ class FastCommandRouter:
             f"• Recovery Attempt: {recovery}\n"
             f"• Final Status: {final_status}"
         )
-

@@ -10,18 +10,22 @@ import asyncio
 import json
 import logging
 import os
+import socket
 import time
+import uuid
 from typing import Any
 
 import requests
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 from backend.exceptions import LLMError, ProviderAuthError, ProviderRateLimitError, ProviderTimeoutError
 from backend.modules.llm.provider_base import ProviderBase
 from backend.types import LLMResponse, Message, TokenUsage, ToolCall, ToolDef
-
-load_dotenv()
 _LOG = logging.getLogger("naira.llm.deepseek")
 
 
@@ -121,39 +125,129 @@ class DeepSeekProvider(ProviderBase):
             ]
             payload["tool_choice"] = "auto"
 
+        request_id = str(uuid.uuid4())
         url = "https://opencode.ai/zen/v1/chat/completions"
+        raw_timeout = self._timeout if (self._timeout is not None and isinstance(self._timeout, (int, float))) else 30
+        timeout_val = max(1, raw_timeout)
 
         def _make_request() -> requests.Response:
-            return requests.post(url, json=payload, headers=headers, timeout=self._timeout)
+            return requests.post(url, json=payload, headers=headers, timeout=timeout_val)
 
         try:
             response = await asyncio.to_thread(_make_request)
-        except requests.Timeout as exc:
+        except asyncio.CancelledError:
+            raise
+        except (requests.Timeout, socket.timeout, TimeoutError) as exc:
+            elapsed_ms = (time.monotonic() - start_time) * 1000
             raise ProviderTimeoutError(
-                f"DeepSeek request timed out after {self._timeout}s",
-                context={"provider": "deepseek", "timeout": self._timeout},
+                f"DeepSeek request timed out after {timeout_val}s",
+                context={
+                    "request_id": request_id,
+                    "provider": "deepseek",
+                    "model": self._model,
+                    "elapsed_ms": elapsed_ms,
+                    "endpoint_without_key": url,
+                    "url": url,
+                    "timeout": timeout_val,
+                    "error": str(exc),
+                    "original_exception": type(exc).__name__,
+                },
+            ) from exc
+        except requests.ConnectionError as exc:
+            elapsed_ms = (time.monotonic() - start_time) * 1000
+            raise LLMError(
+                f"DeepSeek connection error: {exc}",
+                context={
+                    "request_id": request_id,
+                    "provider": "deepseek",
+                    "model": self._model,
+                    "elapsed_ms": elapsed_ms,
+                    "endpoint_without_key": url,
+                    "url": url,
+                    "error": str(exc),
+                    "original_exception": type(exc).__name__,
+                },
+            ) from exc
+        except requests.HTTPError as exc:
+            elapsed_ms = (time.monotonic() - start_time) * 1000
+            raise LLMError(
+                f"DeepSeek HTTP error: {exc}",
+                context={
+                    "request_id": request_id,
+                    "provider": "deepseek",
+                    "model": self._model,
+                    "elapsed_ms": elapsed_ms,
+                    "endpoint_without_key": url,
+                    "url": url,
+                    "error": str(exc),
+                    "original_exception": type(exc).__name__,
+                },
+            ) from exc
+        except requests.RequestException as exc:
+            elapsed_ms = (time.monotonic() - start_time) * 1000
+            raise LLMError(
+                f"DeepSeek request error: {exc}",
+                context={
+                    "request_id": request_id,
+                    "provider": "deepseek",
+                    "model": self._model,
+                    "elapsed_ms": elapsed_ms,
+                    "endpoint_without_key": url,
+                    "url": url,
+                    "error": str(exc),
+                    "original_exception": type(exc).__name__,
+                },
             ) from exc
         except Exception as exc:
+            elapsed_ms = (time.monotonic() - start_time) * 1000
             raise LLMError(
                 f"DeepSeek network/request error: {exc}",
-                context={"provider": "deepseek"},
+                context={
+                    "request_id": request_id,
+                    "provider": "deepseek",
+                    "model": self._model,
+                    "elapsed_ms": elapsed_ms,
+                    "endpoint_without_key": url,
+                    "url": url,
+                    "error": str(exc),
+                    "original_exception": type(exc).__name__,
+                },
             ) from exc
 
         if response.status_code != 200:
-            self._logger.error("DeepSeek API failed (status %d): %s", response.status_code, response.text)
-            print(f"DeepSeek API Error (status {response.status_code}): {response.text}")
+            elapsed_ms = (time.monotonic() - start_time) * 1000
+            self._logger.error("DeepSeek API failed with status %d", response.status_code)
 
+            err_context = {
+                "request_id": request_id,
+                "provider": "deepseek",
+                "model": self._model,
+                "elapsed_ms": elapsed_ms,
+                "endpoint_without_key": url,
+                "status": response.status_code,
+            }
             if response.status_code in (401, 403):
-                raise ProviderAuthError(f"DeepSeek auth failed: {response.text}", context={"status": response.status_code})
+                raise ProviderAuthError(f"DeepSeek auth failed (status {response.status_code})", context=err_context)
             if response.status_code == 429:
-                raise ProviderRateLimitError(f"DeepSeek rate limit: {response.text}", context={"status": response.status_code})
-            raise LLMError(f"DeepSeek API error: {response.text}", context={"status": response.status_code})
+                raise ProviderRateLimitError(f"DeepSeek rate limit exceeded (status {response.status_code})", context=err_context)
+            raise LLMError(f"DeepSeek API error (status {response.status_code})", context=err_context)
 
         try:
             data = response.json()
             text = data['choices'][0]['message']['content']
         except (ValueError, KeyError, IndexError) as exc:
-            raise LLMError(f"DeepSeek response parsing failed: {exc} | Raw response: {response.text}") from exc
+            elapsed_ms = (time.monotonic() - start_time) * 1000
+            raise LLMError(
+                f"DeepSeek response parsing failed: {exc}",
+                context={
+                    "request_id": request_id,
+                    "provider": "deepseek",
+                    "model": self._model,
+                    "elapsed_ms": elapsed_ms,
+                    "error": str(exc),
+                    "original_exception": type(exc).__name__,
+                },
+            ) from exc
 
         choice = data["choices"][0]
         message_data = choice.get("message", {})

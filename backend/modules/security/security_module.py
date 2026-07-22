@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from pathlib import Path
 from typing import Any
 
 from backend.exceptions import ModuleDegradedError
@@ -13,6 +14,11 @@ from backend.modules.security._types import (
     RiskLevel,
     SecurityCheck,
     SecurityPolicyRule,
+)
+from backend.modules.security.permission_engine import (
+    PermissionDecision,
+    PermissionEngine,
+    PermissionResult,
 )
 from backend.modules.security.ports.security_port import SecurityPort
 from backend.types import ToolResult
@@ -39,6 +45,13 @@ class SecurityManager:
         self._tool_manager = tool_manager
         self._degraded: bool = False
         self._default_timeout = default_timeout
+
+        db_dir = Path.cwd() / "data"
+        db_dir.mkdir(parents=True, exist_ok=True)
+        self._permission_engine = PermissionEngine(
+            db_path=str(db_dir / "naira_security.db"),
+            logger=self._logger,
+        )
 
         sec_config = getattr(config, "security", None) if config else None
 
@@ -74,6 +87,10 @@ class SecurityManager:
             await self._adapter.close()
         except Exception as exc:
             self._logger.warning("Error closing security adapter: %s", exc)
+        try:
+            self._permission_engine.close()
+        except Exception as exc:
+            self._logger.warning("Error closing permission engine: %s", exc)
         self._degraded = False
         self._logger.info("Security manager shut down.")
 
@@ -88,6 +105,115 @@ class SecurityManager:
     @property
     def is_available(self) -> bool:
         return self._executor.is_available
+
+    @property
+    def permission_engine(self) -> PermissionEngine:
+        return self._permission_engine
+
+    # ------------------------------------------------------------------
+    # Async Permission Engine Wrappers (Fail-Open)
+    # ------------------------------------------------------------------
+
+    async def permission_check(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any] | None = None,
+        risk_level: str | None = None,
+    ) -> PermissionResult:
+        try:
+            return await asyncio.to_thread(
+                self._permission_engine.check,
+                tool_name,
+                arguments,
+                risk_level,
+            )
+        except Exception as exc:
+            self._logger.error("Error in permission_check (fail-open): %s", exc)
+            return PermissionResult(
+                decision=PermissionDecision.ALLOWED,
+                tool_name=tool_name,
+                reason=f"Fail-open exception: {exc}",
+                risk_level=risk_level or "medium",
+                requires_user_prompt=False,
+                user_prompt_message="",
+                cached_from_scope="",
+            )
+
+    async def grant_permission(
+        self,
+        tool_name: str,
+        decision: PermissionDecision | str = PermissionDecision.ALLOWED,
+        scope: str = "session",
+        reason: str | None = None,
+    ) -> None:
+        try:
+            await asyncio.to_thread(
+                self._permission_engine.grant,
+                tool_name,
+                decision,
+                scope,
+                reason,
+            )
+        except Exception as exc:
+            self._logger.error("Error in grant_permission: %s", exc)
+
+    async def log_operation(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any] | None = None,
+        decision: PermissionDecision | str = PermissionDecision.ALLOWED,
+        risk_level: str = "low",
+        duration_ms: float = 0,
+        session_id: str | None = None,
+        result_summary: str | None = None,
+    ) -> None:
+        try:
+            await asyncio.to_thread(
+                self._permission_engine.log_audit,
+                tool_name,
+                arguments,
+                decision,
+                risk_level,
+                duration_ms,
+                session_id,
+                result_summary,
+            )
+        except Exception as exc:
+            self._logger.error("Error in log_operation: %s", exc)
+
+    async def get_audit_log(
+        self,
+        limit: int = 100,
+        tool_name: str | None = None,
+    ) -> Any:
+        if tool_name is not None:
+            try:
+                return await asyncio.to_thread(
+                    self._permission_engine.get_audit_log,
+                    limit,
+                    tool_name,
+                )
+            except Exception as exc:
+                self._logger.error("Error in get_audit_log: %s", exc)
+                return []
+        return await self._executor.get_audit_log(limit=limit)
+
+    async def get_security_stats(self) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(
+                self._permission_engine.get_stats,
+            )
+        except Exception as exc:
+            self._logger.error("Error in get_security_stats: %s", exc)
+            return {}
+
+    async def clear_session_permissions(self) -> None:
+        try:
+            await asyncio.to_thread(
+                self._permission_engine.clear_session,
+            )
+        except Exception as exc:
+            self._logger.error("Error in clear_session_permissions: %s", exc)
 
     # ------------------------------------------------------------------
     # Permission API (used by ToolPermission integration)
@@ -172,9 +298,6 @@ class SecurityManager:
             "caller": caller,
             "result": result,
         })
-
-    async def get_audit_log(self, limit: int = 100) -> list[AuditEntry]:
-        return await self._executor.get_audit_log(limit=limit)
 
     async def get_status(self) -> ToolResult:
         self._ensure_not_degraded()
@@ -348,8 +471,8 @@ class SecurityManager:
         if not entries:
             return ToolResult(status="success", output="No audit entries found")
         lines = [
-            f"[{e.timestamp}] {e.tool} by {e.caller}: "
-            f"{e.result} (risk={e.risk_score.value})"
+            f"[{e.get('called_at', '')}] {e.get('tool_name', '')}: "
+            f"{e.get('decision', '')} (risk={e.get('risk_level', '')})"
             for e in entries
         ]
         return ToolResult(status="success", output="\n".join(lines))
