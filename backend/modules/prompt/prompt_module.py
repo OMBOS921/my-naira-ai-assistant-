@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from backend.modules.prompt._compiler import PromptCompiler
 from backend.modules.prompt._loader import load_template
@@ -152,13 +153,19 @@ class PromptManager:
             )
 
 
-def _build_default_variables(config: object | None) -> dict[str, str]:
+def _build_default_variables(config: object | None) -> dict[str, Any]:
     """Build a base set of template variables from *config*.
 
     Includes the current date and capabilities derived from feature flags.
     """
-    variables: dict[str, str] = {
+    variables: dict[str, Any] = {
         "date": date.today().isoformat(),
+        "memory_context": "",
+        "user_name": "Om",
+        "friendship_score": 5,
+        "fs": 5,
+        "voice_mode": False,
+        "capabilities": "",
     }
 
     capabilities: list[str] = []
@@ -189,7 +196,5 @@ def _build_default_variables(config: object | None) -> dict[str, str]:
 
     if capabilities:
         variables["capabilities"] = ", ".join(capabilities)
-    else:
-        variables["capabilities"] = ""
 
     return variables

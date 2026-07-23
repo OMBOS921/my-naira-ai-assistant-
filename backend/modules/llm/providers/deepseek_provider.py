@@ -19,9 +19,9 @@ import requests
 
 try:
     from dotenv import load_dotenv
-    load_dotenv()
 except ImportError:
-    pass
+    def load_dotenv() -> None:
+        pass
 
 from backend.exceptions import LLMError, ProviderAuthError, ProviderRateLimitError, ProviderTimeoutError
 from backend.modules.llm.provider_base import ProviderBase

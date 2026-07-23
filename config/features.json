@@ -3,10 +3,10 @@
   "voice": true,
   "browser": true,
   "avatar_3d": false,
-  "file_manager": false,
+  "file_manager": true,
   "pc_control": true,
   "security": true,
-  "coding_agent": false,
+  "coding_agent": true,
   "plugins": true,
   "autonomous_tasks": false,
   "multi_agent": false

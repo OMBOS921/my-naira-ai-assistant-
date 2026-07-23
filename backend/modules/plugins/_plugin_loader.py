@@ -40,7 +40,6 @@ class PluginLoader:
             if (
                 filename == "__init__.py"
                 or filename.startswith("_")
-                or filename.startswith("test_")
             ):
                 continue
             plugin_files.append(path)
@@ -70,8 +69,10 @@ class PluginLoader:
         Wrap EVERYTHING in try/except — a broken plugin file must NEVER crash Naira.
         """
         try:
+            import uuid
             self._logger.info("Attempting to load plugin file: %s", file_path)
-            module_name = f"naira_plugin_{file_path.stem}"
+            unique_id = uuid.uuid4().hex[:8]
+            module_name = f"naira_plugin_{file_path.stem}_{unique_id}"
 
             spec = importlib.util.spec_from_file_location(module_name, file_path)
             if spec is None or spec.loader is None:
@@ -80,7 +81,11 @@ class PluginLoader:
 
             module = importlib.util.module_from_spec(spec)
             sys.modules[module_name] = module
-            spec.loader.exec_module(module)
+            try:
+                spec.loader.exec_module(module)
+            except Exception:
+                sys.modules.pop(module_name, None)
+                raise
 
             plugin_class: type[NairaPlugin] | None = None
             for _name, cls in inspect.getmembers(module, inspect.isclass):

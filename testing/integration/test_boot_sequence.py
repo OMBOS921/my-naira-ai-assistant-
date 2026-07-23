@@ -267,9 +267,9 @@ class TestShutdown:
             init_order = orchestrator._module_init_order  # type: ignore[attr-defined]
             expected = [
                 "settings", "memory", "analytics", "context", "capability", "tools",
-                "security", "browser", "vision", "voice", "pc_control",
+                "security", "integrations", "plugins", "browser", "vision", "voice", "pc_control",
                 "coding_agent", "planning", "decision", "llm", "prompt",
-                "conversation", "context_intelligence", "runtime",
+                "conversation", "context_intelligence", "autonomous_tasks", "multi_agent", "runtime",
             ]
             assert init_order == expected, f"Expected {expected}, got {init_order}"
         finally:

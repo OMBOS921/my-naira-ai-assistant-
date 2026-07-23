@@ -73,18 +73,49 @@ class PromptCompiler:
                 msg = f"Failed to compile template '{template.name}': {exc}"
                 raise PromptCompileError(msg) from exc
 
-        def _replace(match: re.Match[str]) -> str:
-            name = match.group(1)
-            if name not in vars_dict:
-                msg = f"Missing variable '{name}' in template '{template.name}'"
-                raise PromptCompileError(msg)
-            return str(vars_dict[name])
+        content = template.content
 
-        result = _PLACEHOLDER_RE.sub(_replace, template.content)
+        # Handle {% set ... %} statements
+        content = re.sub(r"\{%\s*set\s+[\w.]+\s*=.*?%\}\n?", "", content)
 
-        remaining = _PLACEHOLDER_RE.findall(result)
-        if remaining:
-            msg = f"Unresolved placeholders in compiled prompt: {', '.join(remaining)}"
-            raise PromptCompileError(msg)
+        # Handle {% if ... %}...{% else %}...{% endif %} blocks
+        def _eval_if(m: re.Match[str]) -> str:
+            expr = m.group(1).strip()
+            if_body = m.group(2)
+            else_body = m.group(3) if m.group(3) is not None else ""
 
+            var_name = expr.split("|")[0].strip()
+            val = vars_dict.get(var_name)
+            is_truthy = bool(val) and str(val).strip() != "" and str(val).lower() != "false"
+            return if_body if is_truthy else else_body
+
+        content = re.sub(
+            r"\{%\s*if\s+(.*?)\s*%\}(.*?)(?:\{%\s*else\s*%\}(.*?))?\{%\s*endif\s*%\}",
+            _eval_if,
+            content,
+            flags=re.DOTALL,
+        )
+
+        # Handle {{ var | default('val') }} and {{ var }}
+        def _replace_var(m: re.Match[str]) -> str:
+            expr = m.group(1).strip()
+            if "|" in expr:
+                parts = expr.split("|", 1)
+                var_name = parts[0].strip()
+                filter_part = parts[1].strip()
+                val = vars_dict.get(var_name)
+                if val is not None and str(val) != "":
+                    return str(val)
+                default_m = re.search(r"default\((['\"]?)(.*?)\1\)", filter_part)
+                if default_m:
+                    return default_m.group(2)
+                return ""
+            else:
+                var_name = expr
+                if var_name not in vars_dict:
+                    msg = f"Missing variable '{var_name}' in template '{template.name}'"
+                    raise PromptCompileError(msg)
+                return str(vars_dict[var_name])
+
+        result = re.sub(r"\{\{\s*(.*?)\s*\}\}", _replace_var, content)
         return result

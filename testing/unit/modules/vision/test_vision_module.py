@@ -306,10 +306,14 @@ class TestScreenCapture:
         assert isinstance(sc.is_available, bool)
 
     @pytest.mark.asyncio
-    async def test_capture_raises(self) -> None:
+    async def test_capture_behavior(self) -> None:
         sc = ScreenCapture()
-        with pytest.raises((VisionNotImplementedError, VisionLoadError, Exception)):
-            await sc.capture()
+        if sc.is_available:
+            result = await sc.capture()
+            assert isinstance(result, ImageData)
+        else:
+            with pytest.raises(VisionLoadError):
+                await sc.capture()
 
 
 # =========================================================================

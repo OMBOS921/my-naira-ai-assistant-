@@ -23,6 +23,7 @@ from backend.modules.context import ContextManager
 from backend.modules.context_intelligence import ContextIntelligenceManager
 from backend.modules.conversation import ConversationManager
 from backend.modules.decision import DecisionManager
+from backend.modules.integrations import IntegrationsManager
 from backend.modules.llm import LLMManager
 from backend.modules.memory import MemoryManager
 from backend.modules.pc_control import PCControlManager
@@ -36,6 +37,7 @@ from backend.modules.pc_control._production_adapter import (
     _HAS_PYWIN32 as _PC_HAS_PYWIN32,
 )
 from backend.modules.planning import PlanningManager
+from backend.modules.plugins import PluginManager
 from backend.modules.prompt import PromptManager
 from backend.modules.security import SecurityManager
 from backend.modules.settings import AppConfig, SettingsManager
@@ -65,6 +67,8 @@ def _check_pc_control_deps() -> dict[str, bool]:
 
 _SHUTDOWN_ORDER: tuple[str, ...] = (
     "runtime",
+    "multi_agent",
+    "autonomous_tasks",
     "context_intelligence",
     "conversation",
     "prompt",
@@ -76,6 +80,8 @@ _SHUTDOWN_ORDER: tuple[str, ...] = (
     "voice",
     "vision",
     "browser",
+    "plugins",
+    "integrations",
     "security",
     "tools",
     "capability",
@@ -93,6 +99,8 @@ _BOOT_ORDER: tuple[str, ...] = (
     "capability",
     "tools",
     "security",
+    "integrations",
+    "plugins",
     "browser",
     "vision",
     "voice",
@@ -104,6 +112,8 @@ _BOOT_ORDER: tuple[str, ...] = (
     "prompt",
     "conversation",
     "context_intelligence",
+    "autonomous_tasks",
+    "multi_agent",
     "runtime",
 )
 
@@ -273,6 +283,38 @@ async def boot_core_modules(
             degraded_modules.append("security")
         tool_mgr.set_security_manager(security_mgr)
         _LOG.info("[BOOT] Security initialised — wired to ToolManager")
+
+        # 7f2 – IntegrationsManager (Layer 4 — Orchestration)
+        _LOG.info("[BOOT]   Initialising IntegrationsManager ...")
+        integrations_mgr = IntegrationsManager(
+            config=config,
+            event_bus=event_bus,
+            capability_manager=capability_mgr,
+            tool_manager=tool_mgr,
+        )
+        await integrations_mgr.async_init()
+        modules["integrations"] = integrations_mgr
+        container.register("integrations_manager", integrations_mgr)
+        orchestrator.register_module("integrations", integrations_mgr)
+        if getattr(integrations_mgr, "degraded", False):
+            degraded_modules.append("integrations")
+        _LOG.info("[BOOT] Integrations initialised")
+
+        # 7f3 – PluginManager (Layer 4 — Orchestration)
+        _LOG.info("[BOOT]   Initialising PluginManager ...")
+        plugins_dir = root_dir / "plugins"
+        plugins_mgr = PluginManager(
+            plugins_dir=plugins_dir,
+            event_bus=event_bus,
+            logger=_LOG,
+        )
+        await plugins_mgr.async_init()
+        modules["plugins"] = plugins_mgr
+        container.register("plugin_manager", plugins_mgr)
+        orchestrator.register_module("plugins", plugins_mgr)
+        if getattr(plugins_mgr, "degraded", False):
+            degraded_modules.append("plugins")
+        _LOG.info("[BOOT] Plugins initialised")
 
         # 7g – BrowserManager (Layer 4 — Orchestration)
         _LOG.info("[BOOT]   Initialising BrowserManager ...")
@@ -759,6 +801,23 @@ async def boot_core_modules(
             max_tool_iterations=config.tools.max_retries + 1,
         )
         await runtime_mgr.async_init()
+
+        # 7o2 – AutonomousTaskEngine (Layer 4 — Orchestration)
+        _LOG.info("[BOOT]   Registering AutonomousTaskEngine ...")
+        autonomous_engine = runtime_mgr.autonomous_task_engine
+        modules["autonomous_tasks"] = autonomous_engine
+        container.register("autonomous_task_engine", autonomous_engine)
+        orchestrator.register_module("autonomous_tasks", autonomous_engine)
+        _LOG.info("[BOOT] AutonomousTaskEngine registered")
+
+        # 7o3 – MultiAgentOrchestrator (Layer 4 — Orchestration)
+        _LOG.info("[BOOT]   Registering MultiAgentOrchestrator ...")
+        multi_agent_orch = runtime_mgr.multi_agent_orchestrator
+        modules["multi_agent"] = multi_agent_orch
+        container.register("multi_agent_orchestrator", multi_agent_orch)
+        orchestrator.register_module("multi_agent", multi_agent_orch)
+        _LOG.info("[BOOT] MultiAgentOrchestrator registered")
+
         modules["runtime"] = runtime_mgr
         container.register("runtime_manager", runtime_mgr)
         orchestrator.register_module("runtime", runtime_mgr)
@@ -890,17 +949,20 @@ def verify_boot_health(
         - ``service_count`` — total DI service count
     """
     expected_modules = {
-        "settings", "memory", "context", "capability", "tools", "security",
-        "vision", "voice", "browser", "pc_control", "coding_agent", "llm", "prompt",
-        "conversation", "context_intelligence", "runtime",
+        "settings", "memory", "analytics", "context", "capability", "tools", "security",
+        "integrations", "plugins", "vision", "voice", "browser", "pc_control", "coding_agent", "llm", "prompt",
+        "conversation", "context_intelligence", "autonomous_tasks", "multi_agent", "runtime",
     }
     expected_services = {
         "settings_manager",
         "memory_manager",
+        "analytics_manager",
         "context_manager",
         "capability_manager",
         "tool_manager",
         "security_manager",
+        "integrations_manager",
+        "plugin_manager",
         "vision_manager",
         "voice_manager",
         "browser_manager",
@@ -910,6 +972,8 @@ def verify_boot_health(
         "prompt_manager",
         "conversation_manager",
         "context_intelligence_manager",
+        "autonomous_task_engine",
+        "multi_agent_orchestrator",
         "runtime_manager",
     }
 
