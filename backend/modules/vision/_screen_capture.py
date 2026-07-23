@@ -1,27 +1,25 @@
 """
-ScreenCapture — screen capture interface placeholder.
+ScreenCapture — screen capture implementation using mss and win32gui.
 
-Future implementations will integrate MSS, PyAutoGUI, or
-Playwright screenshot for cross-platform screen capture.
+Provides screen capture and window-specific capture capability.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
-from backend.modules.vision._exceptions import VisionNotImplementedError
+from backend.modules.vision._exceptions import (
+    VisionLoadError,
+    VisionTimeoutError,
+)
 from backend.modules.vision._types import ImageData
 
 _LOG = logging.getLogger("naira.vision.screen_capture")
 
 
 class ScreenCapture:
-    """Screen capture placeholder.
-
-    All operations raise ``VisionNotImplementedError``.  Real
-    implementations (MSS, PyAutoGUI, Playwright) will be wired
-    in Phase 2.
-    """
+    """Real screen capture provider using mss and win32gui."""
 
     def __init__(self, logger: logging.Logger | None = None) -> None:
         self._logger = logger or _LOG
@@ -30,27 +28,124 @@ class ScreenCapture:
         self,
         *,
         timeout: float = 30.0,
+        monitor_index: int = 0,
+        region: tuple[int, int, int, int] | None = None,
     ) -> ImageData:
-        """Capture the current screen.
-
-        Parameters
-        ----------
-        timeout : float
-            Maximum wait time in seconds.
-
-        Returns
-        -------
-        ImageData
-            Captured screen image data.
-
-        Raises
-        ------
-        VisionNotImplementedError
-            Always raised — no capture driver is configured.
         """
-        raise VisionNotImplementedError(context={"operation": "capture_screen"})
+        Capture the current screen using mss.
+        monitor_index: 0 = all monitors combined, 1 = primary, 2 = secondary, etc.
+        region: optional (left, top, width, height) to capture a specific area instead of full screen.
+        """
+        def _do_capture() -> tuple[bytes, int, int]:
+            import io
+            import mss
+            from PIL import Image as PILImage
+
+            with mss.mss() as sct:
+                if region:
+                    left, top, width, height = region
+                    monitor = {"left": left, "top": top, "width": width, "height": height}
+                else:
+                    monitor = sct.monitors[monitor_index]
+
+                screenshot = sct.grab(monitor)
+                img = PILImage.frombytes("RGB", screenshot.size, screenshot.bgra, "raw", "BGRX")
+
+                buffer = io.BytesIO()
+                img.save(buffer, format="PNG")
+                img_bytes = buffer.getvalue()
+
+                return img_bytes, img.width, img.height
+
+        try:
+            img_bytes, width, height = await asyncio.wait_for(
+                asyncio.to_thread(_do_capture), timeout=timeout
+            )
+            return ImageData(
+                source_type="screen_capture",
+                source_path=None,
+                width=width,
+                height=height,
+                format="png",
+                size_bytes=len(img_bytes),
+                data=img_bytes,
+            )
+        except asyncio.TimeoutError:
+            raise VisionTimeoutError(context={"operation": "capture_screen"})
+        except Exception as exc:
+            raise VisionLoadError(
+                f"Screen capture failed: {exc}", context={"operation": "capture_screen"}
+            ) from exc
+
+    async def capture_window(
+        self,
+        *,
+        app_name: str,
+        timeout: float = 30.0,
+    ) -> ImageData:
+        """
+        Capture only a specific application window by title match.
+        Uses win32gui to find window bounds, then mss to capture that region.
+        """
+        def _do_capture() -> tuple[bytes, int, int]:
+            import io
+            import mss
+            import win32gui
+            from PIL import Image as PILImage
+
+            target_hwnd = None
+
+            def enum_cb(hwnd, _):
+                nonlocal target_hwnd
+                if win32gui.IsWindowVisible(hwnd):
+                    title = win32gui.GetWindowText(hwnd).lower()
+                    if app_name.lower() in title:
+                        target_hwnd = hwnd
+                        return False
+                return True
+
+            win32gui.EnumWindows(enum_cb, None)
+
+            if target_hwnd is None:
+                raise ValueError(f"Window '{app_name}' not found")
+
+            rect = win32gui.GetWindowRect(target_hwnd)
+            left, top, right, bottom = rect
+            width, height = right - left, bottom - top
+
+            with mss.mss() as sct:
+                monitor = {"left": left, "top": top, "width": width, "height": height}
+                screenshot = sct.grab(monitor)
+                img = PILImage.frombytes("RGB", screenshot.size, screenshot.bgra, "raw", "BGRX")
+                buffer = io.BytesIO()
+                img.save(buffer, format="PNG")
+                return buffer.getvalue(), img.width, img.height
+
+        try:
+            img_bytes, width, height = await asyncio.wait_for(
+                asyncio.to_thread(_do_capture), timeout=timeout
+            )
+            return ImageData(
+                source_type="screen_capture",
+                source_path=None,
+                width=width,
+                height=height,
+                format="png",
+                size_bytes=len(img_bytes),
+                data=img_bytes,
+            )
+        except asyncio.TimeoutError:
+            raise VisionTimeoutError(context={"operation": "capture_window"})
+        except Exception as exc:
+            raise VisionLoadError(
+                f"Window capture failed: {exc}",
+                context={"operation": "capture_window", "app_name": app_name},
+            ) from exc
 
     @property
     def is_available(self) -> bool:
-        """Return ``True`` if a real capture driver is wired."""
-        return False
+        try:
+            import mss
+            return True
+        except ImportError:
+            return False

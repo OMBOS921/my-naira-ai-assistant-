@@ -24,6 +24,7 @@ from backend.modules.vision._local_adapter import LocalVisionAdapter
 from backend.modules.vision._object_detection import ObjectDetection
 from backend.modules.vision._ocr import OCR
 from backend.modules.vision._screen_capture import ScreenCapture
+from backend.modules.vision._screen_understanding import ScreenUnderstanding
 from backend.modules.vision._types import ImageData
 from backend.modules.vision.ports.vision_port import VisionPort
 from backend.types import ToolResult
@@ -112,6 +113,12 @@ class VisionManager:
         self._object_detection = ObjectDetection(logger=logger)
         self._face_detection = FaceDetection(logger=logger)
         self._screen_capture = ScreenCapture(logger=logger)
+        self._screen_capture_real = ScreenCapture(logger=logger)
+        self._screen_understanding = ScreenUnderstanding(
+            screen_capture=self._screen_capture_real,
+            vision_provider=self._active_provider,
+            logger=self._logger,
+        )
 
     # ------------------------------------------------------------------
     # Module lifecycle  (ModuleInterface protocol)
@@ -293,6 +300,59 @@ class VisionManager:
         })
         return result
 
+    async def understand_screen(
+        self,
+        question: str | None = None,
+        timeout: float | None = None,
+    ) -> ToolResult:
+        """Understand current screen content or answer a question about it."""
+        self._ensure_not_degraded()
+        to = timeout or self._default_timeout
+        res = await self._screen_understanding.understand_screen(
+            question=question, timeout=to
+        )
+        output = res.get("answer") or res.get("description") or ""
+        return ToolResult(status="success", output=output)
+
+    async def understand_ui(
+        self,
+        timeout: float | None = None,
+    ) -> ToolResult:
+        """Analyze UI interactive elements on current screen."""
+        self._ensure_not_degraded()
+        to = timeout or self._default_timeout
+        res = await self._screen_understanding.understand_ui(timeout=to)
+        return ToolResult(status="success", output=res.get("raw_analysis", ""))
+
+    async def read_screen_text(
+        self,
+        timeout: float | None = None,
+    ) -> ToolResult:
+        """Run OCR on current screen."""
+        self._ensure_not_degraded()
+        to = timeout or self._default_timeout
+        res = await self._screen_understanding.read_screen_text(timeout=to)
+        return ToolResult(status="success", output=res.get("text", ""))
+
+    async def capture_and_save(
+        self,
+        output_path: str,
+        timeout: float | None = None,
+    ) -> ToolResult:
+        """Capture screen and save image to output_path."""
+        self._ensure_not_degraded()
+        to = timeout or self._default_timeout
+        img_data = await self._screen_capture_real.capture(timeout=to)
+        if img_data.data:
+            from pathlib import Path
+            p = Path(output_path)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_bytes(img_data.data)
+            return ToolResult(
+                status="success", output=f"Saved screenshot to {output_path}"
+            )
+        return ToolResult(status="error", error="No image data captured")
+
     # ------------------------------------------------------------------
     # Accessors
     # ------------------------------------------------------------------
@@ -459,6 +519,94 @@ class VisionManager:
                     self._handle_capture_screen_tool,
                 )
 
+                register(
+                    ToolDefinition(
+                        name="vision_understand_screen",
+                        description="Understand current screen content or answer a question about it",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "question": {
+                                    "type": "string",
+                                    "description": "Optional question about the screen content",
+                                },
+                                "timeout": {
+                                    "type": "number",
+                                    "description": "Timeout in seconds",
+                                },
+                            },
+                            "required": [],
+                        },
+                        category="vision",
+                        timeout_seconds=self._default_timeout,
+                    ),
+                    self._handle_understand_screen_tool,
+                )
+
+                register(
+                    ToolDefinition(
+                        name="vision_understand_ui",
+                        description="Analyze UI interactive elements on current screen",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "timeout": {
+                                    "type": "number",
+                                    "description": "Timeout in seconds",
+                                },
+                            },
+                            "required": [],
+                        },
+                        category="vision",
+                        timeout_seconds=self._default_timeout,
+                    ),
+                    self._handle_understand_ui_tool,
+                )
+
+                register(
+                    ToolDefinition(
+                        name="vision_read_screen_text",
+                        description="Run OCR on current screen",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "timeout": {
+                                    "type": "number",
+                                    "description": "Timeout in seconds",
+                                },
+                            },
+                            "required": [],
+                        },
+                        category="vision",
+                        timeout_seconds=self._default_timeout,
+                    ),
+                    self._handle_read_screen_text_tool,
+                )
+
+                register(
+                    ToolDefinition(
+                        name="vision_capture_and_save",
+                        description="Capture screen and save image to output_path",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "output_path": {
+                                    "type": "string",
+                                    "description": "File path to save the screenshot",
+                                },
+                                "timeout": {
+                                    "type": "number",
+                                    "description": "Timeout in seconds",
+                                },
+                            },
+                            "required": ["output_path"],
+                        },
+                        category="vision",
+                        timeout_seconds=self._default_timeout,
+                    ),
+                    self._handle_capture_and_save_tool,
+                )
+
     async def _handle_load_image_tool(
         self,
         source: str,
@@ -517,6 +665,32 @@ class VisionManager:
         timeout: float | None = None,
     ) -> ToolResult:
         return await self.capture_screen(timeout=timeout)
+
+    async def _handle_understand_screen_tool(
+        self,
+        question: str | None = None,
+        timeout: float | None = None,
+    ) -> ToolResult:
+        return await self.understand_screen(question=question, timeout=timeout)
+
+    async def _handle_understand_ui_tool(
+        self,
+        timeout: float | None = None,
+    ) -> ToolResult:
+        return await self.understand_ui(timeout=timeout)
+
+    async def _handle_read_screen_text_tool(
+        self,
+        timeout: float | None = None,
+    ) -> ToolResult:
+        return await self.read_screen_text(timeout=timeout)
+
+    async def _handle_capture_and_save_tool(
+        self,
+        output_path: str,
+        timeout: float | None = None,
+    ) -> ToolResult:
+        return await self.capture_and_save(output_path, timeout=timeout)
 
     def _ensure_not_degraded(self) -> None:
         if self._degraded:

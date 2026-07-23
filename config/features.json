@@ -6,5 +6,8 @@
   "file_manager": false,
   "pc_control": true,
   "security": true,
-  "coding_agent": false
+  "coding_agent": false,
+  "plugins": true,
+  "autonomous_tasks": false,
+  "multi_agent": false
 }

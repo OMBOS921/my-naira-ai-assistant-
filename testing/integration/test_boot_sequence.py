@@ -73,10 +73,10 @@ class TestFullBoot:
 
         try:
             expected_modules = {
-                "settings", "memory", "context", "capability", "tools",
-                "security", "vision", "voice", "browser", "pc_control",
-                "coding_agent", "llm", "prompt", "conversation",
-                "context_intelligence", "runtime",
+                "settings", "memory", "analytics", "context", "capability", "tools",
+                "security", "browser", "vision", "voice", "pc_control",
+                "coding_agent", "planning", "decision", "llm", "prompt",
+                "conversation", "context_intelligence", "runtime",
             }
             assert set(modules.keys()) == expected_modules
 
@@ -266,10 +266,11 @@ class TestShutdown:
         try:
             init_order = orchestrator._module_init_order  # type: ignore[attr-defined]
             expected = [
-    "settings", "memory", "context", "capability", "tools", "security",
-    "browser", "vision", "voice", "pc_control", "coding_agent", "llm",
-    "prompt", "conversation", "context_intelligence", "runtime",
-]
+                "settings", "memory", "analytics", "context", "capability", "tools",
+                "security", "browser", "vision", "voice", "pc_control",
+                "coding_agent", "planning", "decision", "llm", "prompt",
+                "conversation", "context_intelligence", "runtime",
+            ]
             assert init_order == expected, f"Expected {expected}, got {init_order}"
         finally:
             await shutdown_modules(modules)
@@ -612,10 +613,11 @@ class TestBootOrder:
         try:
             init_order = orchestrator._module_init_order  # type: ignore[attr-defined]
             expected = [
-    "settings", "memory", "context", "capability", "tools", "security",
-    "browser", "vision", "voice", "pc_control", "coding_agent", "llm",
-    "prompt", "conversation", "context_intelligence", "runtime",
-]
+                "settings", "memory", "analytics", "context", "capability", "tools",
+                "security", "browser", "vision", "voice", "pc_control",
+                "coding_agent", "planning", "decision", "llm", "prompt",
+                "conversation", "context_intelligence", "runtime",
+            ]
             assert init_order == expected, f"Expected {expected}, got {init_order}"
         finally:
             await shutdown_modules(modules)
@@ -654,10 +656,11 @@ class TestShutdownOrder:
         try:
             init_order = orchestrator._module_init_order  # type: ignore[attr-defined]
             expected_boot = [
-    "settings", "memory", "context", "capability", "tools", "security",
-    "browser", "vision", "voice", "pc_control", "coding_agent", "llm",
-    "prompt", "conversation", "context_intelligence", "runtime",
-]
+                "settings", "memory", "analytics", "context", "capability", "tools",
+                "security", "browser", "vision", "voice", "pc_control",
+                "coding_agent", "planning", "decision", "llm", "prompt",
+                "conversation", "context_intelligence", "runtime",
+            ]
             expected_shutdown = list(reversed(expected_boot))
             assert init_order == expected_boot
             assert list(reversed(init_order)) == expected_shutdown
@@ -912,8 +915,8 @@ class TestHealthVerification:
         try:
             report = verify_boot_health(modules, di_container)
             assert report["all_healthy"]
-            assert report["module_count"] == 16
-            assert report["service_count"] >= 16
+            assert report["module_count"] == 19
+            assert report["service_count"] >= 19
             assert report["missing_modules"] == []
             assert report["missing_services"] == []
         finally:
@@ -1058,8 +1061,8 @@ class TestFullIntegration:
         try:
             report = verify_boot_health(modules, di_container)
             assert report["all_healthy"]
-            assert report["module_count"] == 16
-            assert report["service_count"] >= 16
+            assert report["module_count"] == 19
+            assert report["service_count"] >= 19
 
             for svc in ["settings_manager", "memory_manager", "context_manager",
                         "capability_manager", "tool_manager", "security_manager",

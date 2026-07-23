@@ -112,9 +112,21 @@ class VisionPort(ABC):
         self,
         image: ImageData,
         *,
+        prompt: str | None = None,
         timeout: float = 30.0,
-    ) -> dict[str, Any]:
-        """Full image analysis returning a structured dict."""
+    ) -> Any:
+        """Full image analysis returning a structured result."""
+
+    @abstractmethod
+    async def analyze_image_pair(
+        self,
+        image1: ImageData,
+        image2: ImageData,
+        *,
+        prompt: str | None = None,
+        timeout: float = 30.0,
+    ) -> Any:
+        """Compare two images and return analysis."""
 
     @abstractmethod
     async def close(self) -> None:

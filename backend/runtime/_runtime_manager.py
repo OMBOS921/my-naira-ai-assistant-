@@ -11,6 +11,7 @@ import json
 import logging
 import time
 from collections.abc import AsyncIterator
+from types import SimpleNamespace
 from typing import Any
 
 from backend.exceptions import ModuleDegradedError
@@ -18,7 +19,9 @@ from backend.modules.analytics import AnalyticsEvent, EventType
 from backend.modules.decision import RouteTarget
 from backend.runtime._request_context import RequestContext
 from backend.runtime._tool_loop import MAX_TOOL_ITERATIONS, run_tool_loop
+from backend.runtime.autonomous_task_engine import AutonomousTaskEngine
 from backend.runtime.fast_command_router import FastCommandRouter
+from backend.runtime.multi_agent.multi_agent_orchestrator import MultiAgentOrchestrator
 from backend.types import (
     LLMResponse,
     Message,
@@ -91,6 +94,17 @@ class RuntimeManager:
             logger=self._logger,
         )
 
+        self._autonomous_task_engine = AutonomousTaskEngine(
+            runtime_manager=self,
+            logger=self._logger,
+            event_bus=self._event_bus,
+        )
+        self._multi_agent_orchestrator = MultiAgentOrchestrator(
+            runtime_manager=self,
+            tool_manager=self._tool_manager,
+            logger=self._logger,
+        )
+
         # Wire FastCommandRouter into DecisionManager if decision manager is supplied
         if self._decision_manager is not None and hasattr(
             self._decision_manager, "_fast_command_router"
@@ -103,7 +117,7 @@ class RuntimeManager:
 
     async def async_init(self) -> None:
         self._initialized = True
-        self._logger.info("Runtime manager initialised")
+        self._logger.info("Runtime manager initialized")
 
     async def async_shutdown(self) -> None:
         self._degraded = False
@@ -153,9 +167,9 @@ class RuntimeManager:
             # Decision Engine Routing
             target_route = RouteTarget.LLM_CONVERSATION
             if self._decision_manager is not None:
-                decide_fn = getattr(self._decision_manager, "decide", None)
+                decide_fn: Any = getattr(self._decision_manager, "decide", None)
                 if callable(decide_fn):
-                    decision = await decide_fn(request.text, request.metadata)
+                    decision = await decide_fn(request.text, request.metadata)  # type: ignore
                     target_route = decision.target
                     self._logger.info(
                         "[ROUTING] DecisionManager target=%s confidence=%.2f reason=%s",
@@ -179,7 +193,7 @@ class RuntimeManager:
                 duration_ms = (time.time() - ctx.start_time) * 1000
 
                 if self._analytics_manager is not None:
-                    rec_fn = getattr(self._analytics_manager, "record", None)
+                    rec_fn: Any = getattr(self._analytics_manager, "record", None)
                     if callable(rec_fn):
                         rec_fn(
                             AnalyticsEvent(
@@ -210,12 +224,12 @@ class RuntimeManager:
             # Route 2: PLANNING_ENGINE
             if target_route == RouteTarget.PLANNING_ENGINE and self._planning_manager is not None:
                 self._logger.info("[ROUTING] Routing request to PlanningEngine: %r", request.text)
-                plan_fn = getattr(self._planning_manager, "plan", None)
-                exec_plan_fn = getattr(self._planning_manager, "execute_plan", None)
+                plan_fn: Any = getattr(self._planning_manager, "plan", None)
+                exec_plan_fn: Any = getattr(self._planning_manager, "execute_plan", None)
 
                 if callable(plan_fn) and callable(exec_plan_fn):
-                    plan = await plan_fn(request.text, request.metadata)
-                    plan_res = await exec_plan_fn(plan)
+                    plan = await plan_fn(request.text, request.metadata)  # type: ignore
+                    plan_res = await exec_plan_fn(plan)  # type: ignore
                     duration_ms = (time.time() - ctx.start_time) * 1000
 
                     step_cnt = len(plan_res.executed_steps)
@@ -362,9 +376,9 @@ class RuntimeManager:
             # Stage 0: Decision Engine Routing
             target_route = RouteTarget.LLM_CONVERSATION
             if self._decision_manager is not None:
-                decide_fn = getattr(self._decision_manager, "decide", None)
+                decide_fn: Any = getattr(self._decision_manager, "decide", None)
                 if callable(decide_fn):
-                    decision = await decide_fn(request.text, request.metadata)
+                    decision = await decide_fn(request.text, request.metadata)  # type: ignore
                     target_route = decision.target
 
             if (
@@ -396,12 +410,15 @@ class RuntimeManager:
                 await self._store_turn(ctx, final_response)
                 return
 
+            ctx.current_stage = "session"
             await self._resolve_session(ctx)
 
+            ctx.current_stage = "context"
             ctx.system_prompt = self._compile_prompt()
             ctx.messages = self._build_context(ctx).messages[:]
             tool_defs = self._get_tool_defs()
 
+            ctx.current_stage = "llm"
             accumulated_text = ""
 
             async for chunk in self._stream_with_tools(
@@ -412,6 +429,7 @@ class RuntimeManager:
                 accumulated_text += chunk
                 yield chunk
 
+            ctx.current_stage = "memory"
             token_usage = self._estimate_token_usage(
                 ctx.system_prompt, accumulated_text
             )
@@ -425,12 +443,65 @@ class RuntimeManager:
             )
 
             await self._store_turn(ctx, final_response)
+            ctx.current_stage = "emit"
 
         except Exception as exc:
             self._logger.error(
                 "Runtime stream error at stage '%s': %s", ctx.current_stage, exc
             )
             yield f"\n[Error: {exc}]"
+
+    # ------------------------------------------------------------------
+    # Autonomous Tasks & Multi-Agent API
+    # ------------------------------------------------------------------
+
+    @property
+    def autonomous_task_engine(self) -> AutonomousTaskEngine:
+        """Return the autonomous task engine instance."""
+        return self._autonomous_task_engine
+
+    @property
+    def multi_agent_orchestrator(self) -> MultiAgentOrchestrator:
+        """Return the multi-agent orchestrator instance."""
+        return self._multi_agent_orchestrator
+
+    def start_autonomous_task(
+        self,
+        goal: str,
+        session_id: str = "default",
+        max_steps: int | None = None,
+        timeout_seconds: float | None = None,
+    ) -> object:
+        """Start an autonomous background task."""
+        return self._autonomous_task_engine.start_task(
+            goal=goal,
+            session_id=session_id,
+            max_steps=max_steps,
+            timeout_seconds=timeout_seconds,
+        )
+
+    def get_autonomous_task_status(self, task_id: str) -> object | None:
+        """Get the current status of an autonomous task."""
+        return self._autonomous_task_engine.get_task_status(task_id)
+
+    def confirm_autonomous_step(self, task_id: str, approved: bool) -> bool:
+        """Confirm or reject a paused step in an autonomous task."""
+        return self._autonomous_task_engine.confirm_step(task_id, approved)
+
+    def cancel_autonomous_task(self, task_id: str) -> bool:
+        """Cancel a running autonomous task."""
+        return self._autonomous_task_engine.cancel_task(task_id)
+
+    async def handle_complex_request(
+        self,
+        text: str,
+        session_id: str = "default",
+    ) -> dict[str, Any]:
+        """Process a complex request using the multi-agent orchestrator."""
+        return await self._multi_agent_orchestrator.execute_multi_agent(
+            user_request=text,
+            session_id=session_id,
+        )
 
     # ------------------------------------------------------------------
     # Pipeline stages
@@ -530,7 +601,7 @@ class RuntimeManager:
 
         generate = getattr(self._llm_manager, "generate", None)
         if generate is not None:
-            return await generate(system_prompt, context_messages)
+            return await generate(system_prompt, context_messages)  # type: ignore
         return _empty_llm_response()
 
     async def _stream_with_tools(
@@ -555,7 +626,7 @@ class RuntimeManager:
         while iterations < self._max_tool_iterations:
             iterations += 1
             try:
-                response: LLMResponse = await generate_fn(
+                response: LLMResponse = await generate_fn(  # type: ignore
                     prompt=system_prompt,
                     context=context_messages,
                     tools=tool_defs if tool_defs else None,
@@ -638,11 +709,11 @@ class RuntimeManager:
         if store is None:
             return
         try:
-            await store(
+            await store(  # type: ignore
                 ctx.session_id,
                 Message(role="user", content=ctx.user_text),
             )
-            await store(
+            await store(  # type: ignore
                 ctx.session_id,
                 Message(role="assistant", content=asst_text),
             )
@@ -672,7 +743,7 @@ class RuntimeManager:
             return
         emit = getattr(self._event_bus, "emit", None)
         if emit is not None:
-            await emit(event_type, data)
+            await emit(event_type, data)  # type: ignore
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -687,7 +758,7 @@ class RuntimeManager:
 
 
 def _empty_context() -> object:
-    return type("EmptyContext", (), {"messages": [], "system_prompt": ""})()
+    return SimpleNamespace(messages=[], system_prompt="")
 
 
 def _empty_llm_response() -> LLMResponse:

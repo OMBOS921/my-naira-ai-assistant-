@@ -1,0 +1,69 @@
+"""
+Example Plugin Template — JokePlugin.
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Any
+
+from backend.modules.plugins._plugin_base import NairaPlugin
+from backend.types import ToolResult
+
+
+class JokePlugin(NairaPlugin):
+    """A working example plugin that provides funny programming jokes."""
+
+    PLUGIN_NAME: str = "joke_plugin"
+    PLUGIN_VERSION: str = "1.0.0"
+    PLUGIN_DESCRIPTION: str = "Provides hilarious AI jokes on demand."
+    PLUGIN_AUTHOR: str = "Naira Team"
+    REQUIRES_PERMISSIONS: list[str] = []
+
+    def __init__(self, *, logger: logging.Logger | None = None, event_bus: Any | None = None) -> None:
+        super().__init__(logger=logger, event_bus=event_bus)
+        self._jokes: list[str] = [
+            "Why do programmers prefer dark mode? Because light attracts bugs.",
+            "There are 10 types of people in the world: those who understand binary, and those who don't.",
+            "Why did the programmer quit his job? Because he didn't get arrays.",
+            "A SQL query walks into a bar, walks up to two tables and asks, 'Can I join you?'",
+        ]
+
+    async def on_load(self) -> bool:
+        if self._logger:
+            self._logger.info("JokePlugin loaded successfully")
+        return True
+
+    async def on_unload(self) -> None:
+        if self._logger:
+            self._logger.info("JokePlugin unloaded successfully")
+
+    def get_tools(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "name": "tell_joke",
+                "description": "Returns a random programming joke.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "category": {
+                            "type": "string",
+                            "description": "Category of joke (default: programming)",
+                        }
+                    },
+                },
+                "category": "entertainment",
+                "handler": self.tell_joke,
+            }
+        ]
+
+    async def tell_joke(self, category: str = "programming") -> ToolResult:
+        """Handler for tell_joke tool."""
+        import random
+
+        joke = random.choice(self._jokes)
+        return ToolResult(
+            status="success",
+            result={"joke": joke, "category": category},
+            error=None,
+        )

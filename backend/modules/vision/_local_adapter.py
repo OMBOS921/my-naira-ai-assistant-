@@ -137,10 +137,23 @@ class LocalVisionAdapter(VisionPort):
         self,
         image: ImageData,
         *,
+        prompt: str | None = None,
         timeout: float = 30.0,
     ) -> dict[str, Any]:
         raise VisionNotImplementedError(context={
             "operation": "analyze_image",
+        })
+
+    async def analyze_image_pair(
+        self,
+        image1: ImageData,
+        image2: ImageData,
+        *,
+        prompt: str | None = None,
+        timeout: float = 30.0,
+    ) -> Any:
+        raise VisionNotImplementedError(context={
+            "operation": "analyze_image_pair",
         })
 
     async def close(self) -> None:

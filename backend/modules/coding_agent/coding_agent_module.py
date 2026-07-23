@@ -66,6 +66,9 @@ from backend.modules.coding_agent.ports import (
     ToolSelectionPort,
     WorkspaceManagerPort,
 )
+from backend.modules.coding_agent.providers.vscode_integration_provider import (
+    VSCodeIntegrationProvider,
+)
 from backend.modules.coding_agent.skills._config import SkillConfig
 from backend.modules.coding_agent.skills._manager import SkillManager
 from backend.modules.context_intelligence._types import MCPContext
@@ -253,6 +256,12 @@ class CodingAgentManager:
         self._project_analyzer: ProjectAnalyzerPort | None = project_analyzer
         self._safety_layer: SafetyLayerPort | None = safety_layer
         self._workspace_manager: WorkspaceManagerPort | None = workspace_manager
+
+        self._vscode = VSCodeIntegrationProvider(
+            file_manager=self._file_manager,
+            workspace_manager=self._workspace_manager,
+            logger=self._logger,
+        )
 
         # Internal services — core
         self._executor = CodingAgentExecutor(
@@ -508,6 +517,10 @@ class CodingAgentManager:
     @property
     def package_installer(self) -> PackageAutoInstaller:
         return self._package_installer
+
+    @property
+    def vscode(self) -> VSCodeIntegrationProvider:
+        return self._vscode
 
     # ------------------------------------------------------------------
     # High-level API
@@ -809,6 +822,86 @@ class CodingAgentManager:
             )
         except Exception as exc:
             return ToolResult(status="error", error=str(exc))
+
+    async def vscode_open_folder(
+        self, folder_path: str, new_window: bool = False
+    ) -> ToolResult:
+        """Open a folder in VS Code."""
+        self._ensure_not_degraded()
+        res = await self._vscode.open_folder(folder_path, new_window=new_window)
+        if res.get("success"):
+            return ToolResult(
+                status="success", output=f"Opened folder '{folder_path}' in VS Code"
+            )
+        return ToolResult(
+            status="error", error=res.get("error", "Failed to open folder")
+        )
+
+    async def vscode_open_file(
+        self, file_path: str, line_number: int | None = None
+    ) -> ToolResult:
+        """Open a file in VS Code at optional line number."""
+        self._ensure_not_degraded()
+        res = await self._vscode.open_file(file_path, line_number=line_number)
+        if res.get("success"):
+            return ToolResult(
+                status="success", output=f"Opened file '{file_path}' in VS Code"
+            )
+        return ToolResult(
+            status="error", error=res.get("error", "Failed to open file")
+        )
+
+    async def vscode_create_project(
+        self, base_path: str, structure: dict[str, Any]
+    ) -> ToolResult:
+        """Create project directory structure and open in VS Code."""
+        self._ensure_not_degraded()
+        res = await self._vscode.create_project_structure(base_path, structure)
+        if res.get("success"):
+            files_count = len(res.get("created_files", []))
+            return ToolResult(
+                status="success",
+                output=(
+                    f"Created project structure with {files_count} file(s) and opened"
+                    " in VS Code"
+                ),
+            )
+        return ToolResult(
+            status="error",
+            error=res.get("error", "Failed to create project structure"),
+        )
+
+    async def vscode_edit_file(
+        self, file_path: str, new_content: str, create_backup: bool = True
+    ) -> ToolResult:
+        """Edit a file in a project with optional backup."""
+        self._ensure_not_degraded()
+        res = await self._vscode.edit_file_in_project(
+            file_path, new_content, create_backup=create_backup
+        )
+        if res.get("success"):
+            backup_msg = (
+                f" (backup: {res['backup_path']})" if res.get("backup_path") else ""
+            )
+            return ToolResult(
+                status="success", output=f"Edited file '{file_path}'{backup_msg}"
+            )
+        return ToolResult(
+            status="error", error=res.get("error", "Failed to edit file")
+        )
+
+    async def vscode_run_command(
+        self, command: str, cwd: str | None = None
+    ) -> ToolResult:
+        """Run a command in integrated terminal."""
+        self._ensure_not_degraded()
+        res = await self._vscode.run_in_integrated_terminal(command, cwd=cwd)
+        if res.get("success"):
+            return ToolResult(status="success", output=res.get("stdout", ""))
+        return ToolResult(
+            status="error",
+            error=res.get("stderr") or res.get("error", "Command failed"),
+        )
 
     async def command_operation(
         self,
@@ -1576,6 +1669,157 @@ class CodingAgentManager:
                     ),
                     self._handle_pipeline_tool,
                 )
+
+                register(
+                    ToolDefinition(
+                        name="vscode_open_folder",
+                        description="Open a folder in VS Code",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "folder_path": {
+                                    "type": "string",
+                                    "description": "Path to the folder to open",
+                                },
+                                "new_window": {
+                                    "type": "boolean",
+                                    "description": "Whether to open in a new window",
+                                },
+                            },
+                            "required": ["folder_path"],
+                        },
+                        category="coding_agent",
+                        timeout_seconds=self._default_timeout,
+                    ),
+                    self._handle_vscode_open_folder_tool,
+                )
+
+                register(
+                    ToolDefinition(
+                        name="vscode_open_file",
+                        description="Open a file in VS Code at optional line number",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "file_path": {
+                                    "type": "string",
+                                    "description": "Path to the file to open",
+                                },
+                                "line_number": {
+                                    "type": "integer",
+                                    "description": "Line number to navigate to",
+                                },
+                            },
+                            "required": ["file_path"],
+                        },
+                        category="coding_agent",
+                        timeout_seconds=self._default_timeout,
+                    ),
+                    self._handle_vscode_open_file_tool,
+                )
+
+                register(
+                    ToolDefinition(
+                        name="vscode_create_project",
+                        description="Create project directory structure and open in VS Code",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "base_path": {
+                                    "type": "string",
+                                    "description": "Base directory for the project",
+                                },
+                                "structure": {
+                                    "type": "object",
+                                    "description": "Nested dictionary representing directory layout and files",
+                                },
+                            },
+                            "required": ["base_path", "structure"],
+                        },
+                        category="coding_agent",
+                        timeout_seconds=self._default_timeout,
+                    ),
+                    self._handle_vscode_create_project_tool,
+                )
+
+                register(
+                    ToolDefinition(
+                        name="vscode_edit_file",
+                        description="Edit a file in a project with optional backup",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "file_path": {
+                                    "type": "string",
+                                    "description": "Path to the file to edit",
+                                },
+                                "new_content": {
+                                    "type": "string",
+                                    "description": "New content for the file",
+                                },
+                                "create_backup": {
+                                    "type": "boolean",
+                                    "description": "Whether to create a backup file (.bak)",
+                                },
+                            },
+                            "required": ["file_path", "new_content"],
+                        },
+                        category="coding_agent",
+                        timeout_seconds=self._default_timeout,
+                    ),
+                    self._handle_vscode_edit_file_tool,
+                )
+
+                register(
+                    ToolDefinition(
+                        name="vscode_run_command",
+                        description="Run a command in integrated terminal",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "command": {
+                                    "type": "string",
+                                    "description": "Command to execute",
+                                },
+                                "cwd": {
+                                    "type": "string",
+                                    "description": "Current working directory for command",
+                                },
+                            },
+                            "required": ["command"],
+                        },
+                        category="coding_agent",
+                        timeout_seconds=self._default_timeout,
+                    ),
+                    self._handle_vscode_run_command_tool,
+                )
+
+    async def _handle_vscode_open_folder_tool(
+        self, folder_path: str, new_window: bool = False
+    ) -> ToolResult:
+        return await self.vscode_open_folder(folder_path, new_window=new_window)
+
+    async def _handle_vscode_open_file_tool(
+        self, file_path: str, line_number: int | None = None
+    ) -> ToolResult:
+        return await self.vscode_open_file(file_path, line_number=line_number)
+
+    async def _handle_vscode_create_project_tool(
+        self, base_path: str, structure: dict[str, Any]
+    ) -> ToolResult:
+        return await self.vscode_create_project(base_path, structure)
+
+    async def _handle_vscode_edit_file_tool(
+        self, file_path: str, new_content: str, create_backup: bool = True
+    ) -> ToolResult:
+        return await self.vscode_edit_file(
+            file_path, new_content, create_backup=create_backup
+        )
+
+    async def _handle_vscode_run_command_tool(
+        self, command: str, cwd: str | None = None
+    ) -> ToolResult:
+        return await self.vscode_run_command(command, cwd=cwd)
 
     async def _handle_execute_task_tool(self, task_description: str) -> ToolResult:
         return await self.execute_task(task_description)

@@ -291,21 +291,41 @@ class GeminiVisionAdapter(VisionPort):
         image: ImageData,
         *,
         timeout: float = 30.0,
-    ) -> str:
-        return await self._call_gemini(
+    ) -> VisionResult:
+        output = await self._call_gemini(
             prompt=_UI_UNDERSTANDING_PROMPT, image=image, timeout=timeout,
         )
+        return VisionResult(status="success", output=output)
 
     async def analyze_image(
         self,
         image: ImageData,
         *,
+        prompt: str | None = None,
         timeout: float = 30.0,
-    ) -> dict[str, Any]:
-        response = await self._call_gemini(
-            prompt=_IMAGE_ANALYSIS_PROMPT, image=image, timeout=timeout,
+    ) -> VisionResult:
+        effective_prompt = prompt or _IMAGE_ANALYSIS_PROMPT
+        output = await self._call_gemini(
+            prompt=effective_prompt, image=image, timeout=timeout,
         )
-        return _parse_analysis_response(response)
+        return VisionResult(status="success", output=output)
+
+    async def analyze_image_pair(
+        self,
+        image1: ImageData,
+        image2: ImageData,
+        *,
+        prompt: str | None = None,
+        timeout: float = 30.0,
+    ) -> VisionResult:
+        effective_prompt = prompt or "Compare these two screenshots (before and after)."
+        pil1 = await self._to_pil(image1)
+        pil2 = await self._to_pil(image2)
+        response = await self._client.aio.models.generate_content(
+            model=self._model,
+            contents=[effective_prompt, pil1, pil2],
+        )
+        return VisionResult(status="success", output=response.text or "")
 
     async def close(self) -> None:
         self._logger.debug("GeminiVisionAdapter.close() — no-op")

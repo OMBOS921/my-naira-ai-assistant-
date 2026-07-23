@@ -257,7 +257,7 @@ class TestGeminiCaptioning:
         )
         image = _make_image()
         result = await adapter.understand_ui(image)
-        assert "login" in result
+        assert "login" in result.output
 
 
 # =========================================================================
@@ -276,8 +276,9 @@ class TestGeminiImageAnalysis:
         adapter._call_gemini = AsyncMock(return_value=json_response)
         image = _make_image()
         result = await adapter.analyze_image(image)
-        assert result["description"] == "A cat"
-        assert "cat" in result["objects"]
+        parsed = _parse_analysis_response(result.output)
+        assert parsed["description"] == "A cat"
+        assert "cat" in parsed["objects"]
 
     @pytest.mark.asyncio
     async def test_analyze_image_non_json(self) -> None:
@@ -285,8 +286,9 @@ class TestGeminiImageAnalysis:
         adapter._call_gemini = AsyncMock(return_value="Just some text")
         image = _make_image()
         result = await adapter.analyze_image(image)
-        assert result["description"] == "Just some text"
-        assert result["objects"] == []
+        parsed = _parse_analysis_response(result.output)
+        assert parsed["description"] == "Just some text"
+        assert parsed["objects"] == []
 
 
 # =========================================================================
