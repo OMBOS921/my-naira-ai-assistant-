@@ -1391,8 +1391,7 @@ class FastCommandRouter:
         target_raw = match.params.get("raw_target", app_target)
         tool_used = "launch_application"
 
-        # BUG 4 (P1): Invalid target check
-        if match.params.get("is_invalid_target") or not app_target or not app_target.strip():
+        if not app_target or not app_target.strip() or not target_raw or not target_raw.strip():
             duration_ms = (time.time() - start_time) * 1000
             return f"INVALID_TARGET: '{target_raw}' is an unknown or invalid target. [Fast Execution: {duration_ms:.1f}ms]"
 
@@ -1414,13 +1413,15 @@ class FastCommandRouter:
         if self.discovery_engine and app_key and not is_builtin_cli:
             discovered_exe = self.discovery_engine.get_executable(app_key)
 
-        # --- Determine installation status (BUG 2) -------------------
+        # --- Determine installation status -------------------
         BUILTIN_APPS = {
             "calc", "notepad", "cmd", "powershell", "explorer", "mspaint",
             "taskmgr", "control", "regedit", "snippingtool", "devmgmt.msc", "wt"
         }
         app_is_installed = False
-        if app_target.startswith(("http://", "https://", "www.")):
+        if match.params.get("is_invalid_target"):
+            app_is_installed = False
+        elif app_target.startswith(("http://", "https://", "www.")):
             app_is_installed = True
         elif is_builtin_cli or app_key in BUILTIN_APPS or app_target.lower() in BUILTIN_APPS:
             app_is_installed = True
@@ -1459,35 +1460,22 @@ class FastCommandRouter:
 
         self._logger.info("[FCR] LaunchMethod=%s", launch_method)
 
-        # --- NOT_INSTALLED gate -> Browser Fallback (BUG 2) -----------
-        # Browser fallback ONLY executes when app_is_installed is False!
+        # --- NOT_INSTALLED gate -> Universal Web Browser Fallback -----------
         if not app_is_installed:
-            if fallback_url:
-                import webbrowser
-                self._logger.info("[FCR]\nFallback=True\nFallbackURL=%s\nReason=NOT_INSTALLED", fallback_url)
-                self._logger.info("[FCR]")
-                self._logger.info("Fallback=True")
-                self._logger.info("FallbackURL=%s", fallback_url)
-                self._logger.info("Reason=NOT_INSTALLED")
+            if not fallback_url:
+                fallback_url = f"https://www.google.com/search?q={urllib.parse.quote(target_raw)}"
 
-                webbrowser.open(fallback_url)
-                await self._verify_launch(app_key, fallback_url, timeout=0.5)
-                duration_ms = (time.time() - start_time) * 1000
-                return (
-                    f"BROWSER_FALLBACK: '{name_display}' is not installed. "
-                    f"Opened web version at {fallback_url}. [Fast Execution: {duration_ms:.1f}ms]"
-                )
-
-            # No fallback URL registered
-            self._logger.info("[FCR]\nFallback=False\nReason=NOT_INSTALLED")
+            import webbrowser
+            self._logger.info("[FCR]\nFallback=True\nFallbackURL=%s\nReason=NOT_INSTALLED", fallback_url)
             self._logger.info("[FCR]")
-            self._logger.info("Fallback=False")
+            self._logger.info("Fallback=True")
+            self._logger.info("FallbackURL=%s", fallback_url)
             self._logger.info("Reason=NOT_INSTALLED")
+
+            webbrowser.open(fallback_url)
+            await self._verify_launch(app_key, fallback_url, timeout=0.5)
             duration_ms = (time.time() - start_time) * 1000
-            return (
-                f"NOT_INSTALLED: '{name_display}' is not installed on this system. "
-                f"[Fast Execution: {duration_ms:.1f}ms]"
-            )
+            return f"BROWSER_FALLBACK: '{name_display}' is not installed locally. Opened web search automatically."
 
         # --- BUG 5 (P1): Duplicate Command Protection -----------------
         if self._mock_verification is None and not is_website:
