@@ -7,9 +7,6 @@ Naira-OS Bootstrap — Main Entry Point.
 
 from __future__ import annotations
 
-from dotenv import load_dotenv
-load_dotenv()
-
 import asyncio
 import base64
 import io
@@ -22,6 +19,20 @@ import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Final
+
+ROOT_DIR: Final[Path] = Path(__file__).resolve().parent
+ENV_PATH: Final[Path] = ROOT_DIR / ".env"
+
+# Explicitly load .env file from root directory at startup
+try:
+    from dotenv import load_dotenv
+    load_dotenv(dotenv_path=ENV_PATH, override=True)
+    load_dotenv(override=True)
+except ImportError:
+    pass
+
+from google import genai
+from google.genai import types
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -36,8 +47,8 @@ from backend.modules.utils.log import install_excepthook, setup_logging
 from backend.eventbus import EventBus
 from backend.orchestrator import FSMState, Orchestrator
 from backend.types import UserRequest
+from backend.runtime.fast_command_router import FastCommandRouter
 
-ROOT_DIR: Final[Path] = Path(__file__).resolve().parent
 _SHUTDOWN_GRACE_S: Final[float] = 3.0
 
 _LOG: logging.Logger = logging.getLogger("naira.main")
@@ -45,6 +56,115 @@ _modules: dict[str, Any] = {}
 _orchestrator: Orchestrator | None = None
 _container: DIContainer | None = None
 _active_websockets: set[WebSocket] = set()
+
+# Global Master Fast Command Router Instance
+fcr = FastCommandRouter()
+
+# Global Relation Engine / Memory store for user identity
+naira_memory: dict[str, str] = {
+    "name": "Boss",
+    "role": "Lead Architect"
+}
+
+
+async def process_llm(user_text: str) -> str:
+    """Complex LLM Router: Sends complex queries to Gemini via google.genai SDK."""
+    _LOG.info("[LLM ROUTER] Forwarding complex command to Gemini: '%s'", user_text)
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(dotenv_path=ENV_PATH, override=True)
+    except Exception:
+        pass
+
+    api_key = os.getenv("GEMINI_API_KEY", "").strip() or os.getenv("NAIRA_API_KEY", "").strip() or os.getenv("API_KEY", "").strip()
+    name = naira_memory.get("name", "Boss")
+    role = naira_memory.get("role", "Lead Architect")
+    system_instruction = f"You are Naira, an advanced autonomous operating system. Your boss and creator is {name}, the {role}. Keep responses sharp, highly technical, and brief."
+
+    try:
+        if api_key:
+            client = genai.Client(api_key=api_key)
+        else:
+            client = genai.Client()
+
+        response = await client.aio.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=user_text,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction
+            )
+        )
+        if response and response.text:
+            return response.text
+        return "[LLM / Gemini]: No response text returned."
+    except Exception as exc:
+        _LOG.error("[LLM ROUTER] Gemini API call error (gemini-2.5-flash): %s", exc)
+        try:
+            if api_key:
+                client = genai.Client(api_key=api_key)
+            else:
+                client = genai.Client()
+
+            response = await client.aio.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=user_text,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction
+                )
+            )
+            if response and response.text:
+                return response.text
+        except Exception as fallback_exc:
+            _LOG.error("[LLM ROUTER] Gemini API fallback error (gemini-2.0-flash): %s", fallback_exc)
+
+        return f"[LLM Error]: Unable to query Gemini ({exc})."
+
+
+async def process_command(user_text: str) -> str:
+    """Fast Command Router (FCR): Evaluates user input via Master FCR, identity memory check, or LLM."""
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(dotenv_path=ENV_PATH, override=True)
+    except Exception:
+        pass
+
+    # 1. Master FastCommandRouter (NLP, Hinglish, OS commands, Direct execution)
+    if fcr and fcr.is_fast_command(user_text):
+        _LOG.info("[FCR] Command matched by FastCommandRouter: '%s'", user_text)
+        try:
+            result = await fcr.execute_fast_command(user_text)
+            if result:
+                return result
+        except Exception as exc:
+            _LOG.error("[FCR] Execution error: %s", exc)
+
+    # 2. Basic Identity Memory Check (naira_memory relation store)
+    text_lower = user_text.lower().strip()
+    name = naira_memory.get("name", "Boss")
+    role = naira_memory.get("role", "Lead Architect")
+
+    identity_keywords = [
+        "who are you", "what is your name", "who are u", "what's your name",
+        "identify yourself", "what is your identity", "who created you"
+    ]
+    if any(k in text_lower for k in identity_keywords):
+        return "I am Naira, your autonomous operating system."
+
+    user_identity_keywords = ["who am i", "whoami", "my name", "my role"]
+    if any(k in text_lower for k in user_identity_keywords):
+        return f"You are {name}, the {role}."
+
+    if any(k in text_lower for k in ["hello", "hi naira", "hey naira", "greetings"]):
+        return f"Hello {name}. Neural links initialized and systems operational."
+    elif text_lower in ["hi", "hey"]:
+        return f"Hello {name}. Neural links initialized and systems operational."
+    elif any(k in text_lower for k in ["status", "system status", "health"]):
+        return f"System Status: Nominal. Operating at peak efficiency, {role} {name}."
+    elif "wake up" in text_lower:
+        return f"Naira-OS online and awaiting your command, {name}."
+
+    # 3. Fallback to Gemini LLM for Complex Queries
+    return await process_llm(user_text)
 
 
 def record_audio_sd(duration_sec: float = 4.0, samplerate: int = 16000) -> tuple[bytes | None, float]:
@@ -348,22 +468,129 @@ app.add_middleware(
 
 @app.get("/api/check_key")
 async def check_key() -> dict[str, Any]:
-    load_dotenv()
-    key = os.getenv("GEMINI_API_KEY") or os.getenv("NAIRA_API_KEY") or os.getenv("API_KEY")
-    return {"has_key": True, "status": "valid"}
+    load_dotenv(override=True)
+    gemini_key = os.getenv("GEMINI_API_KEY", "").strip() or os.getenv("NAIRA_API_KEY", "").strip() or os.getenv("API_KEY", "").strip()
+    zen_key = os.getenv("OPENCODE_ZEN_API_KEY", "").strip() or os.getenv("ZEN_API_KEY", "").strip()
+    has_key = bool(gemini_key) or bool(zen_key)
+    return {
+        "has_key": has_key,
+        "gemini_key": gemini_key,
+        "opencode_zen_key": zen_key,
+        "status": "valid" if has_key else "missing"
+    }
 
 @app.post("/api/save_key")
-async def save_key(payload: dict[str, str]) -> dict[str, bool]:
-    api_key = payload.get("api_key", "").strip()
-    if api_key:
-        os.environ["GEMINI_API_KEY"] = api_key
-        llm_mgr = _modules.get("llm")
-        if llm_mgr:
-            for provider in llm_mgr._providers.values():
-                if hasattr(provider, "_api_key"):
-                    setattr(provider, "_api_key", api_key)
-        return {"success": True}
-    return {"success": False}
+async def save_key(payload: dict[str, str]) -> dict[str, Any]:
+    gemini_key = payload.get("gemini_key", "").strip() or payload.get("api_key", "").strip()
+    zen_key = payload.get("opencode_zen_key", "").strip() or payload.get("zen_key", "").strip()
+
+    if not gemini_key and not zen_key:
+        return {"success": False, "message": "No key provided"}
+
+    # Update runtime OS environment
+    if gemini_key:
+        os.environ["GEMINI_API_KEY"] = gemini_key
+    if zen_key:
+        os.environ["OPENCODE_ZEN_API_KEY"] = zen_key
+
+    # Update LLM core modules in memory
+    llm_mgr = _modules.get("llm")
+    if llm_mgr:
+        for provider in llm_mgr._providers.values():
+            if hasattr(provider, "_api_key"):
+                if gemini_key:
+                    setattr(provider, "_api_key", gemini_key)
+
+    # Auto-Save to .env configuration file dynamically
+    env_path = ROOT_DIR / ".env"
+    env_lines = []
+    existing_keys = set()
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            if "=" in line and not line.strip().startswith("#"):
+                k, _ = line.split("=", 1)
+                k_clean = k.strip()
+                if k_clean == "GEMINI_API_KEY" and gemini_key:
+                    env_lines.append(f"GEMINI_API_KEY={gemini_key}")
+                    existing_keys.add("GEMINI_API_KEY")
+                elif k_clean == "OPENCODE_ZEN_API_KEY" and zen_key:
+                    env_lines.append(f"OPENCODE_ZEN_API_KEY={zen_key}")
+                    existing_keys.add("OPENCODE_ZEN_API_KEY")
+                else:
+                    env_lines.append(line)
+            else:
+                env_lines.append(line)
+    else:
+        env_lines = []
+
+    if gemini_key and "GEMINI_API_KEY" not in existing_keys:
+        env_lines.append(f"GEMINI_API_KEY={gemini_key}")
+    if zen_key and "OPENCODE_ZEN_API_KEY" not in existing_keys:
+        env_lines.append(f"OPENCODE_ZEN_API_KEY={zen_key}")
+
+    try:
+        env_path.write_text("\n".join(env_lines) + "\n", encoding="utf-8")
+        _LOG.info("[CONFIG] API Keys auto-saved to .env file dynamically")
+    except Exception as exc:
+        _LOG.warning("[CONFIG] Could not write to .env file: %s", exc)
+
+    return {"success": True, "saved_to_env": True}
+
+@app.websocket("/ws/naira")
+async def websocket_naira_endpoint(websocket: WebSocket) -> None:
+    """Real-time bi-directional WebSocket endpoint for Naira chat & control."""
+    await websocket.accept()
+    _active_websockets.add(websocket)
+    _LOG.info("[WS-NAIRA] Client connected successfully")
+    try:
+        while True:
+            try:
+                ws_msg = await websocket.receive()
+            except WebSocketDisconnect:
+                _LOG.info("[WS-NAIRA] WebSocket disconnected gracefully")
+                break
+            except Exception as e:
+                _LOG.warning("[WS-NAIRA] Error receiving message: %s", e)
+                break
+
+            user_text = ""
+            msg_type = ""
+            if "text" in ws_msg and ws_msg["text"]:
+                raw_text = ws_msg["text"]
+                if raw_text.startswith("{"):
+                    try:
+                        import json
+                        payload = json.loads(raw_text)
+                        msg_type = payload.get("type", "")
+                        if msg_type == "system_init":
+                            name = payload.get("name", naira_memory["name"])
+                            role = payload.get("role", naira_memory["role"])
+                            naira_memory["name"] = name
+                            naira_memory["role"] = role
+                            _LOG.info("[WS-NAIRA] System Init received. Identity synced: name=%s, role=%s", name, role)
+                            await websocket.send_json({
+                                "sender": "naira",
+                                "text": f"Identity synced to Relation Engine: Welcome, {name} ({role})."
+                            })
+                            continue
+                        user_text = payload.get("text", payload.get("content", raw_text))
+                    except Exception:
+                        user_text = raw_text
+                else:
+                    user_text = raw_text
+
+            if user_text:
+                _LOG.info("[WS-NAIRA] Received command from frontend: %s", user_text)
+                response_text = await process_command(user_text)
+                await websocket.send_json({
+                    "sender": "naira",
+                    "text": response_text
+                })
+    except Exception as e:
+        _LOG.debug("[WS-NAIRA] WebSocket handler exception: %s", e)
+    finally:
+        _active_websockets.discard(websocket)
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:

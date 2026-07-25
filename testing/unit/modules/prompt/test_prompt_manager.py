@@ -78,12 +78,10 @@ class TestPromptCompiler:
         result = PromptCompiler.compile(t, None)
         assert result == "No placeholders."
 
-    def test_missing_variable_raises_error(self) -> None:
+    def test_missing_variable_handled_gracefully(self) -> None:
         t = PromptTemplate(name="test", content="Hello {{ name }}!", source="test")
-        with pytest.raises(PromptCompileError) as exc:
-            PromptCompiler.compile(t, {})
-        assert "Missing variable" in str(exc.value)
-        assert "name" in str(exc.value)
+        result = PromptCompiler.compile(t, {})
+        assert result == "Hello !"
 
     def test_whitespace_in_placeholders(self) -> None:
         t = PromptTemplate(name="test", content="Hello {{  name  }}!", source="test")
@@ -94,6 +92,23 @@ class TestPromptCompiler:
         t = PromptTemplate(name="test", content="{{ user.name }}", source="test")
         result = PromptCompiler.compile(t, {"user.name": "Alice"})
         assert result == "Alice"
+
+    def test_elif_chain_evaluation(self) -> None:
+        template_text = (
+            "{% if level == 'high' %}"
+            "Personality: Enthusiastic and energetic"
+            "{% elif level == 'medium' %}"
+            "Personality: Friendly and helpful"
+            "{% else %}"
+            "Personality: Neutral and concise"
+            "{% endif %}"
+        )
+        t = PromptTemplate(name="test_elif", content=template_text, source="test")
+
+        assert PromptCompiler.compile(t, {"level": "high"}) == "Personality: Enthusiastic and energetic"
+        assert PromptCompiler.compile(t, {"level": "medium"}) == "Personality: Friendly and helpful"
+        assert PromptCompiler.compile(t, {"level": "low"}) == "Personality: Neutral and concise"
+        assert PromptCompiler.compile(t, {}) == "Personality: Neutral and concise"
 
 
 # =========================================================================
@@ -294,8 +309,8 @@ class TestPromptManagerCompile:
         )
         mgr = PromptManager(templates_dir=templates_dir)
         await mgr.async_init()
-        with pytest.raises(PromptCompileError):
-            mgr.compile({})
+        result = mgr.compile({})
+        assert result == "Hello !"
 
 
 # =========================================================================

@@ -1,41 +1,36 @@
 """
-Prompt compiler — renders ``{{ variable }}`` placeholders in templates.
+Prompt compiler — renders Jinja2 templates for Naira-OS prompts.
 
-No Jinja2 dependency is required.  A minimal ``{{ ... }}`` parser handles
-the simple substitution patterns used by this project.  The ``.j2`` file
-extension is used per 21_System_Contracts.md §19.10 to distinguish templates
-from plain text, even though the parser is custom.
+Uses the official ``jinja2`` library to compile and render templates,
+handling variables, logic blocks ({% if %}, {% elif %}, {% else %}),
+and filters gracefully without crashing on missing context variables per
+jinja2's Undefined settings.
 """
 
 from __future__ import annotations
 
-import re
-from typing import Final
+from typing import Any
+
+import jinja2
 
 from backend.modules.prompt._template import PromptTemplate
 
-try:
-    import jinja2
-except ImportError:
-    jinja2 = None
-
-_PLACEHOLDER_RE: Final[re.Pattern[str]] = re.compile(r"\{\{\s*([\w.]+)\s*\}\}")
-
 
 class PromptCompileError(ValueError):
-    """Raised when a template cannot be compiled (missing variables, etc.)."""
+    """Raised when a template cannot be compiled due to syntax errors or invalid template structure."""
 
 
-def _expand_dots(d: dict[str, object]) -> dict[str, object]:
-    res: dict[str, object] = {}
+def _expand_dots(d: dict[str, Any]) -> dict[str, Any]:
+    """Expand flat keys containing dots (e.g., 'user.name': 'Alice') into nested dictionaries."""
+    res: dict[str, Any] = {}
     for k, v in d.items():
         res[k] = v
         if "." in k:
             parts = k.split(".")
-            curr: dict[str, object] = res
+            curr: dict[str, Any] = res
             for part in parts[:-1]:
                 if part not in curr or not isinstance(curr[part], dict):
-                    new_d: dict[str, object] = {}
+                    new_d: dict[str, Any] = {}
                     curr[part] = new_d
                     curr = new_d
                 else:
@@ -45,77 +40,49 @@ def _expand_dots(d: dict[str, object]) -> dict[str, object]:
 
 
 class PromptCompiler:
-    """Compiles ``PromptTemplate`` instances by substituting placeholders.
+    """Compiles ``PromptTemplate`` instances using Jinja2.
 
-    Recognises ``{{ variable_name }}`` patterns (dots allowed in names)
-    and Jinja2 logic templates, replacing them with values from *variables*.
+    Uses ``jinja2.Environment`` and ``from_string()`` to compile and render templates.
+    Gracefully handles missing variables in the context dictionary using Jinja2's
+    Undefined setting so the app doesn't crash if a variable is missing at runtime.
     """
 
-    @staticmethod
+    _env: jinja2.Environment = jinja2.Environment(
+        undefined=jinja2.Undefined,
+        autoescape=False,
+    )
+
+    @classmethod
     def compile(
+        cls,
         template: PromptTemplate,
-        variables: dict[str, str] | None = None,
+        variables: dict[str, Any] | None = None,
     ) -> str:
-        vars_dict: dict[str, object] = dict(variables or {})
+        """Compile and render a prompt template with the provided variables.
 
-        if jinja2 is not None:
-            try:
-                env = jinja2.Environment(
-                    undefined=jinja2.StrictUndefined,
-                    autoescape=False,
-                )
-                j2_template = env.from_string(template.content)
-                return j2_template.render(**_expand_dots(vars_dict))
-            except jinja2.UndefinedError as exc:
-                msg = f"Missing variable '{exc}' in template '{template.name}'"
-                raise PromptCompileError(msg) from exc
-            except jinja2.TemplateError as exc:
-                msg = f"Failed to compile template '{template.name}': {exc}"
-                raise PromptCompileError(msg) from exc
+        Parameters
+        ----------
+        template : PromptTemplate
+            The prompt template containing content and metadata.
+        variables : dict[str, Any] | None
+            Runtime context variables for substitution.
 
-        content = template.content
+        Returns
+        -------
+        str
+            The rendered system prompt string.
 
-        # Handle {% set ... %} statements
-        content = re.sub(r"\{%\s*set\s+[\w.]+\s*=.*?%\}\n?", "", content)
+        Raises
+        ------
+        PromptCompileError
+            If the template contains invalid Jinja2 syntax or fails compilation.
+        """
+        vars_dict: dict[str, Any] = dict(variables or {})
+        expanded_vars = _expand_dots(vars_dict)
 
-        # Handle {% if ... %}...{% else %}...{% endif %} blocks
-        def _eval_if(m: re.Match[str]) -> str:
-            expr = m.group(1).strip()
-            if_body = m.group(2)
-            else_body = m.group(3) if m.group(3) is not None else ""
-
-            var_name = expr.split("|")[0].strip()
-            val = vars_dict.get(var_name)
-            is_truthy = bool(val) and str(val).strip() != "" and str(val).lower() != "false"
-            return if_body if is_truthy else else_body
-
-        content = re.sub(
-            r"\{%\s*if\s+(.*?)\s*%\}(.*?)(?:\{%\s*else\s*%\}(.*?))?\{%\s*endif\s*%\}",
-            _eval_if,
-            content,
-            flags=re.DOTALL,
-        )
-
-        # Handle {{ var | default('val') }} and {{ var }}
-        def _replace_var(m: re.Match[str]) -> str:
-            expr = m.group(1).strip()
-            if "|" in expr:
-                parts = expr.split("|", 1)
-                var_name = parts[0].strip()
-                filter_part = parts[1].strip()
-                val = vars_dict.get(var_name)
-                if val is not None and str(val) != "":
-                    return str(val)
-                default_m = re.search(r"default\((['\"]?)(.*?)\1\)", filter_part)
-                if default_m:
-                    return default_m.group(2)
-                return ""
-            else:
-                var_name = expr
-                if var_name not in vars_dict:
-                    msg = f"Missing variable '{var_name}' in template '{template.name}'"
-                    raise PromptCompileError(msg)
-                return str(vars_dict[var_name])
-
-        result = re.sub(r"\{\{\s*(.*?)\s*\}\}", _replace_var, content)
-        return result
+        try:
+            j2_template = cls._env.from_string(template.content)
+            return j2_template.render(**expanded_vars)
+        except jinja2.TemplateError as exc:
+            msg = f"Failed to compile template '{template.name}': {exc}"
+            raise PromptCompileError(msg) from exc
