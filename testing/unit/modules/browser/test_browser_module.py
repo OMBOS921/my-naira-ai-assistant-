@@ -407,8 +407,24 @@ class _MockAdapter:
             raise BrowserNotImplementedError()
         return BrowserPage(url=url, title="Extracted", content="Extracted content", status_code=200)
 
+    async def click(self, selector: str, timeout: float | None = None) -> None:
+        pass
+
+    async def fill(self, selector: str, value: str, timeout: float | None = None) -> None:
+        pass
+
+    async def scroll(self, delta_x: int = 0, delta_y: int = 500) -> None:
+        pass
+
+    async def get_visible_text(self) -> str:
+        return "Mock visible page text"
+
+    async def execute_js(self, script: str, *args: Any) -> Any:
+        return "Mock element text"
+
     async def close(self) -> None:
         pass
+
 
 
 class TestBrowserExecutor:
@@ -683,3 +699,112 @@ class TestModuleInterfaceConformance:
         assert hasattr(mgr, "async_init")
         assert hasattr(mgr, "async_shutdown")
         assert hasattr(mgr, "degrade")
+
+
+# =========================================================================
+# Deep Web Automation Actions & Tool Registration
+# =========================================================================
+
+
+class TestBrowserManagerDeepWeb:
+    @pytest.mark.asyncio
+    async def test_click_success(self) -> None:
+        adapter = _MockAdapter()
+        mgr = BrowserManager(adapter=adapter)
+        await mgr.async_init()
+        res = await mgr.click("button#submit")
+        assert res.status == "success"
+        assert "button#submit" in res.output
+
+    @pytest.mark.asyncio
+    async def test_click_no_adapter(self) -> None:
+        mgr = BrowserManager()
+        await mgr.async_init()
+        res = await mgr.click("button#submit")
+        assert res.status == "error"
+
+    @pytest.mark.asyncio
+    async def test_fill_success(self) -> None:
+        adapter = _MockAdapter()
+        mgr = BrowserManager(adapter=adapter)
+        await mgr.async_init()
+        res = await mgr.fill("input#username", "testuser")
+        assert res.status == "success"
+        assert "input#username" in res.output
+
+    @pytest.mark.asyncio
+    async def test_fill_no_adapter(self) -> None:
+        mgr = BrowserManager()
+        await mgr.async_init()
+        res = await mgr.fill("input#username", "testuser")
+        assert res.status == "error"
+
+    @pytest.mark.asyncio
+    async def test_scroll_success(self) -> None:
+        adapter = _MockAdapter()
+        mgr = BrowserManager(adapter=adapter)
+        await mgr.async_init()
+        res = await mgr.scroll(delta_x=0, delta_y=300)
+        assert res.status == "success"
+
+    @pytest.mark.asyncio
+    async def test_scroll_no_adapter(self) -> None:
+        mgr = BrowserManager()
+        await mgr.async_init()
+        res = await mgr.scroll(delta_x=0, delta_y=300)
+        assert res.status == "error"
+
+    @pytest.mark.asyncio
+    async def test_extract_text_success(self) -> None:
+        adapter = _MockAdapter()
+        mgr = BrowserManager(adapter=adapter)
+        await mgr.async_init()
+        res = await mgr.extract_text()
+        assert res.status == "success"
+        assert "Mock visible page text" in res.output
+
+    @pytest.mark.asyncio
+    async def test_extract_text_with_selector(self) -> None:
+        adapter = _MockAdapter()
+        mgr = BrowserManager(adapter=adapter)
+        await mgr.async_init()
+        res = await mgr.extract_text(selector="div.content")
+        assert res.status == "success"
+        assert "Mock element text" in res.output
+
+    @pytest.mark.asyncio
+    async def test_extract_text_no_adapter(self) -> None:
+        mgr = BrowserManager()
+        await mgr.async_init()
+        res = await mgr.extract_text()
+        assert res.status == "error"
+
+
+class TestBrowserToolRegistration:
+    @pytest.mark.asyncio
+    async def test_registers_all_deep_web_tools(self) -> None:
+        tool_manager = MagicMock()
+        registered_tools: dict[str, Any] = {}
+
+        def mock_register(tool_def: Any, handler: Any) -> None:
+            registered_tools[tool_def.name] = (tool_def, handler)
+
+        tool_manager.register_tool = mock_register
+
+        mgr = BrowserManager(tool_manager=tool_manager)
+        await mgr.async_init()
+
+        expected_tools = {
+            "browser_navigate",
+            "browser_search",
+            "browser_click",
+            "browser_fill",
+            "browser_scroll",
+            "browser_extract_text",
+        }
+        assert expected_tools.issubset(set(registered_tools.keys()))
+        for name in expected_tools:
+            tool_def, handler = registered_tools[name]
+            assert tool_def.category == "browser"
+            assert callable(handler)
+

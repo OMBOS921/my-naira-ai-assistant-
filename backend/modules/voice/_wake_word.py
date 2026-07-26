@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from backend.modules.voice._audio_player import audio_interrupt_event
 from backend.modules.voice._types import AudioData, WakeWordResult
 
 _LOG = logging.getLogger("naira.voice.wake_word")
@@ -83,6 +84,7 @@ class WakeWord:
                     timeout=timeout + 1.0,
                 )
                 if result and result.detected:
+                    audio_interrupt_event.set()
                     return WakeWordResult(
                         detected=True,
                         wake_word=result.wake_word or wake_word,
@@ -118,6 +120,7 @@ class WakeWord:
 
             for kw in keywords:
                 if kw in text_heard:
+                    audio_interrupt_event.set()
                     return WakeWordResult(
                         detected=True,
                         wake_word=kw,

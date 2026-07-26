@@ -17,7 +17,7 @@ import logging
 from typing import Any
 
 from backend.exceptions import ModuleDegradedError
-from backend.modules.voice._audio_player import AudioPlayer
+from backend.modules.voice._audio_player import AudioPlayer, audio_interrupt_event
 from backend.modules.voice._audio_recorder import AudioRecorder
 from backend.modules.voice._exceptions import VoiceNotImplementedError
 from backend.modules.voice._local_adapter import LocalVoiceAdapter
@@ -789,6 +789,15 @@ class VoiceManager:
     def wake_word(self) -> WakeWord:
         """Expose the wake-word detector."""
         return self._wake_word
+
+    @property
+    def interrupt_event(self) -> Any:
+        """Expose the global audio interrupt event."""
+        return audio_interrupt_event
+
+    def interrupt(self) -> None:
+        """Trigger immediate audio playback interruption (barge-in)."""
+        audio_interrupt_event.set()
 
     # ------------------------------------------------------------------
     # Internal helpers

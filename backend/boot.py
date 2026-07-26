@@ -211,6 +211,7 @@ async def boot_core_modules(
             config=config,
             max_tokens=config.context.max_tokens,
             memory_port=memory_mgr.memory_adapter,
+            memory_manager=memory_mgr,
             event_bus=event_bus,
         )
         await context_mgr.async_init()
@@ -265,7 +266,8 @@ async def boot_core_modules(
         orchestrator.register_module("tools", tool_mgr)
         if getattr(tool_mgr, "degraded", False):
             degraded_modules.append("tools")
-        _LOG.info("[BOOT] Tools initialised")
+        memory_mgr.register_tools(tool_mgr)
+        _LOG.info("[BOOT] Tools initialised — registered memory tools")
 
         # 7f – SecurityManager (Layer 4 — Orchestration)
         _LOG.info("[BOOT]   Initialising SecurityManager ...")
@@ -812,6 +814,8 @@ async def boot_core_modules(
             conversation_manager=conversation_mgr,
             context_intelligence_manager=context_intel_mgr,
             pc_control_manager=pc_control_mgr,
+            coding_agent_manager=coding_agent_mgr,
+            vision_manager=vision_mgr,
             decision_manager=decision_mgr,
             analytics_manager=analytics_mgr,
             planning_manager=planning_mgr,

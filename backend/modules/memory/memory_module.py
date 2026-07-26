@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from pathlib import Path
 from typing import Any
 
@@ -28,12 +29,43 @@ from backend.modules.memory.engines.user_profile_engine import UserProfileEngine
 from backend.modules.memory.search import SearchAPI
 from backend.modules.memory.sqlite_store import SQLiteStore
 from backend.modules.memory.vector_index import VectorIndex
-from backend.types import Message
+from backend.modules.tools._definition import ToolDefinition
+from backend.types import Message, ToolResult
 
 _LOG = logging.getLogger("naira.memory")
 
 DEFAULT_DB_FILENAME = "naira_memory.db"
 DEFAULT_INDEX_FILENAME = "naira_vector_index.json"
+
+SEARCH_MEMORY_TOOL_DEF = ToolDefinition(
+    name="search_memory",
+    description=(
+        "Search Naira-OS long-term memory, conversation history, vector index, and "
+        "timeline events for past context, user preferences, or previously used terminal commands."
+    ),
+    parameters={
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "Search term or natural language query to look up in long-term memory.",
+            },
+            "search_type": {
+                "type": "string",
+                "enum": ["all", "conversations", "timeline", "semantic", "profile"],
+                "description": "Optional search filter type (defaults to 'all').",
+                "default": "all",
+            },
+            "limit": {
+                "type": "integer",
+                "description": "Maximum number of search results to return (default 5).",
+                "default": 5,
+            },
+        },
+        "required": ["query"],
+    },
+    category="memory",
+)
 
 
 class MemoryManager:
@@ -80,8 +112,6 @@ class MemoryManager:
         self._store = SQLiteStore(resolved_db)
         self._index = VectorIndex(resolved_index)
         self._search = SearchAPI(self._store, self._index)
-        self._memory_adapter = SQLiteMemoryAdapter(self._store)
-        self._index_adapter = JSONVectorIndexAdapter(self._index)
 
         # Instantiate persistent memory engines using central SQLiteStore
         self._relationship_memory = RelationshipMemory(self._store, self._logger)
@@ -98,6 +128,13 @@ class MemoryManager:
             self._memory_intelligence,
             self._logger,
         )
+
+        self._memory_adapter = SQLiteMemoryAdapter(
+            self._store,
+            timeline_engine=self._timeline_engine,
+            user_profile_engine=self._user_profile,
+        )
+        self._index_adapter = JSONVectorIndexAdapter(self._index)
 
     # ------------------------------------------------------------------
     # Module lifecycle  (ModuleInterface protocol)
@@ -371,6 +408,148 @@ class MemoryManager:
         """Reclaim SQLite storage space."""
         self._ensure_not_degraded()
         await asyncio.to_thread(self._store.vacuum)
+
+    # ------------------------------------------------------------------
+    # Tool extraction and registration API
+    # ------------------------------------------------------------------
+
+    def register_tools(self, tool_manager: object) -> None:
+        """Register the ``search_memory`` tool with the provided ToolManager."""
+        if tool_manager is None:
+            return
+        has_fn = getattr(tool_manager, "has_tool", None)
+        if callable(has_fn) and has_fn("search_memory"):
+            return
+        reg_fn = getattr(tool_manager, "register_tool", None)
+        if callable(reg_fn):
+            try:
+                reg_fn(SEARCH_MEMORY_TOOL_DEF, self.search_memory_tool_handler)
+                self._logger.info("Registered search_memory tool with ToolManager")
+            except Exception as exc:
+                self._logger.warning("Failed to register search_memory tool: %s", exc)
+
+    async def search_memory_tool_handler(
+        self,
+        query: str,
+        search_type: str = "all",
+        limit: int = 5,
+    ) -> ToolResult:
+        """Handler for the search_memory LLM tool.
+
+        Queries past conversation history, vector index, timeline events, and profile entries.
+        """
+        self._ensure_not_degraded()
+
+        try:
+            results_text: list[str] = []
+
+            # 1. Timeline Events Search
+            if search_type in ("all", "timeline"):
+                tl_events = await asyncio.to_thread(
+                    self._timeline_engine.search, query, limit
+                )
+                if tl_events:
+                    results_text.append("=== Timeline Events ===")
+                    for ev in tl_events:
+                        ts = ev.get("happened_at", 0)
+                        dt = time.strftime("%Y-%m-%d %H:%M", time.localtime(ts)) if ts else ""
+                        results_text.append(
+                            f"• [{dt}] [{ev.get('event_type')}] {ev.get('title')}: {ev.get('description', '')}"
+                        )
+
+            # 2. User Profile Search
+            if search_type in ("all", "profile"):
+                profile_all = await asyncio.to_thread(self._user_profile.get_all)
+                matching_prof = {
+                    k: v for k, v in profile_all.items()
+                    if query.lower() in k.lower() or query.lower() in str(v).lower()
+                }
+                if matching_prof:
+                    results_text.append("=== User Profile Entries ===")
+                    for k, v in matching_prof.items():
+                        results_text.append(f"• {k}: {v}")
+
+            # 3. Conversation & Semantic Search
+            if search_type in ("all", "conversations", "semantic"):
+                if search_type == "conversations":
+                    conv_results = await asyncio.to_thread(
+                        self._search.search_conversations, query, None, limit
+                    )
+                elif search_type == "semantic":
+                    conv_results = await asyncio.to_thread(
+                        self._search.search_semantic, query, limit
+                    )
+                else:
+                    conv_results = await asyncio.to_thread(
+                        self._search.combined_search, query, limit
+                    )
+
+                if conv_results:
+                    results_text.append("=== Past Conversations & Index ===")
+                    for r in conv_results:
+                        results_text.append(
+                            f"• [Session: {r.source_id}] (Score: {r.score:.2f}) {r.content}"
+                        )
+
+            if not results_text:
+                return ToolResult(
+                    status="success",
+                    output=f"No memory items found matching query '{query}'.",
+                )
+
+            final_output = "\n".join(results_text)
+            return ToolResult(status="success", output=final_output)
+
+        except Exception as exc:
+            self._logger.error("search_memory_tool_handler failed: %s", exc)
+            return ToolResult(
+                status="error",
+                error=f"Failed to query memory: {exc}",
+            )
+
+    async def get_dynamic_historical_context(
+        self, session_id: str = "default", limit_events: int = 3
+    ) -> str:
+        """Retrieve dynamic historical context string (user profile + recent timeline events)."""
+        self._ensure_not_degraded()
+        return await self._memory_adapter.get_dynamic_context_summary(session_id, limit_events)
+
+    async def record_tool_call_success(
+        self,
+        tool_name: str,
+        args: dict[str, Any],
+        result: Any,
+        session_id: str | None = None,
+    ) -> int | None:
+        """Record successful tool execution in the timeline engine."""
+        self._ensure_not_degraded()
+        res_str = str(result)
+        if len(res_str) > 300:
+            res_str = res_str[:300] + "..."
+        return await self.record_event(
+            event_type="tool_call_success",
+            title=f"Executed tool: {tool_name}",
+            description=f"Args: {args} | Result: {res_str}",
+            session_id=session_id,
+            importance=5,
+            metadata={"tool_name": tool_name, "args": args},
+        )
+
+    async def record_conversation_summary(
+        self,
+        summary: str,
+        session_id: str | None = None,
+        importance: int = 7,
+    ) -> int | None:
+        """Record significant conversation summary in the timeline engine."""
+        self._ensure_not_degraded()
+        return await self.record_event(
+            event_type="conversation_summary",
+            title="Conversation Summary",
+            description=summary,
+            session_id=session_id,
+            importance=importance,
+        )
 
     # ------------------------------------------------------------------
     # Internal helpers

@@ -9,6 +9,7 @@ for convenience; all other shared types originate in this module.
 
 from __future__ import annotations
 
+import time
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol, runtime_checkable
@@ -91,7 +92,7 @@ class UserRequest:
     source: RequestSource
     text: str
     session_id: str
-    timestamp: float
+    timestamp: float = field(default_factory=time.time)
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -102,7 +103,7 @@ class UserResponse:
     request_id: uuid.UUID
     text: str
     source: RequestSource
-    duration_ms: float
+    duration_ms: float = 0.0
 
 
 @dataclass(frozen=True)

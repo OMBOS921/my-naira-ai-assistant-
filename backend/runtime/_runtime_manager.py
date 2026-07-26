@@ -66,6 +66,8 @@ class RuntimeManager:
         conversation_manager: object | None = None,
         context_intelligence_manager: object | None = None,
         pc_control_manager: object | None = None,
+        coding_agent_manager: object | None = None,
+        vision_manager: object | None = None,
         decision_manager: object | None = None,
         analytics_manager: object | None = None,
         planning_manager: object | None = None,
@@ -84,6 +86,8 @@ class RuntimeManager:
         self._conversation_manager = conversation_manager
         self._context_intelligence_manager = context_intelligence_manager
         self._pc_control_manager = pc_control_manager
+        self._coding_agent_manager = coding_agent_manager
+        self._vision_manager = vision_manager
         self._decision_manager = decision_manager
         self._analytics_manager = analytics_manager
         self._planning_manager = planning_manager
@@ -102,6 +106,7 @@ class RuntimeManager:
 
         self._fast_command_router = FastCommandRouter(
             pc_control_manager=pc_control_manager,
+            vision_manager=vision_manager,
             logger=self._logger,
         )
 
@@ -121,6 +126,17 @@ class RuntimeManager:
             self._decision_manager, "_fast_command_router"
         ):
             self._decision_manager._fast_command_router = self._fast_command_router
+
+        # Wire MemoryManager with ToolManager and ContextManager if present
+        if self._memory_manager is not None:
+            if self._tool_manager is not None:
+                reg_t = getattr(self._memory_manager, "register_tools", None)
+                if callable(reg_t):
+                    reg_t(self._tool_manager)
+            if self._context_manager is not None:
+                set_m = getattr(self._context_manager, "set_memory_manager", None)
+                if callable(set_m):
+                    set_m(self._memory_manager)
 
     # ------------------------------------------------------------------
     # Module lifecycle  (ModuleInterface protocol)
@@ -308,6 +324,39 @@ class RuntimeManager:
                 gw_decision.complexity_score,
                 gw_decision.reasoning,
             )
+
+            # Route Coding Tasks directly to CodingAgentManager (TDD & Self-Correction Loop)
+            if (
+                (gw_decision.category == IntentCategory.CODING or gw_decision.category == "CODING")
+                and self._coding_agent_manager is not None
+                and hasattr(self._coding_agent_manager, "execute_task")
+            ):
+                self._logger.info("[ROUTING] [MATCH] Routing coding request to CodingAgentManager TDD engine: '%s'", request.text)
+                try:
+                    res = await self._coding_agent_manager.execute_task(
+                        request.text,
+                        {"session_id": request.session_id},
+                    )
+                    duration_ms = (time.time() - ctx.start_time) * 1000
+                    res_text = getattr(res, "output", "") or getattr(res, "error", "") or f"Coding task completed with status: {getattr(res, 'status', 'completed')}"
+                    token_usage = self._estimate_token_usage("", res_text)
+                    final_response = LLMResponse(
+                        text=res_text,
+                        tool_calls=None,
+                        finish_reason="stop",
+                        token_usage=token_usage,
+                        provider="coding_agent",
+                        duration_ms=duration_ms,
+                    )
+                    await self._store_turn(ctx, final_response)
+                    return UserResponse(
+                        request_id=request.id,
+                        text=res_text,
+                        source=request.source,
+                        duration_ms=duration_ms,
+                    )
+                except Exception as coding_exc:
+                    self._logger.warning("[ROUTING] CodingAgentManager execution failed, falling back to standard LLM pipeline: %s", coding_exc)
 
             if not gw_decision.llm_required:
                 duration_ms = (time.time() - ctx.start_time) * 1000
@@ -637,6 +686,7 @@ class RuntimeManager:
                     session_id=ctx.session_id,
                     text=ctx.user_text,
                     source=ctx.source,
+                    timestamp=time.time(),
                     metadata=ctx.metadata,
                 )
                 try:

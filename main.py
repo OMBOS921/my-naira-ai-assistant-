@@ -52,6 +52,7 @@ from backend.modules.utils.di import DIContainer
 from backend.modules.utils.log import install_excepthook, setup_logging
 from backend.eventbus import EventBus
 from backend.orchestrator import FSMState, Orchestrator
+from backend.runtime.proactive_watchdog import ProactiveWatchdog
 from backend.types import UserRequest, UserResponse
 
 _SHUTDOWN_GRACE_S: Final[float] = 3.0
@@ -61,6 +62,7 @@ _modules: dict[str, Any] = {}
 _orchestrator: Orchestrator | None = None
 _container: DIContainer | None = None
 _active_websockets: set[WebSocket] = set()
+_watchdog: ProactiveWatchdog | None = None
 
 # =====================================================================
 # 2. CORE REQUEST ROUTER (Clean Architecture Entry Point)
@@ -87,7 +89,7 @@ async def process_user_input(user_text: str, session_id: str = "default") -> str
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Boot all core modules on startup; shut them down on exit."""
-    global _modules, _orchestrator, _container, _LOG
+    global _modules, _orchestrator, _container, _watchdog, _LOG
 
     try:
         env = EnvironmentSnapshot.load()
@@ -126,10 +128,17 @@ async def lifespan(app: FastAPI):
 
     _orchestrator.state = FSMState.IDLE
     _LOG.info("[BOOT] System ready — %d modules booted.", len(_modules))
+    await _orchestrator.start_autonomous_loop()
+
+    _watchdog = ProactiveWatchdog(active_websockets=_active_websockets, check_interval=60.0, logger=_LOG)
+    await _watchdog.start()
 
     yield  # server runs here
 
     _LOG.info("[BOOT] Shutdown sequence started ...")
+    if _watchdog:
+        await _watchdog.stop()
+    await _orchestrator.stop_autonomous_loop()
     await shutdown_modules(_modules)
     if _container:
         _container.shutdown()
@@ -175,6 +184,15 @@ async def websocket_naira_endpoint(websocket: WebSocket) -> None:
                                 "text": f"Identity synced to Relation Engine: Welcome, {name}."
                             })
                             continue
+                        elif msg_type in ("barge_in", "interrupt"):
+                            from backend.modules.voice._audio_player import audio_interrupt_event
+                            audio_interrupt_event.set()
+                            await websocket.send_json({
+                                "sender": "naira",
+                                "type": "barge_in_acknowledged",
+                                "text": "Playback interrupted."
+                            })
+                            continue
                         user_text = payload.get("text", payload.get("content", raw_text))
                     except Exception:
                         user_text = raw_text
@@ -182,6 +200,8 @@ async def websocket_naira_endpoint(websocket: WebSocket) -> None:
                     user_text = raw_text
 
             if user_text:
+                from backend.modules.voice._audio_player import audio_interrupt_event
+                audio_interrupt_event.set()
                 _LOG.info("[WS-NAIRA] Received command: %s", user_text)
                 response_text = await process_user_input(user_text)
                 await websocket.send_json({

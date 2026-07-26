@@ -70,6 +70,11 @@ _COMPLEX_ANALYSIS_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+_BROWSER_PATTERNS = re.compile(
+    r"\b(?:navigate to|click on|fill field|fill input|browser scroll|extract text from page|open website|type into|browser_)\b",
+    re.IGNORECASE,
+)
+
 
 def evaluate_request(
     request_text: str,
@@ -124,21 +129,22 @@ def evaluate_request(
     # 5. Live web search sufficiency check
     is_web_q = bool(_WEB_SEARCH_PATTERNS.search(text))
 
-    # 6. Coding, Planning, Creative, Analysis checks
+    # 6. Coding, Planning, Creative, Analysis, Browser checks
     is_coding = bool(_CODING_PATTERNS.search(text))
     is_planning = bool(_PLANNING_PATTERNS.search(text))
     is_creative = bool(_CREATIVE_PATTERNS.search(text))
     is_analysis = bool(_COMPLEX_ANALYSIS_PATTERNS.search(text))
+    is_browser = bool(_BROWSER_PATTERNS.search(text))
 
     # 7. Tool requirement
-    tool_required = is_coding or is_planning or (tool_manager is not None and bool(getattr(tool_manager, "has_tool_for", lambda _: False)(text)))
+    tool_required = is_coding or is_planning or is_browser or (tool_manager is not None and bool(getattr(tool_manager, "has_tool_for", lambda _: False)(text)))
 
     # 8. Complexity score calculation (0 to 100)
     words = text.split()
     length_factor = min(len(words) * 3, 40)
     logic_words = re.findall(r"\b(?:if|then|else|because|unless|where|and|or|not|step)\b", text, re.IGNORECASE)
     logic_factor = min(len(logic_words) * 10, 30)
-    domain_factor = 30 if (is_coding or is_planning or is_analysis) else (15 if is_creative else 0)
+    domain_factor = 30 if (is_coding or is_planning or is_analysis or is_browser) else (15 if is_creative else 0)
     complexity_score = min(length_factor + logic_factor + domain_factor, 100)
 
     # Category determination
@@ -150,6 +156,8 @@ def evaluate_request(
         category = IntentCategory.CLARIFICATION
     elif is_memory_q:
         category = IntentCategory.MEMORY_RECALL
+    elif is_browser:
+        category = IntentCategory.BROWSER
     elif is_web_q:
         category = IntentCategory.WEB_SEARCH
     elif is_coding:
@@ -162,6 +170,7 @@ def evaluate_request(
         category = IntentCategory.COMPLEX_ANALYSIS
     else:
         category = IntentCategory.REASONING
+
 
     # Routing Decision rules:
     # - If memory alone can answer -> skip LLM

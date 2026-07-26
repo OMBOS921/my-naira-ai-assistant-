@@ -260,6 +260,241 @@ class BrowserManager:
         })
         return result
 
+    async def click(
+        self,
+        selector: str,
+        timeout: float | None = None,
+    ) -> ToolResult:
+        """Click an element matching the CSS selector.
+
+        Parameters
+        ----------
+        selector : str
+            CSS selector for the target element.
+        timeout : float | None
+            Per-operation timeout.
+
+        Returns
+        -------
+        ToolResult
+            Execution result.
+        """
+        self._ensure_not_degraded()
+        effective_timeout = timeout if timeout is not None else self._default_timeout
+        await self._emit_event_async("browser.click_start", {"selector": selector})
+        try:
+            adapter = getattr(self._executor, "_adapter", self._adapter)
+            if not adapter.is_available or not hasattr(adapter, "click"):
+                res = ToolResult(
+                    status="error",
+                    error="Browser adapter not configured — no Playwright/Selenium driver available",
+                )
+                await self._emit_event_async("browser.click_complete", {"selector": selector, "status": res.status})
+                return res
+            await asyncio.wait_for(
+                adapter.click(selector, timeout=effective_timeout),
+                timeout=effective_timeout + 1.0,
+            )
+            res = ToolResult(
+                status="success",
+                output=f"Successfully clicked element with selector '{selector}'",
+            )
+        except asyncio.TimeoutError:
+            res = ToolResult(
+                status="timeout",
+                error=f"Click on '{selector}' timed out after {effective_timeout}s",
+            )
+        except Exception as exc:
+            self._logger.warning("Click on '%s' failed: %s", selector, exc)
+            res = ToolResult(
+                status="error",
+                error=f"Click on '{selector}' failed: {exc}",
+            )
+        await self._emit_event_async("browser.click_complete", {"selector": selector, "status": res.status})
+        return res
+
+    async def fill(
+        self,
+        selector: str,
+        text: str,
+        timeout: float | None = None,
+    ) -> ToolResult:
+        """Fill an input field matching the CSS selector with text.
+
+        Parameters
+        ----------
+        selector : str
+            CSS selector for the target element.
+        text : str
+            Text value to input.
+        timeout : float | None
+            Per-operation timeout.
+
+        Returns
+        -------
+        ToolResult
+            Execution result.
+        """
+        self._ensure_not_degraded()
+        effective_timeout = timeout if timeout is not None else self._default_timeout
+        await self._emit_event_async("browser.fill_start", {"selector": selector})
+        try:
+            adapter = getattr(self._executor, "_adapter", self._adapter)
+            if not adapter.is_available or not hasattr(adapter, "fill"):
+                res = ToolResult(
+                    status="error",
+                    error="Browser adapter not configured — no Playwright/Selenium driver available",
+                )
+                await self._emit_event_async("browser.fill_complete", {"selector": selector, "status": res.status})
+                return res
+            await asyncio.wait_for(
+                adapter.fill(selector, text, timeout=effective_timeout),
+                timeout=effective_timeout + 1.0,
+            )
+            res = ToolResult(
+                status="success",
+                output=f"Successfully filled element '{selector}' with provided text",
+            )
+        except asyncio.TimeoutError:
+            res = ToolResult(
+                status="timeout",
+                error=f"Fill on '{selector}' timed out after {effective_timeout}s",
+            )
+        except Exception as exc:
+            self._logger.warning("Fill on '%s' failed: %s", selector, exc)
+            res = ToolResult(
+                status="error",
+                error=f"Fill on '{selector}' failed: {exc}",
+            )
+        await self._emit_event_async("browser.fill_complete", {"selector": selector, "status": res.status})
+        return res
+
+    async def scroll(
+        self,
+        delta_x: int = 0,
+        delta_y: int = 500,
+        timeout: float | None = None,
+    ) -> ToolResult:
+        """Scroll the active page by horizontal and vertical pixel deltas.
+
+        Parameters
+        ----------
+        delta_x : int
+            Horizontal scroll pixel delta (default 0).
+        delta_y : int
+            Vertical scroll pixel delta (default 500).
+        timeout : float | None
+            Per-operation timeout.
+
+        Returns
+        -------
+        ToolResult
+            Execution result.
+        """
+        self._ensure_not_degraded()
+        effective_timeout = timeout if timeout is not None else self._default_timeout
+        await self._emit_event_async("browser.scroll_start", {"delta_x": delta_x, "delta_y": delta_y})
+        try:
+            adapter = getattr(self._executor, "_adapter", self._adapter)
+            if not adapter.is_available or not hasattr(adapter, "scroll"):
+                res = ToolResult(
+                    status="error",
+                    error="Browser adapter not configured — no Playwright/Selenium driver available",
+                )
+                await self._emit_event_async("browser.scroll_complete", {"status": res.status})
+                return res
+            await asyncio.wait_for(
+                adapter.scroll(delta_x=delta_x, delta_y=delta_y),
+                timeout=effective_timeout + 1.0,
+            )
+            res = ToolResult(
+                status="success",
+                output=f"Successfully scrolled page by delta_x={delta_x}, delta_y={delta_y}",
+            )
+        except asyncio.TimeoutError:
+            res = ToolResult(
+                status="timeout",
+                error=f"Scroll action timed out after {effective_timeout}s",
+            )
+        except Exception as exc:
+            self._logger.warning("Scroll action failed: %s", exc)
+            res = ToolResult(
+                status="error",
+                error=f"Scroll action failed: {exc}",
+            )
+        await self._emit_event_async("browser.scroll_complete", {"status": res.status})
+        return res
+
+    async def extract_text(
+        self,
+        selector: str | None = None,
+        timeout: float | None = None,
+    ) -> ToolResult:
+        """Extract visible text from active page or specific CSS selector.
+
+        Parameters
+        ----------
+        selector : str | None
+            Optional CSS selector targeting specific element.
+        timeout : float | None
+            Per-operation timeout.
+
+        Returns
+        -------
+        ToolResult
+            Execution result containing extracted text.
+        """
+        self._ensure_not_degraded()
+        effective_timeout = timeout if timeout is not None else self._default_timeout
+        await self._emit_event_async("browser.extract_text_start", {"selector": selector})
+        try:
+            import json
+            adapter = getattr(self._executor, "_adapter", self._adapter)
+            if not adapter.is_available:
+                res = ToolResult(
+                    status="error",
+                    error="Browser adapter not configured — no Playwright/Selenium driver available",
+                )
+                await self._emit_event_async("browser.extract_text_complete", {"status": res.status})
+                return res
+
+            if selector and hasattr(adapter, "execute_js"):
+                script = f"document.querySelector({json.dumps(selector)})?.innerText || ''"
+                text = await asyncio.wait_for(
+                    adapter.execute_js(script),
+                    timeout=effective_timeout,
+                )
+            elif hasattr(adapter, "get_visible_text"):
+                text = await asyncio.wait_for(
+                    adapter.get_visible_text(),
+                    timeout=effective_timeout,
+                )
+            else:
+                res = ToolResult(
+                    status="error",
+                    error="Browser adapter does not support text extraction",
+                )
+                await self._emit_event_async("browser.extract_text_complete", {"status": res.status})
+                return res
+
+            res = ToolResult(
+                status="success",
+                output=text if text else "(no visible text found)",
+            )
+        except asyncio.TimeoutError:
+            res = ToolResult(
+                status="timeout",
+                error=f"Extract text timed out after {effective_timeout}s",
+            )
+        except Exception as exc:
+            self._logger.warning("Extract text failed: %s", exc)
+            res = ToolResult(
+                status="error",
+                error=f"Extract text failed: {exc}",
+            )
+        await self._emit_event_async("browser.extract_text_complete", {"status": res.status})
+        return res
+
     # ------------------------------------------------------------------
     # Session API
     # ------------------------------------------------------------------
@@ -329,6 +564,78 @@ class BrowserManager:
                     self._handle_search_tool,
                 )
 
+                register(
+                    ToolDefinition(
+                        name="browser_click",
+                        description="Click an element matching the CSS selector on the active browser page",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "selector": {"type": "string", "description": "CSS selector of the element to click"},
+                                "timeout": {"type": "number", "description": "Timeout in seconds"},
+                            },
+                            "required": ["selector"],
+                        },
+                        category="browser",
+                        timeout_seconds=self._default_timeout,
+                    ),
+                    self._handle_click_tool,
+                )
+
+                register(
+                    ToolDefinition(
+                        name="browser_fill",
+                        description="Fill an input field matching the CSS selector with text on the active browser page",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "selector": {"type": "string", "description": "CSS selector of the input field"},
+                                "text": {"type": "string", "description": "Text value to fill into the input field"},
+                                "timeout": {"type": "number", "description": "Timeout in seconds"},
+                            },
+                            "required": ["selector", "text"],
+                        },
+                        category="browser",
+                        timeout_seconds=self._default_timeout,
+                    ),
+                    self._handle_fill_tool,
+                )
+
+                register(
+                    ToolDefinition(
+                        name="browser_scroll",
+                        description="Scroll the active browser page by given horizontal and vertical pixel deltas",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "delta_x": {"type": "integer", "description": "Horizontal scroll offset in pixels (default 0)"},
+                                "delta_y": {"type": "integer", "description": "Vertical scroll offset in pixels (default 500)"},
+                                "timeout": {"type": "number", "description": "Timeout in seconds"},
+                            },
+                        },
+                        category="browser",
+                        timeout_seconds=self._default_timeout,
+                    ),
+                    self._handle_scroll_tool,
+                )
+
+                register(
+                    ToolDefinition(
+                        name="browser_extract_text",
+                        description="Extract visible text content from the active page or a specific CSS selector",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "selector": {"type": "string", "description": "Optional CSS selector to extract text from"},
+                                "timeout": {"type": "number", "description": "Timeout in seconds"},
+                            },
+                        },
+                        category="browser",
+                        timeout_seconds=self._default_timeout,
+                    ),
+                    self._handle_extract_text_tool,
+                )
+
     async def _handle_navigate_tool(self, url: str, timeout: float | None = None, **kwargs: object) -> ToolResult:
         """Tool handler for ``browser_navigate``."""
         import webbrowser
@@ -349,6 +656,23 @@ class BrowserManager:
         except Exception:
             pass
         return await self.search(query, max_results=max_results)
+
+    async def _handle_click_tool(self, selector: str, timeout: float | None = None, **kwargs: object) -> ToolResult:
+        """Tool handler for ``browser_click``."""
+        return await self.click(selector, timeout=timeout)
+
+    async def _handle_fill_tool(self, selector: str, text: str = "", value: str = "", timeout: float | None = None, **kwargs: object) -> ToolResult:
+        """Tool handler for ``browser_fill``."""
+        target_text = text if text else value
+        return await self.fill(selector, target_text, timeout=timeout)
+
+    async def _handle_scroll_tool(self, delta_x: int = 0, delta_y: int = 500, timeout: float | None = None, **kwargs: object) -> ToolResult:
+        """Tool handler for ``browser_scroll``."""
+        return await self.scroll(delta_x=delta_x, delta_y=delta_y, timeout=timeout)
+
+    async def _handle_extract_text_tool(self, selector: str | None = None, timeout: float | None = None, **kwargs: object) -> ToolResult:
+        """Tool handler for ``browser_extract_text``."""
+        return await self.extract_text(selector=selector, timeout=timeout)
 
     def _ensure_not_degraded(self) -> None:
         if self._degraded:
@@ -376,3 +700,4 @@ class BrowserManager:
         emit = getattr(self._event_bus, "emit", None)
         if emit is not None:
             await emit(event_type, data)
+

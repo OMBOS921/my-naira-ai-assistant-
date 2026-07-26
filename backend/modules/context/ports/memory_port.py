@@ -46,3 +46,30 @@ class MemoryPort(ABC):
     async def health_check(self) -> bool:
         """Return ``True`` if the backing store is reachable."""
         ...
+
+    async def get_dynamic_context_summary(
+        self, session_id: str = "default", limit_events: int = 3
+    ) -> str:
+        """Retrieve dynamic historical context string (user profile + recent timeline events)."""
+        return ""
+
+    async def record_event(
+        self,
+        event_type: str,
+        title: str,
+        description: str | None = None,
+        session_id: str | None = None,
+        importance: int = 5,
+        metadata: dict | None = None,
+    ) -> int | None:
+        """Record a temporal or milestone event."""
+        return None
+
+    async def set_user_profile(self, key: str, value: object) -> bool:
+        """Set a user profile preference."""
+        return False
+
+    async def get_user_profile(self, key: str | None = None) -> object:
+        """Get user profile preference or full profile dict."""
+        return {} if key is None else None
+

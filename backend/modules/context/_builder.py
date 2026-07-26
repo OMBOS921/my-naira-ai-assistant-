@@ -13,8 +13,20 @@ class ContextBuilder:
     """Builder for the ``Context`` dataclass consumed by the LLM pipeline.
 
     Accepts conversation history and a system prompt, applies token
-    estimation, and returns an immutable ``Context`` payload.
+    estimation, dynamic context injection, and returns an immutable ``Context`` payload.
     """
+
+    @staticmethod
+    def inject_dynamic_context(system_prompt: str, dynamic_context: str) -> str:
+        """Append dynamic memory/historical context block to system_prompt."""
+        if not dynamic_context or not dynamic_context.strip():
+            return system_prompt
+
+        if "[DYNAMIC HISTORICAL CONTEXT]" in system_prompt:
+            return system_prompt
+
+        block = f"\n\n[DYNAMIC HISTORICAL CONTEXT]\n{dynamic_context.strip()}\n"
+        return (system_prompt.strip() + block).strip()
 
     @staticmethod
     def build(
@@ -22,6 +34,7 @@ class ContextBuilder:
         system_prompt: str,
         messages: list[Message],
         max_tokens: int = 4096,
+        dynamic_context: str = "",
     ) -> Context:
         """Assemble a ``Context`` from the given parts.
 
@@ -32,18 +45,22 @@ class ContextBuilder:
         messages : list[Message]
             Conversation history (pre-windowed if desired).
         max_tokens : int
-            Maximum allowed token budget (used for estimation only;
-            does **not** apply the sliding window).
+            Maximum allowed token budget.
+        dynamic_context : str
+            Optional dynamic memory context (user profile + top recent timeline events).
 
         Returns
         -------
         Context
             Immutable context payload ready for prompt compilation.
         """
-        token_count = ContextBuilder._count_tokens(system_prompt, messages)
+        effective_prompt = ContextBuilder.inject_dynamic_context(
+            system_prompt, dynamic_context
+        )
+        token_count = ContextBuilder._count_tokens(effective_prompt, messages)
 
         return Context(
-            system_prompt=system_prompt,
+            system_prompt=effective_prompt,
             messages=list(messages),
             token_count=token_count,
         )

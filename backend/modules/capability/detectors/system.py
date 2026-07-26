@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import platform
+import shutil
 import sys
 import time
 from backend.modules.capability.detectors.base import BaseDetector

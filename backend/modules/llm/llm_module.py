@@ -21,6 +21,7 @@ from backend.exceptions import (
     ProviderRateLimitError,
     ProviderTimeoutError,
 )
+from backend.modules.llm._response_cache import LLMResponseCache
 from backend.modules.llm.generation_config import GenerationConfig
 from backend.modules.llm.orchestrator import LLMProviderOrchestrator
 from backend.modules.llm.ports.llm_port import LLMPort
@@ -80,12 +81,18 @@ class LLMManager:
         self._provider_failure_count: dict[str, int] = {}
         self._degraded: bool = False
         self._initialized: bool = False
+        self._cache = LLMResponseCache(logger=self._logger)
         self._orchestrator = LLMProviderOrchestrator(
             providers=dict(self._providers),
             fallback_chain=self._fallback_chain,
             logger=self._logger,
             interaction_manager=interaction_manager,
         )
+
+    @property
+    def response_cache(self) -> LLMResponseCache:
+        """Return the response cache instance."""
+        return self._cache
 
     # ------------------------------------------------------------------
     # Module lifecycle  (ModuleInterface protocol)
@@ -272,8 +279,12 @@ class LLMManager:
         context: list[Message],
         tools: list[ToolDef] | None = None,
     ) -> LLMResponse:
-        """Generate a response using LLMProviderOrchestrator."""
+        """Generate a response using LLMProviderOrchestrator with caching."""
         self._ensure_not_degraded()
+
+        cached_response = self._cache.get(prompt, context, tools)
+        if cached_response is not None:
+            return cached_response
 
         response = await self._orchestrator.generate(
             prompt=prompt,
@@ -285,6 +296,7 @@ class LLMManager:
             self._provider_success_count[response.provider] = (
                 self._provider_success_count.get(response.provider, 0) + 1
             )
+            self._cache.put(prompt, context, tools, response)
         return response
 
     async def generate_stream(

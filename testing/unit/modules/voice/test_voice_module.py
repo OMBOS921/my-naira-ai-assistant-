@@ -800,3 +800,95 @@ class TestModuleInterfaceConformance:
         assert hasattr(mgr, "async_init")
         assert hasattr(mgr, "async_shutdown")
         assert hasattr(mgr, "degrade")
+
+
+# =========================================================================
+# Voice Barge-in & Interruption tests (Phase 5)
+# =========================================================================
+
+
+class TestVoiceBargeInAndInterruption:
+    def test_interrupt_event_lifecycle(self) -> None:
+        from backend.modules.voice._audio_player import audio_interrupt_event
+
+        audio_interrupt_event.clear()
+        assert not audio_interrupt_event.is_set()
+
+        audio_interrupt_event.set()
+        assert audio_interrupt_event.is_set()
+
+        audio_interrupt_event.clear()
+        assert not audio_interrupt_event.is_set()
+
+    def test_voice_manager_interrupt_api(self) -> None:
+        mgr = VoiceManager()
+        assert hasattr(mgr, "interrupt")
+        assert hasattr(mgr, "interrupt_event")
+
+        mgr.interrupt_event.clear()
+        assert not mgr.interrupt_event.is_set()
+
+        mgr.interrupt()
+        assert mgr.interrupt_event.is_set()
+        mgr.interrupt_event.clear()
+
+    @pytest.mark.asyncio
+    async def test_audio_player_play_barge_in_interruption(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from backend.modules.voice._audio_player import AudioPlayer, audio_interrupt_event
+        from backend.modules.voice._types import AudioData
+        import numpy as np
+
+        player = AudioPlayer()
+        if not player.is_available:
+            pytest.skip("sounddevice not available")
+
+        # Mock sd.OutputStream to avoid hardware audio output in headless tests
+        class MockStream:
+            def __init__(self, **kwargs: Any) -> None:
+                pass
+            def start(self) -> None:
+                pass
+            def write(self, chunk: Any) -> None:
+                # Trigger interrupt on first chunk write
+                audio_interrupt_event.set()
+            def stop(self) -> None:
+                pass
+            def close(self) -> None:
+                pass
+
+        monkeypatch.setattr("sounddevice.OutputStream", MockStream)
+        monkeypatch.setattr("sounddevice.stop", lambda: None)
+
+        audio = AudioData(
+            source_type="file",
+            data=np.zeros(16000 * 2, dtype=np.int16).tobytes(),  # 2 sec audio
+            sample_rate=16000,
+        )
+
+        audio_interrupt_event.clear()
+        await player.play(audio, timeout=5.0)
+
+        # Player should have stopped immediately on first chunk interrupt
+        assert not player.is_playing
+        assert not audio_interrupt_event.is_set()
+
+    @pytest.mark.asyncio
+    async def test_wake_word_triggers_barge_in(self) -> None:
+        from backend.modules.voice._audio_player import audio_interrupt_event
+        from backend.modules.voice._wake_word import WakeWord
+        from backend.modules.voice._types import AudioData, TranscriptionResult
+
+        class MockSTT:
+            is_available = True
+            async def transcribe(self, audio: AudioData, language: str = "en", timeout: float = 30.0) -> TranscriptionResult:
+                return TranscriptionResult(text="Hey Naira stop", confidence=0.9)
+
+        ww = WakeWord(stt_provider=MockSTT())
+        audio = AudioData(source_type="microphone", data=b"dummy")
+
+        audio_interrupt_event.clear()
+        res = await ww.detect(audio, wake_word="naira")
+
+        assert res.detected is True
+        assert audio_interrupt_event.is_set()
+        audio_interrupt_event.clear()

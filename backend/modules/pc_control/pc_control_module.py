@@ -673,6 +673,65 @@ class PCControlManager:
                         },
                         "pc_control",
                     ),
+                    (
+                        "mouse_click",
+                        "Click mouse at screen coordinates X and Y",
+                        {
+                            "type": "object",
+                            "properties": {
+                                "x": {"type": "integer", "description": "X coordinate"},
+                                "y": {"type": "integer", "description": "Y coordinate"},
+                            },
+                            "required": ["x", "y"],
+                        },
+                        "pc_control",
+                    ),
+                    (
+                        "keyboard_type",
+                        "Type text on keyboard into focused window",
+                        {
+                            "type": "object",
+                            "properties": {
+                                "text": {"type": "string", "description": "Text to type"},
+                            },
+                            "required": ["text"],
+                        },
+                        "pc_control",
+                    ),
+                    (
+                        "window_focus",
+                        "Bring window to front and focus by window handle",
+                        {
+                            "type": "object",
+                            "properties": {
+                                "handle": {"type": "integer", "description": "Window handle integer"},
+                            },
+                            "required": ["handle"],
+                        },
+                        "pc_control",
+                    ),
+                    (
+                        "mouse_move_to",
+                        "Move mouse cursor smoothly to screen coordinates X and Y",
+                        {
+                            "type": "object",
+                            "properties": {
+                                "x": {"type": "integer", "description": "X coordinate"},
+                                "y": {"type": "integer", "description": "Y coordinate"},
+                            },
+                            "required": ["x", "y"],
+                        },
+                        "pc_control",
+                    ),
+                    (
+                        "screen_capture",
+                        "Capture a screenshot of the active desktop display",
+                        {
+                            "type": "object",
+                            "properties": {},
+                        },
+                        "pc_control",
+                    ),
                 ]
 
                 for name, description, parameters, category in tool_defs:
@@ -694,6 +753,19 @@ class PCControlManager:
         """
         tool_name = str(kwargs.pop("_tool_name", ""))
         action = str(kwargs.get("action", ""))
+
+        if tool_name == "mouse_click":
+            x_val = kwargs.get("x")
+            y_val = kwargs.get("y")
+            return await self.mouse_click(x=int(x_val) if x_val is not None else None, y=int(y_val) if y_val is not None else None)
+        elif tool_name == "keyboard_type":
+            return await self.keyboard_type_text(str(kwargs.get("text", "")))
+        elif tool_name == "window_focus":
+            return await self.window_focus(int(kwargs.get("handle", 0)))
+        elif tool_name == "mouse_move_to":
+            return await self.mouse_move_to(int(kwargs.get("x", 0)), int(kwargs.get("y", 0)))
+        elif tool_name == "screen_capture":
+            return await self.screen_capture()
 
         method_map: dict[str, dict[str, str]] = {
             "pc_mouse": {

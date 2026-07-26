@@ -884,6 +884,44 @@ class IntentEngine:
             params={"sub": sub_name},
         )
 
+    def _is_plausible_app_name(self, candidate: str) -> bool:
+        """
+        Reject captured text that looks like conversational language
+        rather than an application/window name. Real app names are
+        short and don't contain sentence-structure words.
+        """
+        if not candidate:
+            return False
+
+        cleaned = candidate.strip().strip(".,!?;:'\"").strip()
+        if not cleaned:
+            return False
+
+        words = cleaned.split()
+
+        # Real app/window names are almost always 1-3 words.
+        # ("visual studio code" is 3 words; that's the practical ceiling)
+        if len(words) > 3:
+            return False
+
+        # Reject if it contains common sentence-structure / filler
+        # words that never appear in an app or window name.
+        SENTENCE_MARKERS = {
+            "the", "that", "this", "a", "an", "of", "in", "on", "at",
+            "to", "for", "and", "or", "but", "is", "are", "was", "were",
+            "my", "your", "his", "her", "their", "our", "life", "time",
+            "today", "risk", "deal", "chapter", "while", "waiting",
+            "productivity", "losing", "contract", "move", "boss",
+            "game", "final", "want", "need", "should", "would", "could",
+            "how", "do", "i", "we", "you", "it", "he", "she", "they",
+            "with", "from", "about", "because", "so", "if", "when",
+        }
+        lowered_words = {w.lower() for w in words}
+        if lowered_words & SENTENCE_MARKERS:
+            return False
+
+        return True
+
     def _match_window_control(self, cleaned: str, lowered_raw: str) -> RouteMatch | None:
         text = lowered_raw.strip()
 
@@ -894,7 +932,8 @@ class IntentEngine:
         )
         if m_min:
             app_name = m_min.group(1).strip()
-            if app_name and app_name.lower() not in ("window", "the window"):
+            if app_name and app_name.lower() not in ("window", "the window") \
+               and self._is_plausible_app_name(app_name):
                 return RouteMatch(
                     intent=CommandIntent.WINDOW_MINIMIZE,
                     target=app_name,
@@ -910,7 +949,8 @@ class IntentEngine:
         )
         if m_max:
             app_name = m_max.group(1).strip()
-            if app_name and app_name.lower() not in ("window", "the window"):
+            if app_name and app_name.lower() not in ("window", "the window") \
+               and self._is_plausible_app_name(app_name):
                 return RouteMatch(
                     intent=CommandIntent.WINDOW_MAXIMIZE,
                     target=app_name,
@@ -926,7 +966,8 @@ class IntentEngine:
         )
         if m_close:
             app_name = m_close.group(1).strip()
-            if app_name and app_name.lower() not in ("window", "the window", "karo", "kar", ""):
+            if app_name and app_name.lower() not in ("window", "the window", "karo", "kar", "") \
+               and self._is_plausible_app_name(app_name):
                 return RouteMatch(
                     intent=CommandIntent.WINDOW_CLOSE,
                     target=app_name,
@@ -945,7 +986,7 @@ class IntentEngine:
         )
         if m:
             app_name = m.group(1).strip()
-            if app_name:
+            if app_name and self._is_plausible_app_name(app_name):
                 return RouteMatch(
                     intent=CommandIntent.KILL_PROCESS,
                     target=app_name,
@@ -1060,11 +1101,13 @@ class FastCommandRouter:
     def __init__(
         self,
         pc_control_manager: Any | None = None,
+        vision_manager: Any | None = None,
         logger: logging.Logger | None = None,
         config_path: Path | None = None,
         enable_discovery: bool = True,
     ) -> None:
         self._pc_control_mgr = pc_control_manager
+        self._vision_mgr = vision_manager
         self._logger = logger or _LOG
         self.alias_engine = AliasEngine(config_path=config_path)
         self.intent_engine = IntentEngine(self.alias_engine)
@@ -1251,8 +1294,6 @@ class FastCommandRouter:
                 window_detected=window_det,
                 error=None if verified else "Launch verification timeout / process not detected",
             )
-
-        return verified, running_proc, window_det
 
         return verified, running_proc, window_det
 
@@ -2074,17 +2115,22 @@ class FastCommandRouter:
         if lifecycle:
             lifecycle.transition_to(ActionState.RUNNING, "Capturing screenshot")
         try:
-            import mss
             screenshot_dir = Path.home() / "Desktop" / "Screenshots"
             screenshot_dir.mkdir(parents=True, exist_ok=True)
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             file_path = screenshot_dir / f"naira_{timestamp}.png"
 
-            def _take_screenshot():
-                with mss.mss() as sct:
-                    sct.shot(output=str(file_path))
+            if self._vision_mgr and hasattr(self._vision_mgr, "capture_and_save"):
+                res = await self._vision_mgr.capture_and_save(str(file_path))
+                if getattr(res, "status", "") == "error":
+                    raise RuntimeError(f"VisionManager capture error: {getattr(res, 'error', '')}")
+            else:
+                def _take_screenshot():
+                    import mss
+                    with mss.mss() as sct:
+                        sct.shot(output=str(file_path))
 
-            await asyncio.to_thread(_take_screenshot)
+                await asyncio.to_thread(_take_screenshot)
 
             if lifecycle:
                 lifecycle.set_verification(verified=file_path.exists(), details={"file_path": str(file_path)})

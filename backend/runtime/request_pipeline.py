@@ -81,6 +81,7 @@ class RequestPipeline:
         session_manager: SessionManager | None = None,
         tool_router: ToolRouter | None = None,
         security_manager: object | None = None,
+        vision_manager: object | None = None,
         event_bus: EventBus | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
@@ -89,6 +90,7 @@ class RequestPipeline:
         self._session_manager = session_manager
         self._tool_router = tool_router
         self._security_manager = security_manager
+        self._vision_manager = vision_manager
         self._event_bus = event_bus
         self._logger = logger or _LOG
         self._degraded: bool = False
@@ -169,6 +171,25 @@ class RequestPipeline:
 
         # Stage 2: Prompt compilation (needed before context assembly)
         system_prompt = self._compile_prompt(session.session_id)
+
+        # Stage 2b: Automatic Vision-Language context injection for screen queries
+        req_text_lower = request.text.lower()
+        if self._vision_manager is not None and any(kw in req_text_lower for kw in ("screen", "error", "screenshot", "ocr", "look at", "display", "window")):
+            try:
+                screen_res = None
+                if hasattr(self._vision_manager, "read_screen_text"):
+                    screen_res = await self._vision_manager.read_screen_text()
+                elif hasattr(self._vision_manager, "understand_screen"):
+                    screen_res = await self._vision_manager.understand_screen(request.text)
+
+                if screen_res:
+                    out_text = getattr(screen_res, "output", str(screen_res))
+                    if out_text:
+                        system_prompt += f"\n\n[Active Screen Context / OCR Text]:\n{out_text}"
+                        self._logger.info("[VISION] Injected live screen OCR context into LLM prompt (%d chars).", len(out_text))
+            except Exception as v_exc:
+                self._logger.warning("[VISION] Failed to capture screen context for prompt: %s", v_exc)
+
         await self._emit_event("runtime.prompt_compiled", {
             "session_id": session.session_id,
             "request_id": str(request.id),

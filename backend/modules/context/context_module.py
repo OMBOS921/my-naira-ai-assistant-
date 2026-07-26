@@ -47,12 +47,14 @@ class ContextManager:
         logger: logging.Logger | None = None,
         max_tokens: int = 4096,
         memory_port: object | None = None,
+        memory_manager: object | None = None,
         event_bus: object | None = None,
     ) -> None:
         self._config = config
         self._logger = logger or _LOG
         self._max_tokens = max_tokens
         self._memory_port = memory_port
+        self._memory_manager = memory_manager
         self._event_bus = event_bus
         self._sessions: dict[str, ConversationContext] = {}
         self._degraded: bool = False
@@ -90,6 +92,10 @@ class ContextManager:
     # Public API
     # ------------------------------------------------------------------
 
+    def set_memory_manager(self, memory_manager: object) -> None:
+        """Attach memory manager post-construction if needed."""
+        self._memory_manager = memory_manager
+
     def build_context(
         self, session_id: str, text: str, system_prompt: str = ""
     ) -> Context:
@@ -100,7 +106,8 @@ class ContextManager:
         1. Retrieves or creates a ``ConversationContext`` for the session.
         2. Appends the current user message.
         3. Applies the sliding window if the token budget is exceeded.
-        4. Returns an immutable ``Context`` dataclass.
+        4. Queries memory engines for dynamic profile & timeline event context.
+        5. Returns an immutable ``Context`` dataclass.
 
         Parameters
         ----------
@@ -130,11 +137,45 @@ class ContextManager:
 
         conv.apply_sliding_window()
 
+        dynamic_context = self._get_dynamic_memory_context(session_id)
+
         return ContextBuilder.build(
             system_prompt=system_prompt,
             messages=conv.messages,
             max_tokens=self._max_tokens,
+            dynamic_context=dynamic_context,
         )
+
+    def _get_dynamic_memory_context(self, session_id: str) -> str:
+        """Fetch user profile and top 3 recent session milestone events."""
+        parts: list[str] = []
+        try:
+            if self._memory_manager is not None:
+                user_prof = getattr(self._memory_manager, "user_profile", None)
+                timeline = getattr(self._memory_manager, "timeline_engine", None)
+                if user_prof and hasattr(user_prof, "get_summary_for_prompt"):
+                    up_str = user_prof.get_summary_for_prompt()
+                    if up_str:
+                        parts.append(up_str)
+                if timeline and hasattr(timeline, "get_summary_for_prompt"):
+                    tl_str = timeline.get_summary_for_prompt(limit=3)
+                    if tl_str:
+                        parts.append(tl_str)
+            elif self._memory_port is not None:
+                u_prof = getattr(self._memory_port, "_user_profile_engine", None)
+                t_engine = getattr(self._memory_port, "_timeline_engine", None)
+                if u_prof and hasattr(u_prof, "get_summary_for_prompt"):
+                    up_str = u_prof.get_summary_for_prompt()
+                    if up_str:
+                        parts.append(up_str)
+                if t_engine and hasattr(t_engine, "get_summary_for_prompt"):
+                    tl_str = t_engine.get_summary_for_prompt(limit=3)
+                    if tl_str:
+                        parts.append(tl_str)
+        except Exception as exc:
+            self._logger.debug("Failed to retrieve dynamic memory context: %s", exc)
+
+        return "\n\n".join(parts)
 
     def add_assistant_message(self, session_id: str, content: str) -> None:
         """Add an assistant response message to session context history."""

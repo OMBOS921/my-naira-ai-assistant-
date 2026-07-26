@@ -53,6 +53,8 @@ class Orchestrator:
         self._logger = logging.getLogger("naira.orchestrator")
         self._module_registry: dict[str, object] = {}
         self._module_init_order: list[str] = []
+        self._proactive_task: asyncio.Task[None] | None = None
+        self._running_autonomous_loop: bool = False
 
     @property
     def state(self) -> FSMState:
@@ -77,6 +79,51 @@ class Orchestrator:
     def get_module(self, name: str) -> object | None:
         """Retrieve a registered module instance by name."""
         return self._module_registry.get(name)
+
+    async def start_autonomous_loop(self) -> None:
+        """Initiate background proactive loop for health monitoring and autonomous task management."""
+        if self._running_autonomous_loop:
+            return
+
+        self._running_autonomous_loop = True
+        self._proactive_task = asyncio.create_task(self._proactive_health_and_task_loop())
+        self._logger.info("[AUTONOMY] Autonomous proactive background loop initiated.")
+
+    async def stop_autonomous_loop(self) -> None:
+        """Stop background proactive loop gracefully."""
+        self._running_autonomous_loop = False
+        if self._proactive_task and not self._proactive_task.done():
+            self._proactive_task.cancel()
+            try:
+                await self._proactive_task
+            except asyncio.CancelledError:
+                pass
+        self._proactive_task = None
+        self._logger.info("[AUTONOMY] Autonomous proactive background loop stopped.")
+
+    async def _proactive_health_and_task_loop(self) -> None:
+        """Background non-blocking loop monitoring system health and autonomous task engine state."""
+        import asyncio
+        self._logger.info("[AUTONOMY] Proactive health & task loop active.")
+        while self._running_autonomous_loop:
+            try:
+                await asyncio.sleep(15.0)
+                if self._state == FSMState.IDLE:
+                    auto_tasks = self.get_module("autonomous_tasks")
+                    if auto_tasks and hasattr(auto_tasks, "cleanup_old_tasks"):
+                        removed = auto_tasks.cleanup_old_tasks()
+                        if removed > 0:
+                            self._logger.debug("[AUTONOMY] Cleaned up %d expired background task(s).", removed)
+
+                    if self._event_bus and hasattr(self._event_bus, "emit"):
+                        await self._event_bus.emit("orchestrator.proactive_heartbeat", {
+                            "state": self._state.value,
+                            "modules_registered": len(self._module_registry),
+                        })
+            except asyncio.CancelledError:
+                break
+            except Exception as exc:
+                self._logger.warning("[AUTONOMY] Proactive loop encountered warning: %s", exc)
 
     async def process_user_request(self, request: UserRequest) -> UserResponse:
         """Mediate a user request through FSM transitions and delegate execution to Runtime."""
@@ -119,6 +166,7 @@ class Orchestrator:
         ``shutdown_modules()`` in ``boot.py`` (called from ``main.py``
         before orchestrator shutdown) to avoid double-shutdown.
         """
+        await self.stop_autonomous_loop()
         self.state = FSMState.SHUTDOWN
 
         await self._event_bus.shutdown()
@@ -129,4 +177,5 @@ class Orchestrator:
         )
         self._module_registry.clear()
         self._module_init_order.clear()
+
 

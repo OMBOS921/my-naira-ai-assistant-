@@ -122,7 +122,8 @@ class UserProfileEngine:
                 return default
 
             val_str = row["profile_value"]
-            dtype = row.get("data_type", "string")
+            row_dict = dict(row)
+            dtype = row_dict.get("data_type", "string")
 
             if dtype == "json":
                 try:
@@ -174,9 +175,10 @@ class UserProfileEngine:
 
             result = {}
             for row in rows:
-                key = row["profile_key"]
-                val_str = row["profile_value"]
-                dtype = row.get("data_type", "string")
+                r_dict = dict(row)
+                key = r_dict["profile_key"]
+                val_str = r_dict["profile_value"]
+                dtype = r_dict.get("data_type", "string")
 
                 if dtype == "json":
                     try:

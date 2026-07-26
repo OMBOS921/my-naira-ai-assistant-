@@ -13,6 +13,7 @@ import logging
 import time
 from threading import Thread
 
+from backend.modules.voice._audio_player import audio_interrupt_event
 from backend.modules.voice._exceptions import VoiceAudioError
 from backend.modules.voice._types import AudioData
 
@@ -153,6 +154,7 @@ class AudioRecorder:
             nonlocal silence_start, recording_started
             rms = float(np.sqrt(np.mean(indata.astype(np.float32) ** 2)))
             if rms > _VAD_THRESHOLD:
+                audio_interrupt_event.set()
                 recording_started = True
                 silence_start = None
                 frames.append(indata.copy())
@@ -229,6 +231,9 @@ class AudioRecorder:
 
             def _callback(indata, _frames, _time_info, _status):
                 if self._stream_active:
+                    rms = float(np.sqrt(np.mean(indata.astype(np.float32) ** 2)))
+                    if rms > _VAD_THRESHOLD:
+                        audio_interrupt_event.set()
                     self._stream_buffer.append(indata.copy())
 
             self._stream = sd.InputStream(
