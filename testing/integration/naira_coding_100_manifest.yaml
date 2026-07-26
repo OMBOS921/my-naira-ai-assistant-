@@ -1,0 +1,438 @@
+suite_name: NairaOS_Coding_Regression_100
+purpose: End-to-end coding-agent verification across 24 skill packs and tools
+mode: sequential
+cleanup: true
+fail_fast: false
+
+categories:
+  - LANG_DETECTION_AND_PROJECT_ANALYSIS
+  - C_AND_CPP
+  - PYTHON
+  - JAVASCRIPT_AND_TYPESCRIPT
+  - REACT_NEXT_NODE_EXPRESS
+  - DJANGO_FASTAPI
+  - SQL_AND_DATABASES
+  - GIT_DOCKER_DEVOPS_LINUX
+  - SECURITY_DSA_AI_ML
+  - CODING_AGENT_WORKFLOW_AND_TOOLS
+
+tests:
+  # 1) LANG_DETECTION_AND_PROJECT_ANALYSIS
+  - id: T01
+    category: LANG_DETECTION_AND_PROJECT_ANALYSIS
+    prompt: "Analyze the project and tell me the primary language, framework, and folder structure."
+    expected_route: coding_agent_analyze_project
+  - id: T02
+    category: LANG_DETECTION_AND_PROJECT_ANALYSIS
+    prompt: "Detect the language of main.py and explain the project type."
+    expected_route: coding_agent_detect_language
+  - id: T03
+    category: LANG_DETECTION_AND_PROJECT_ANALYSIS
+    prompt: "Scan this repository and list the top 5 risky files."
+    expected_route: coding_agent_scan
+  - id: T04
+    category: LANG_DETECTION_AND_PROJECT_ANALYSIS
+    prompt: "Open the project and summarize what the entry point does."
+    expected_route: coding_agent_analyze_project
+  - id: T05
+    category: LANG_DETECTION_AND_PROJECT_ANALYSIS
+    prompt: "Find the build system and tell me how the app is started."
+    expected_route: coding_agent_analyze_project
+  - id: T06
+    category: LANG_DETECTION_AND_PROJECT_ANALYSIS
+    prompt: "Identify all languages used in this workspace."
+    expected_route: coding_agent_detect_language
+  - id: T07
+    category: LANG_DETECTION_AND_PROJECT_ANALYSIS
+    prompt: "Show me the dependency tree and explain the highest risk modules."
+    expected_route: coding_agent_analyze_project
+  - id: T08
+    category: LANG_DETECTION_AND_PROJECT_ANALYSIS
+    prompt: "Tell me whether this repo is frontend-heavy, backend-heavy, or mixed."
+    expected_route: coding_agent_analyze_project
+  - id: T09
+    category: LANG_DETECTION_AND_PROJECT_ANALYSIS
+    prompt: "Detect whether this codebase is Python, Node, or mixed."
+    expected_route: coding_agent_detect_language
+  - id: T10
+    category: LANG_DETECTION_AND_PROJECT_ANALYSIS
+    prompt: "Analyze the repo and list the core coding agent skills available."
+    expected_route: coding_agent_analyze_project
+
+  # 2) C_AND_CPP
+  - id: T11
+    category: C_AND_CPP
+    prompt: "Write a C program to check whether a number is prime."
+    expected_route: skill.c
+  - id: T12
+    category: C_AND_CPP
+    prompt: "Fix this C program that has scanf and pointer errors."
+    expected_route: skill.c
+  - id: T13
+    category: C_AND_CPP
+    prompt: "Explain pointer arithmetic in C with a small example."
+    expected_route: skill.c
+  - id: T14
+    category: C_AND_CPP
+    prompt: "Write a C program for matrix multiplication."
+    expected_route: skill.c
+  - id: T15
+    category: C_AND_CPP
+    prompt: "Debug a C program with segmentation fault."
+    expected_route: skill.c
+  - id: T16
+    category: C_AND_CPP
+    prompt: "Write a C++ program using classes and inheritance."
+    expected_route: skill.cpp
+  - id: T17
+    category: C_AND_CPP
+    prompt: "Refactor C++ code to use smart pointers instead of raw pointers."
+    expected_route: skill.cpp
+  - id: T18
+    category: C_AND_CPP
+    prompt: "Explain RAII and move semantics in C++."
+    expected_route: skill.cpp
+  - id: T19
+    category: C_AND_CPP
+    prompt: "Fix a C++ template compilation error."
+    expected_route: skill.cpp
+  - id: T20
+    category: C_AND_CPP
+    prompt: "Write a C++ solution for binary search."
+    expected_route: skill.cpp
+
+  # 3) PYTHON
+  - id: T21
+    category: PYTHON
+    prompt: "Write a Python script that reads a JSON file and prints formatted output."
+    expected_route: skill.python
+  - id: T22
+    category: PYTHON
+    prompt: "Fix a Python script with indentation and import errors."
+    expected_route: skill.python
+  - id: T23
+    category: PYTHON
+    prompt: "Write a Python function to remove duplicates from a list."
+    expected_route: skill.python
+  - id: T24
+    category: PYTHON
+    prompt: "Explain decorators in Python with an example."
+    expected_route: skill.python
+  - id: T25
+    category: PYTHON
+    prompt: "Refactor Python code to use type hints and dataclasses."
+    expected_route: skill.python
+  - id: T26
+    category: PYTHON
+    prompt: "Write a Python script to scrape a webpage safely."
+    expected_route: skill.python
+  - id: T27
+    category: PYTHON
+    prompt: "Create a Python CLI tool with argparse."
+    expected_route: skill.python
+  - id: T28
+    category: PYTHON
+    prompt: "Debug a Python traceback from a failing function."
+    expected_route: skill.python
+  - id: T29
+    category: PYTHON
+    prompt: "Write a Python unit test for a calculator function."
+    expected_route: skill.python
+  - id: T30
+    category: PYTHON
+    prompt: "Optimize a Python loop that is too slow."
+    expected_route: skill.python
+
+  # 4) JAVASCRIPT_AND_TYPESCRIPT
+  - id: T31
+    category: JAVASCRIPT_AND_TYPESCRIPT
+    prompt: "Write a JavaScript function to debounce input."
+    expected_route: skill.javascript
+  - id: T32
+    category: JAVASCRIPT_AND_TYPESCRIPT
+    prompt: "Fix a JavaScript async/await error."
+    expected_route: skill.javascript
+  - id: T33
+    category: JAVASCRIPT_AND_TYPESCRIPT
+    prompt: "Explain the event loop in JavaScript."
+    expected_route: skill.javascript
+  - id: T34
+    category: JAVASCRIPT_AND_TYPESCRIPT
+    prompt: "Refactor JavaScript code to modern ES6 syntax."
+    expected_route: skill.javascript
+  - id: T35
+    category: JAVASCRIPT_AND_TYPESCRIPT
+    prompt: "Write a TypeScript interface for a user profile."
+    expected_route: skill.typescript
+  - id: T36
+    category: JAVASCRIPT_AND_TYPESCRIPT
+    prompt: "Fix a TypeScript type mismatch in a React component."
+    expected_route: skill.typescript
+  - id: T37
+    category: JAVASCRIPT_AND_TYPESCRIPT
+    prompt: "Explain generics in TypeScript with examples."
+    expected_route: skill.typescript
+  - id: T38
+    category: JAVASCRIPT_AND_TYPESCRIPT
+    prompt: "Create a TypeScript utility type for deep partial."
+    expected_route: skill.typescript
+  - id: T39
+    category: JAVASCRIPT_AND_TYPESCRIPT
+    prompt: "Write a JS script to fetch API data and handle errors."
+    expected_route: skill.javascript
+  - id: T40
+    category: JAVASCRIPT_AND_TYPESCRIPT
+    prompt: "Convert this JavaScript module to TypeScript."
+    expected_route: skill.typescript
+
+  # 5) REACT_NEXT_NODE_EXPRESS
+  - id: T41
+    category: REACT_NEXT_NODE_EXPRESS
+    prompt: "Build a React counter component with hooks."
+    expected_route: skill.react
+  - id: T42
+    category: REACT_NEXT_NODE_EXPRESS
+    prompt: "Fix a React state update bug."
+    expected_route: skill.react
+  - id: T43
+    category: REACT_NEXT_NODE_EXPRESS
+    prompt: "Create a Next.js page that loads data server-side."
+    expected_route: skill.nextjs
+  - id: T44
+    category: REACT_NEXT_NODE_EXPRESS
+    prompt: "Explain the difference between React and Next.js."
+    expected_route: skill.react
+  - id: T45
+    category: REACT_NEXT_NODE_EXPRESS
+    prompt: "Write an Express route for a login API."
+    expected_route: skill.express
+  - id: T46
+    category: REACT_NEXT_NODE_EXPRESS
+    prompt: "Debug an Express middleware problem."
+    expected_route: skill.express
+  - id: T47
+    category: REACT_NEXT_NODE_EXPRESS
+    prompt: "Create a Node.js script that reads a file and writes output."
+    expected_route: skill.nodejs
+  - id: T48
+    category: REACT_NEXT_NODE_EXPRESS
+    prompt: "Refactor a React component to use memoization."
+    expected_route: skill.react
+  - id: T49
+    category: REACT_NEXT_NODE_EXPRESS
+    prompt: "Build a Next.js API route for a contact form."
+    expected_route: skill.nextjs
+  - id: T50
+    category: REACT_NEXT_NODE_EXPRESS
+    prompt: "Write a Node.js function to validate input."
+    expected_route: skill.nodejs
+
+  # 6) DJANGO_FASTAPI
+  - id: T51
+    category: DJANGO_FASTAPI
+    prompt: "Create a Django model for blog posts."
+    expected_route: skill.django
+  - id: T52
+    category: DJANGO_FASTAPI
+    prompt: "Fix a Django migration error."
+    expected_route: skill.django
+  - id: T53
+    category: DJANGO_FASTAPI
+    prompt: "Write a Django view and URL route."
+    expected_route: skill.django
+  - id: T54
+    category: DJANGO_FASTAPI
+    prompt: "Explain Django ORM query optimization."
+    expected_route: skill.django
+  - id: T55
+    category: DJANGO_FASTAPI
+    prompt: "Build a FastAPI endpoint with Pydantic validation."
+    expected_route: skill.fastapi
+  - id: T56
+    category: DJANGO_FASTAPI
+    prompt: "Fix a FastAPI dependency injection bug."
+    expected_route: skill.fastapi
+  - id: T57
+    category: DJANGO_FASTAPI
+    prompt: "Create a FastAPI route with GET and POST methods."
+    expected_route: skill.fastapi
+  - id: T58
+    category: DJANGO_FASTAPI
+    prompt: "Explain async database access in FastAPI."
+    expected_route: skill.fastapi
+  - id: T59
+    category: DJANGO_FASTAPI
+    prompt: "Refactor Django code to use class-based views."
+    expected_route: skill.django
+  - id: T60
+    category: DJANGO_FASTAPI
+    prompt: "Write a FastAPI test using TestClient."
+    expected_route: skill.fastapi
+
+  # 7) SQL_AND_DATABASES
+  - id: T61
+    category: SQL_AND_DATABASES
+    prompt: "Write a SQL query to find duplicate rows."
+    expected_route: skill.sql
+  - id: T62
+    category: SQL_AND_DATABASES
+    prompt: "Optimize a slow PostgreSQL query."
+    expected_route: skill.postgresql
+  - id: T63
+    category: SQL_AND_DATABASES
+    prompt: "Design a MongoDB schema for chat history."
+    expected_route: skill.mongodb
+  - id: T64
+    category: SQL_AND_DATABASES
+    prompt: "Explain SQL joins with examples."
+    expected_route: skill.sql
+  - id: T65
+    category: SQL_AND_DATABASES
+    prompt: "Write a migration for a new database column."
+    expected_route: skill.postgresql
+  - id: T66
+    category: SQL_AND_DATABASES
+    prompt: "Refactor SQL to avoid nested subqueries."
+    expected_route: skill.sql
+  - id: T67
+    category: SQL_AND_DATABASES
+    prompt: "Write a MongoDB aggregation pipeline."
+    expected_route: skill.mongodb
+  - id: T68
+    category: SQL_AND_DATABASES
+    prompt: "Explain indexing strategy for PostgreSQL."
+    expected_route: skill.postgresql
+  - id: T69
+    category: SQL_AND_DATABASES
+    prompt: "Create SQL schema for users and sessions."
+    expected_route: skill.sql
+  - id: T70
+    category: SQL_AND_DATABASES
+    prompt: "Debug a database connection string issue."
+    expected_route: skill.sql
+
+  # 8) GIT_DOCKER_DEVOPS_LINUX
+  - id: T71
+    category: GIT_DOCKER_DEVOPS_LINUX
+    prompt: "Show me Git status and explain the changes."
+    expected_route: skill.git
+  - id: T72
+    category: GIT_DOCKER_DEVOPS_LINUX
+    prompt: "Write a clean Git commit message for these changes."
+    expected_route: skill.git
+  - id: T73
+    category: GIT_DOCKER_DEVOPS_LINUX
+    prompt: "Fix a merge conflict in Git."
+    expected_route: skill.git
+  - id: T74
+    category: GIT_DOCKER_DEVOPS_LINUX
+    prompt: "Create a Dockerfile for a Node app."
+    expected_route: skill.docker
+  - id: T75
+    category: GIT_DOCKER_DEVOPS_LINUX
+    prompt: "Optimize a Docker image to reduce size."
+    expected_route: skill.docker
+  - id: T76
+    category: GIT_DOCKER_DEVOPS_LINUX
+    prompt: "Write a docker-compose setup for app and database."
+    expected_route: skill.docker
+  - id: T77
+    category: GIT_DOCKER_DEVOPS_LINUX
+    prompt: "Explain Linux file permissions."
+    expected_route: skill.linux
+  - id: T78
+    category: GIT_DOCKER_DEVOPS_LINUX
+    prompt: "Write a shell command to find large files."
+    expected_route: skill.linux
+  - id: T79
+    category: GIT_DOCKER_DEVOPS_LINUX
+    prompt: "Design a CI/CD workflow for a web app."
+    expected_route: skill.devops
+  - id: T80
+    category: GIT_DOCKER_DEVOPS_LINUX
+    prompt: "Create a Kubernetes deployment manifest."
+    expected_route: skill.kubernetes
+
+  # 9) SECURITY_DSA_AI_ML
+  - id: T81
+    category: SECURITY_DSA_AI_ML
+    prompt: "Review this code for XSS and CSRF issues."
+    expected_route: skill.web_security
+  - id: T82
+    category: SECURITY_DSA_AI_ML
+    prompt: "Explain OWASP Top 10 with examples."
+    expected_route: skill.web_security
+  - id: T83
+    category: SECURITY_DSA_AI_ML
+    prompt: "Write a secure password hashing approach."
+    expected_route: skill.web_security
+  - id: T84
+    category: SECURITY_DSA_AI_ML
+    prompt: "Solve this DSA problem with time complexity analysis."
+    expected_route: skill.dsa
+  - id: T85
+    category: SECURITY_DSA_AI_ML
+    prompt: "Explain dynamic programming for knapsack."
+    expected_route: skill.dsa
+  - id: T86
+    category: SECURITY_DSA_AI_ML
+    prompt: "Optimize this graph algorithm."
+    expected_route: skill.dsa
+  - id: T87
+    category: SECURITY_DSA_AI_ML
+    prompt: "Design an ML pipeline for text classification."
+    expected_route: skill.ai_ml
+  - id: T88
+    category: SECURITY_DSA_AI_ML
+    prompt: "Explain overfitting and regularization."
+    expected_route: skill.ai_ml
+  - id: T89
+    category: SECURITY_DSA_AI_ML
+    prompt: "Write a Python training loop with evaluation."
+    expected_route: skill.ai_ml
+  - id: T90
+    category: SECURITY_DSA_AI_ML
+    prompt: "Review this API for command injection risks."
+    expected_route: skill.web_security
+
+  # 10) CODING_AGENT_WORKFLOW_AND_TOOLS
+  - id: T91
+    category: CODING_AGENT_WORKFLOW_AND_TOOLS
+    prompt: "Read this file, summarize the bug, and suggest a patch."
+    expected_route: coding_agent_read_file
+  - id: T92
+    category: CODING_AGENT_WORKFLOW_AND_TOOLS
+    prompt: "Write a new file with the fixed code."
+    expected_route: coding_agent_write_file
+  - id: T93
+    category: CODING_AGENT_WORKFLOW_AND_TOOLS
+    prompt: "Detect the language in this file and route to the right skill."
+    expected_route: coding_agent_detect_language
+  - id: T94
+    category: CODING_AGENT_WORKFLOW_AND_TOOLS
+    prompt: "Analyze the project, then list the best skills to use."
+    expected_route: coding_agent_analyze_project
+  - id: T95
+    category: CODING_AGENT_WORKFLOW_AND_TOOLS
+    prompt: "Show git status, then explain what should be committed."
+    expected_route: coding_agent_git_status
+  - id: T96
+    category: CODING_AGENT_WORKFLOW_AND_TOOLS
+    prompt: "Scan the repository and identify unsafe command usage."
+    expected_route: coding_agent_scan
+  - id: T97
+    category: CODING_AGENT_WORKFLOW_AND_TOOLS
+    prompt: "Install the missing package and explain the risk."
+    expected_route: coding_agent_install_package
+  - id: T98
+    category: CODING_AGENT_WORKFLOW_AND_TOOLS
+    prompt: "Suggest the best coding skill for this repository."
+    expected_route: coding_agent_suggest
+  - id: T99
+    category: CODING_AGENT_WORKFLOW_AND_TOOLS
+    prompt: "Estimate the cost and complexity of the coding task."
+    expected_route: coding_agent_costs
+  - id: T100
+    category: CODING_AGENT_WORKFLOW_AND_TOOLS
+    prompt: "Run the full coding pipeline for this task and report the result."
+    expected_route: coding_agent_pipeline

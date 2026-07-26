@@ -279,12 +279,13 @@ class RuntimeManager:
 
                     step_cnt = len(plan_res.executed_steps)
                     if plan_res.success:
-                        res_text = f"Executed multi-step plan successfully ({step_cnt} steps)."
+                        raw_text = f"Executed multi-step plan successfully ({step_cnt} steps)."
                     else:
-                        res_text = (
+                        raw_text = (
                             f"Plan execution failed at step {plan_res.failed_step}: "
                             f"{plan_res.error}"
                         )
+                    res_text = await self._synthesize_conversational_reply(request.text, raw_text)
 
                     if self._analytics_manager is not None:
                         rec_fn = getattr(self._analytics_manager, "record", None)
@@ -338,7 +339,8 @@ class RuntimeManager:
                         {"session_id": request.session_id},
                     )
                     duration_ms = (time.time() - ctx.start_time) * 1000
-                    res_text = getattr(res, "output", "") or getattr(res, "error", "") or f"Coding task completed with status: {getattr(res, 'status', 'completed')}"
+                    raw_text = getattr(res, "output", "") or getattr(res, "error", "") or f"Coding task completed with status: {getattr(res, 'status', 'completed')}"
+                    res_text = await self._synthesize_conversational_reply(request.text, raw_text)
                     token_usage = self._estimate_token_usage("", res_text)
                     final_response = LLMResponse(
                         text=res_text,
@@ -361,7 +363,7 @@ class RuntimeManager:
             if not gw_decision.llm_required:
                 duration_ms = (time.time() - ctx.start_time) * 1000
                 if gw_decision.clarification_required:
-                    bypass_text = f"[User Clarification Required]: Your request '{request.text}' is ambiguous. Please provide specific details."
+                    raw_text = f"[User Clarification Required]: Your request '{request.text}' is ambiguous. Please provide specific details."
                 elif gw_decision.memory_lookup:
                     mem_res = None
                     if self._memory_manager is not None:
@@ -371,15 +373,17 @@ class RuntimeManager:
                                 mem_res = search_fn(request.text)
                             except Exception:
                                 pass
-                    bypass_text = f"Retrieved from memory: {mem_res}" if mem_res else f"Memory recall for '{request.text}' processed."
+                    raw_text = f"Retrieved from memory: {mem_res}" if mem_res else f"Memory recall for '{request.text}' processed."
                 elif gw_decision.web_search_only:
-                    bypass_text = f"[Web Search Summary]: Live result for '{request.text}' retrieved without full LLM reasoning."
+                    raw_text = f"[Web Search Summary]: Live result for '{request.text}' retrieved without full LLM reasoning."
                 elif gw_decision.category == IntentCategory.GREETING:
-                    bypass_text = "Hello! How can I assist you today?"
+                    raw_text = "Hello! How can I assist you today?"
                 elif gw_decision.category == IntentCategory.LOCAL_CAPABILITY:
-                    bypass_text = f"Local capability status for '{request.text}': System online and ready."
+                    raw_text = f"Local capability status for '{request.text}': System online and ready."
                 else:
-                    bypass_text = f"Request '{request.text}' processed deterministically by Reasoning Gateway."
+                    raw_text = f"Request '{request.text}' processed deterministically by Reasoning Gateway."
+
+                bypass_text = await self._synthesize_conversational_reply(request.text, raw_text)
 
                 token_usage = self._estimate_token_usage("", bypass_text)
                 final_response = LLMResponse(
@@ -900,6 +904,41 @@ class RuntimeManager:
             completion_tokens=completion_tokens,
             total_tokens=prompt_tokens + completion_tokens,
         )
+
+    async def _synthesize_conversational_reply(self, user_text: str, raw_output: str) -> str:
+        """Pass raw operation or tool outputs through the LLM for natural, conversational synthesis."""
+        if self._llm_manager is None or not hasattr(self._llm_manager, "generate"):
+            return raw_output
+        try:
+            sys_prompt = self._compile_prompt() + (
+                "\n\n[SYSTEM INSTRUCTION]: Now that the tools or operations have executed, provide a natural, "
+                "conversational, and concise reply to the user based on the results. Do NOT output technical logs or 'plan executed' messages."
+            )
+            context = [
+                Message(role="user", content=user_text),
+                Message(role="user", content=f"[System Observation / Operation Result]: {raw_output}"),
+            ]
+            resp = await self._llm_manager.generate(
+                prompt=sys_prompt,
+                context=context,
+                tools=None,
+            )
+            if resp and resp.text:
+                text_clean = resp.text.strip()
+                # Do not let AI provider outage errors overwrite real operation results
+                if (
+                    getattr(resp, "provider", "") in ("orchestrator_outage_fallback", "none")
+                    or "trouble connecting to AI services" in text_clean
+                    or "unable to reach AI services" in text_clean
+                ):
+                    return raw_output
+                # Do not let synthesis repeat the user's input command instead of execution result
+                if text_clean.lower() == user_text.strip().lower():
+                    return raw_output
+                return text_clean
+        except Exception as exc:
+            self._logger.warning("[SYNTHESIS] Synthesis pass failed, returning raw output: %s", exc)
+        return raw_output
 
     # ------------------------------------------------------------------
     # Event emission

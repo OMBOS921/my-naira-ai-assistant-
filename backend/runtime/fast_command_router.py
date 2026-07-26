@@ -552,28 +552,28 @@ class IntentEngine:
                 params={"raw_target": cleaned_text or lowered_raw}
             )
 
-        # 2. Open App / Website Intents (fast path for valid aliases)
+        # 2. Filesystem Intents (create/delete/rename folder/file, open file)
+        match = self._match_filesystem(cleaned_text, lowered_raw)
+        if match:
+            return match
+
+        # 3. Open App / Website Intents (fast path for valid aliases)
         match = self._match_open(cleaned_text, lowered_raw)
         if match and not match.params.get("is_invalid_target"):
             return match
 
-        # 3. System Intents (Lock, Shutdown, Restart)
+        # 4. System Intents (Lock, Shutdown, Restart)
         match = self._match_system_control(cleaned_text, lowered_raw)
         if match:
             return match
 
-        # 4. Volume Intents
+        # 5. Volume Intents
         match = self._match_volume(cleaned_text, lowered_raw)
         if match:
             return match
 
-        # 5. Brightness Intents
+        # 6. Brightness Intents
         match = self._match_brightness(cleaned_text, lowered_raw)
-        if match:
-            return match
-
-        # 6. Filesystem Intents
-        match = self._match_filesystem(cleaned_text, lowered_raw)
         if match:
             return match
 
@@ -1261,10 +1261,6 @@ class FastCommandRouter:
             # 2. psutil process check
             if not running_proc:
                 running_proc = await asyncio.to_thread(_check_psutil)
-
-            # Fallback for website targets when webbrowser.open succeeded
-            if not running_proc and not window_det and target and target.startswith(("http://", "https://", "www.")):
-                running_proc = "Default Browser (webbrowser.open)"
 
             # 3. win32gui window title check
             if not window_det:
@@ -2041,11 +2037,23 @@ class FastCommandRouter:
                 else:
                     subprocess.Popen(["xdg-open", str(path)])
 
+                verified, proc_info, win_info = await self._verify_launch(
+                    app_key=path.suffix.lstrip("."),
+                    target=str(path),
+                    timeout=1.0,
+                    lifecycle=lifecycle,
+                )
+                duration_ms = (time.time() - start_time) * 1000
+                if not verified:
+                    if lifecycle:
+                        lifecycle.transition_to(ActionState.FAILED, "File open process or window could not be verified")
+                    nat_msg = NaturalResponseFormatter.format_file_op_failed("open_file", path.name, "Editor/viewer process or window could not be verified")
+                    return f"FAILED_TO_LAUNCH: {nat_msg} [Fast Execution: {duration_ms:.1f}ms]"
+
                 if lifecycle:
-                    lifecycle.set_verification(verified=True, details={"path": str(path)})
+                    lifecycle.set_verification(verified=True, running_process=proc_info, window_detected=win_info, details={"path": str(path)})
                     lifecycle.transition_to(ActionState.SUCCESS, "File opened via OS handler")
 
-                duration_ms = (time.time() - start_time) * 1000
                 nat_msg = NaturalResponseFormatter.format_file_op_success("open_file", path.name)
                 return f"SUCCESS: {nat_msg} [Fast Execution: {duration_ms:.1f}ms]"
             except Exception as exc:

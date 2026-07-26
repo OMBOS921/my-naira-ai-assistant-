@@ -59,14 +59,18 @@ async def run_tool_loop(
         tool_messages = await _execute_tool_calls(tool_manager, response.tool_calls)
         context_messages.extend(tool_messages)
 
-        # If last iteration reached, break and do final generation without tools to close loop
-        if iteration == MAX_TOOL_ITERATIONS:
-            final_response = await llm_manager.generate(
-                prompt=system_prompt,
-                context=context_messages,
-                tools=None,
-            )
-            return final_response
+        # Perform final conversational synthesis pass after tool execution
+        synthesis_prompt = system_prompt + (
+            "\n\n[SYSTEM INSTRUCTION]: Now that the tools have executed, provide a natural, "
+            "conversational, and concise reply to the user based on the results. "
+            "Do NOT output technical logs or 'plan executed' messages."
+        )
+        final_response = await llm_manager.generate(
+            prompt=synthesis_prompt,
+            context=context_messages,
+            tools=None,
+        )
+        return final_response
 
     return response
 

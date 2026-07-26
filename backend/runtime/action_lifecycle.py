@@ -246,3 +246,26 @@ class NaturalResponseFormatter:
     @classmethod
     def format_brightness_success(cls, level: int) -> str:
         return f"Brightness {level}% set kar di hai."
+
+    @classmethod
+    def format_multi_step_result(
+        cls,
+        step1_name: str,
+        step1_success: bool,
+        step2_name: str,
+        step2_success: bool,
+        step1_error: str | None = None,
+        step2_error: str | None = None,
+    ) -> str:
+        if step1_success and step2_success:
+            return f"SUCCESS: Both {step1_name} and {step2_name} completed and verified successfully."
+        if step1_success and not step2_success:
+            err = f": {step2_error}" if step2_error else ""
+            return f"PARTIAL_SUCCESS: Step 1 ({step1_name}) succeeded, but Step 2 ({step2_name}) failed{err}."
+        if not step1_success and step2_success:
+            err = f": {step1_error}" if step1_error else ""
+            return f"PARTIAL_SUCCESS: Step 1 ({step1_name}) failed{err}, but Step 2 ({step2_name}) succeeded."
+        err1 = f": {step1_error}" if step1_error else ""
+        err2 = f": {step2_error}" if step2_error else ""
+        return f"FAILED: Step 1 ({step1_name}) failed{err1} and Step 2 ({step2_name}) failed{err2}."
+

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+import re
 
 from backend.modules.coding_agent.skills._config import SkillConfig
 from backend.modules.coding_agent.skills._registry import SkillRegistry
@@ -75,6 +76,113 @@ class SkillRouter:
         ".md": [],
     }
 
+    QUERY_ROUTES: dict[str, list[str]] = {
+        "c++": ["cpp"],
+        "cpp": ["cpp"],
+        "smart pointer": ["cpp"],
+        "raii": ["cpp"],
+        "template compilation": ["cpp"],
+        "binary search": ["cpp"],
+        "c program": ["c"],
+        "pointer arithmetic in c": ["c"],
+        "scanf": ["c"],
+        "segmentation fault": ["c"],
+        "matrix multiplication": ["c"],
+        "python": ["python"],
+        "json file": ["python"],
+        "remove duplicates": ["python"],
+        "decorators": ["python"],
+        "type hints": ["python"],
+        "dataclasses": ["python"],
+        "scrape": ["python"],
+        "argparse": ["python"],
+        "traceback": ["python"],
+        "calculator function": ["python"],
+        "loop that is too slow": ["python"],
+        "debounce": ["javascript"],
+        "async/await": ["javascript"],
+        "event loop": ["javascript"],
+        "es6": ["javascript"],
+        "js script": ["javascript"],
+        "typescript interface": ["typescript"],
+        "type mismatch": ["typescript"],
+        "generics in typescript": ["typescript"],
+        "utility type": ["typescript"],
+        "to typescript": ["typescript"],
+        "typescript": ["typescript"],
+        "react counter": ["react"],
+        "state update bug": ["react"],
+        "difference between react": ["react"],
+        "memoization": ["react"],
+        "react": ["react"],
+        "next.js page": ["nextjs"],
+        "next.js api route": ["nextjs"],
+        "next.js": ["nextjs"],
+        "nextjs": ["nextjs"],
+        "express route": ["express"],
+        "express middleware": ["express"],
+        "express": ["express"],
+        "node.js script": ["nodejs"],
+        "node.js function": ["nodejs"],
+        "node.js": ["nodejs"],
+        "nodejs": ["nodejs"],
+        "django model": ["django"],
+        "django migration": ["django"],
+        "django view": ["django"],
+        "django orm": ["django"],
+        "class-based views": ["django"],
+        "django": ["django"],
+        "fastapi endpoint": ["fastapi"],
+        "fastapi dependency": ["fastapi"],
+        "fastapi route": ["fastapi"],
+        "fastapi": ["fastapi"],
+        "pydantic": ["fastapi"],
+        "testclient": ["fastapi"],
+        "sql query": ["sql"],
+        "duplicate rows": ["sql"],
+        "sql joins": ["sql"],
+        "nested subqueries": ["sql"],
+        "sql schema": ["sql"],
+        "connection string": ["sql"],
+        "sql": ["sql"],
+        "postgresql query": ["postgresql"],
+        "database column": ["postgresql"],
+        "indexing strategy": ["postgresql"],
+        "postgresql": ["postgresql"],
+        "mongodb schema": ["mongodb"],
+        "mongodb aggregation": ["mongodb"],
+        "mongodb": ["mongodb"],
+        "git status": ["git"],
+        "commit message": ["git"],
+        "merge conflict": ["git"],
+        "git": ["git"],
+        "dockerfile": ["docker"],
+        "docker image": ["docker"],
+        "docker-compose": ["docker"],
+        "docker": ["docker"],
+        "linux file permissions": ["linux"],
+        "find large files": ["linux"],
+        "linux": ["linux"],
+        "ci/cd workflow": ["devops"],
+        "kubernetes": ["kubernetes"],
+        "xss": ["web_security"],
+        "csrf": ["web_security"],
+        "owasp": ["web_security"],
+        "password hashing": ["web_security"],
+        "command injection": ["web_security"],
+        "web security": ["web_security"],
+        "dsa problem": ["dsa"],
+        "dsa": ["dsa"],
+        "knapsack": ["dsa"],
+        "graph algorithm": ["dsa"],
+        "time complexity": ["dsa"],
+        "ml pipeline": ["ai_ml"],
+        "overfitting": ["ai_ml"],
+        "regularization": ["ai_ml"],
+        "training loop": ["ai_ml"],
+        "ai/ml": ["ai_ml"],
+    }
+
     def __init__(
         self,
         *,
@@ -100,6 +208,16 @@ class SkillRouter:
 
         candidates: dict[str, float] = {}
 
+        # Route by query text matching if provided
+        if query:
+            q_lower = query.lower()
+            for key in sorted(self.QUERY_ROUTES.keys(), key=len, reverse=True):
+                pattern = r'(?:^|[\s,.;:!?()\/\\-])' + re.escape(key) + r'(?:$|[\s,.;:!?()\/\\-])'
+                if re.search(pattern, q_lower):
+                    for s_name in self.QUERY_ROUTES[key]:
+                        score = 1.0 + (len(key) / 100.0)
+                        candidates[s_name] = max(candidates.get(s_name, 0), score)
+
         # Route by project type
         project_type = context.project.project_type.lower()
         project_routes = {
@@ -116,7 +234,7 @@ class SkillRouter:
         }
         route_name = project_routes.get(project_type)
         if route_name:
-            candidates[route_name] = 1.0
+            candidates[route_name] = max(candidates.get(route_name, 0), 0.9)
 
         # Route by file extension
         current_file = context.current_file

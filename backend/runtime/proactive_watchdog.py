@@ -41,12 +41,14 @@ class ProactiveWatchdog:
         cpu_threshold: float = 80.0,
         memory_threshold: float = 85.0,
         logger: logging.Logger | None = None,
+        llm_manager: object | None = None,
     ) -> None:
         self._websockets = active_websockets if active_websockets is not None else set()
         self._check_interval = check_interval
         self._cpu_threshold = cpu_threshold
         self._memory_threshold = memory_threshold
         self._logger = logger or _LOG
+        self._llm_manager = llm_manager
         self._running = False
         self._task: asyncio.Task[None] | None = None
         self._last_alert_time: float = 0.0
@@ -101,7 +103,29 @@ class ProactiveWatchdog:
 
         if proactive_msg and self._websockets:
             self._last_alert_time = now
-            await self.broadcast(proactive_msg)
+            synthesized_msg = await self._synthesize_alert(proactive_msg)
+            await self.broadcast(synthesized_msg)
+
+    async def _synthesize_alert(self, raw_alert: str) -> str:
+        """Synthesise system metrics alert into a natural voice notification."""
+        if self._llm_manager is None or not hasattr(self._llm_manager, "generate"):
+            return raw_alert
+        try:
+            from backend.types import Message
+            prompt = (
+                "You are Naira, a friendly, intelligent AI assistant. Rephrase this system alert into a single, natural, "
+                "conversational sentence starting with 'Boss,' or a warm greeting. Keep it concise."
+            )
+            resp = await self._llm_manager.generate(
+                prompt=prompt,
+                context=[Message(role="user", content=f"Alert: {raw_alert}")],
+                tools=None,
+            )
+            if resp and resp.text:
+                return resp.text.strip()
+        except Exception as exc:
+            self._logger.warning("[WATCHDOG] Alert synthesis failed: %s", exc)
+        return raw_alert
 
     def _get_system_metrics(self) -> dict[str, float]:
         """Gather CPU and Memory usage."""

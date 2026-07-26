@@ -8,9 +8,11 @@ Orchestrator — central mediator, Event Bus, and Finite State Machine.
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from enum import StrEnum
+from enum import Enum, StrEnum, auto
 from typing import TYPE_CHECKING
+
 
 from backend.eventbus import EventBus
 from backend.types import UserRequest, UserResponse

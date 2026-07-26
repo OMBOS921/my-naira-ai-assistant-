@@ -1,0 +1,1010 @@
+{
+  "suite_name": "NairaOS_Coding_Regression_100",
+  "total_tests": 100,
+  "passed": 100,
+  "failed": 0,
+  "pass_rate": 100.0,
+  "total_duration_seconds": 0.1,
+  "results": [
+    {
+      "id": "T01",
+      "category": "LANG_DETECTION_AND_PROJECT_ANALYSIS",
+      "prompt": "Analyze the project and tell me the primary language, framework, and folder structure.",
+      "expected_route": "coding_agent_analyze_project",
+      "actual_route": "coding_agent_analyze_project",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T02",
+      "category": "LANG_DETECTION_AND_PROJECT_ANALYSIS",
+      "prompt": "Detect the language of main.py and explain the project type.",
+      "expected_route": "coding_agent_detect_language",
+      "actual_route": "coding_agent_detect_language",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T03",
+      "category": "LANG_DETECTION_AND_PROJECT_ANALYSIS",
+      "prompt": "Scan this repository and list the top 5 risky files.",
+      "expected_route": "coding_agent_scan",
+      "actual_route": "coding_agent_scan",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T04",
+      "category": "LANG_DETECTION_AND_PROJECT_ANALYSIS",
+      "prompt": "Open the project and summarize what the entry point does.",
+      "expected_route": "coding_agent_analyze_project",
+      "actual_route": "coding_agent_analyze_project",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T05",
+      "category": "LANG_DETECTION_AND_PROJECT_ANALYSIS",
+      "prompt": "Find the build system and tell me how the app is started.",
+      "expected_route": "coding_agent_analyze_project",
+      "actual_route": "coding_agent_analyze_project",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T06",
+      "category": "LANG_DETECTION_AND_PROJECT_ANALYSIS",
+      "prompt": "Identify all languages used in this workspace.",
+      "expected_route": "coding_agent_detect_language",
+      "actual_route": "coding_agent_detect_language",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T07",
+      "category": "LANG_DETECTION_AND_PROJECT_ANALYSIS",
+      "prompt": "Show me the dependency tree and explain the highest risk modules.",
+      "expected_route": "coding_agent_analyze_project",
+      "actual_route": "coding_agent_analyze_project",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T08",
+      "category": "LANG_DETECTION_AND_PROJECT_ANALYSIS",
+      "prompt": "Tell me whether this repo is frontend-heavy, backend-heavy, or mixed.",
+      "expected_route": "coding_agent_analyze_project",
+      "actual_route": "coding_agent_analyze_project",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T09",
+      "category": "LANG_DETECTION_AND_PROJECT_ANALYSIS",
+      "prompt": "Detect whether this codebase is Python, Node, or mixed.",
+      "expected_route": "coding_agent_detect_language",
+      "actual_route": "coding_agent_detect_language",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T10",
+      "category": "LANG_DETECTION_AND_PROJECT_ANALYSIS",
+      "prompt": "Analyze the repo and list the core coding agent skills available.",
+      "expected_route": "coding_agent_analyze_project",
+      "actual_route": "coding_agent_analyze_project",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T11",
+      "category": "C_AND_CPP",
+      "prompt": "Write a C program to check whether a number is prime.",
+      "expected_route": "skill.c",
+      "actual_route": "skill.c",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0345
+    },
+    {
+      "id": "T12",
+      "category": "C_AND_CPP",
+      "prompt": "Fix this C program that has scanf and pointer errors.",
+      "expected_route": "skill.c",
+      "actual_route": "skill.c",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0006
+    },
+    {
+      "id": "T13",
+      "category": "C_AND_CPP",
+      "prompt": "Explain pointer arithmetic in C with a small example.",
+      "expected_route": "skill.c",
+      "actual_route": "skill.c",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0012
+    },
+    {
+      "id": "T14",
+      "category": "C_AND_CPP",
+      "prompt": "Write a C program for matrix multiplication.",
+      "expected_route": "skill.c",
+      "actual_route": "skill.c",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0015
+    },
+    {
+      "id": "T15",
+      "category": "C_AND_CPP",
+      "prompt": "Debug a C program with segmentation fault.",
+      "expected_route": "skill.c",
+      "actual_route": "skill.c",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0007
+    },
+    {
+      "id": "T16",
+      "category": "C_AND_CPP",
+      "prompt": "Write a C++ program using classes and inheritance.",
+      "expected_route": "skill.cpp",
+      "actual_route": "skill.cpp",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0006
+    },
+    {
+      "id": "T17",
+      "category": "C_AND_CPP",
+      "prompt": "Refactor C++ code to use smart pointers instead of raw pointers.",
+      "expected_route": "skill.cpp",
+      "actual_route": "skill.cpp",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0006
+    },
+    {
+      "id": "T18",
+      "category": "C_AND_CPP",
+      "prompt": "Explain RAII and move semantics in C++.",
+      "expected_route": "skill.cpp",
+      "actual_route": "skill.cpp",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T19",
+      "category": "C_AND_CPP",
+      "prompt": "Fix a C++ template compilation error.",
+      "expected_route": "skill.cpp",
+      "actual_route": "skill.cpp",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0004
+    },
+    {
+      "id": "T20",
+      "category": "C_AND_CPP",
+      "prompt": "Write a C++ solution for binary search.",
+      "expected_route": "skill.cpp",
+      "actual_route": "skill.cpp",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T21",
+      "category": "PYTHON",
+      "prompt": "Write a Python script that reads a JSON file and prints formatted output.",
+      "expected_route": "skill.python",
+      "actual_route": "skill.python",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0006
+    },
+    {
+      "id": "T22",
+      "category": "PYTHON",
+      "prompt": "Fix a Python script with indentation and import errors.",
+      "expected_route": "skill.python",
+      "actual_route": "skill.python",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0045
+    },
+    {
+      "id": "T23",
+      "category": "PYTHON",
+      "prompt": "Write a Python function to remove duplicates from a list.",
+      "expected_route": "skill.python",
+      "actual_route": "skill.python",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0013
+    },
+    {
+      "id": "T24",
+      "category": "PYTHON",
+      "prompt": "Explain decorators in Python with an example.",
+      "expected_route": "skill.python",
+      "actual_route": "skill.python",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0009
+    },
+    {
+      "id": "T25",
+      "category": "PYTHON",
+      "prompt": "Refactor Python code to use type hints and dataclasses.",
+      "expected_route": "skill.python",
+      "actual_route": "skill.python",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0008
+    },
+    {
+      "id": "T26",
+      "category": "PYTHON",
+      "prompt": "Write a Python script to scrape a webpage safely.",
+      "expected_route": "skill.python",
+      "actual_route": "skill.python",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0006
+    },
+    {
+      "id": "T27",
+      "category": "PYTHON",
+      "prompt": "Create a Python CLI tool with argparse.",
+      "expected_route": "skill.python",
+      "actual_route": "skill.python",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T28",
+      "category": "PYTHON",
+      "prompt": "Debug a Python traceback from a failing function.",
+      "expected_route": "skill.python",
+      "actual_route": "skill.python",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T29",
+      "category": "PYTHON",
+      "prompt": "Write a Python unit test for a calculator function.",
+      "expected_route": "skill.python",
+      "actual_route": "skill.python",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T30",
+      "category": "PYTHON",
+      "prompt": "Optimize a Python loop that is too slow.",
+      "expected_route": "skill.python",
+      "actual_route": "skill.python",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T31",
+      "category": "JAVASCRIPT_AND_TYPESCRIPT",
+      "prompt": "Write a JavaScript function to debounce input.",
+      "expected_route": "skill.javascript",
+      "actual_route": "skill.javascript",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T32",
+      "category": "JAVASCRIPT_AND_TYPESCRIPT",
+      "prompt": "Fix a JavaScript async/await error.",
+      "expected_route": "skill.javascript",
+      "actual_route": "skill.javascript",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0004
+    },
+    {
+      "id": "T33",
+      "category": "JAVASCRIPT_AND_TYPESCRIPT",
+      "prompt": "Explain the event loop in JavaScript.",
+      "expected_route": "skill.javascript",
+      "actual_route": "skill.javascript",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0004
+    },
+    {
+      "id": "T34",
+      "category": "JAVASCRIPT_AND_TYPESCRIPT",
+      "prompt": "Refactor JavaScript code to modern ES6 syntax.",
+      "expected_route": "skill.javascript",
+      "actual_route": "skill.javascript",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T35",
+      "category": "JAVASCRIPT_AND_TYPESCRIPT",
+      "prompt": "Write a TypeScript interface for a user profile.",
+      "expected_route": "skill.typescript",
+      "actual_route": "skill.typescript",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T36",
+      "category": "JAVASCRIPT_AND_TYPESCRIPT",
+      "prompt": "Fix a TypeScript type mismatch in a React component.",
+      "expected_route": "skill.typescript",
+      "actual_route": "skill.typescript",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T37",
+      "category": "JAVASCRIPT_AND_TYPESCRIPT",
+      "prompt": "Explain generics in TypeScript with examples.",
+      "expected_route": "skill.typescript",
+      "actual_route": "skill.typescript",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T38",
+      "category": "JAVASCRIPT_AND_TYPESCRIPT",
+      "prompt": "Create a TypeScript utility type for deep partial.",
+      "expected_route": "skill.typescript",
+      "actual_route": "skill.typescript",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T39",
+      "category": "JAVASCRIPT_AND_TYPESCRIPT",
+      "prompt": "Write a JS script to fetch API data and handle errors.",
+      "expected_route": "skill.javascript",
+      "actual_route": "skill.javascript",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0006
+    },
+    {
+      "id": "T40",
+      "category": "JAVASCRIPT_AND_TYPESCRIPT",
+      "prompt": "Convert this JavaScript module to TypeScript.",
+      "expected_route": "skill.typescript",
+      "actual_route": "skill.typescript",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T41",
+      "category": "REACT_NEXT_NODE_EXPRESS",
+      "prompt": "Build a React counter component with hooks.",
+      "expected_route": "skill.react",
+      "actual_route": "skill.react",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0007
+    },
+    {
+      "id": "T42",
+      "category": "REACT_NEXT_NODE_EXPRESS",
+      "prompt": "Fix a React state update bug.",
+      "expected_route": "skill.react",
+      "actual_route": "skill.react",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T43",
+      "category": "REACT_NEXT_NODE_EXPRESS",
+      "prompt": "Create a Next.js page that loads data server-side.",
+      "expected_route": "skill.nextjs",
+      "actual_route": "skill.nextjs",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0021
+    },
+    {
+      "id": "T44",
+      "category": "REACT_NEXT_NODE_EXPRESS",
+      "prompt": "Explain the difference between React and Next.js.",
+      "expected_route": "skill.react",
+      "actual_route": "skill.react",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0009
+    },
+    {
+      "id": "T45",
+      "category": "REACT_NEXT_NODE_EXPRESS",
+      "prompt": "Write an Express route for a login API.",
+      "expected_route": "skill.express",
+      "actual_route": "skill.express",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0007
+    },
+    {
+      "id": "T46",
+      "category": "REACT_NEXT_NODE_EXPRESS",
+      "prompt": "Debug an Express middleware problem.",
+      "expected_route": "skill.express",
+      "actual_route": "skill.express",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0006
+    },
+    {
+      "id": "T47",
+      "category": "REACT_NEXT_NODE_EXPRESS",
+      "prompt": "Create a Node.js script that reads a file and writes output.",
+      "expected_route": "skill.nodejs",
+      "actual_route": "skill.nodejs",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0007
+    },
+    {
+      "id": "T48",
+      "category": "REACT_NEXT_NODE_EXPRESS",
+      "prompt": "Refactor a React component to use memoization.",
+      "expected_route": "skill.react",
+      "actual_route": "skill.react",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T49",
+      "category": "REACT_NEXT_NODE_EXPRESS",
+      "prompt": "Build a Next.js API route for a contact form.",
+      "expected_route": "skill.nextjs",
+      "actual_route": "skill.nextjs",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T50",
+      "category": "REACT_NEXT_NODE_EXPRESS",
+      "prompt": "Write a Node.js function to validate input.",
+      "expected_route": "skill.nodejs",
+      "actual_route": "skill.nodejs",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T51",
+      "category": "DJANGO_FASTAPI",
+      "prompt": "Create a Django model for blog posts.",
+      "expected_route": "skill.django",
+      "actual_route": "skill.django",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0006
+    },
+    {
+      "id": "T52",
+      "category": "DJANGO_FASTAPI",
+      "prompt": "Fix a Django migration error.",
+      "expected_route": "skill.django",
+      "actual_route": "skill.django",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0006
+    },
+    {
+      "id": "T53",
+      "category": "DJANGO_FASTAPI",
+      "prompt": "Write a Django view and URL route.",
+      "expected_route": "skill.django",
+      "actual_route": "skill.django",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0004
+    },
+    {
+      "id": "T54",
+      "category": "DJANGO_FASTAPI",
+      "prompt": "Explain Django ORM query optimization.",
+      "expected_route": "skill.django",
+      "actual_route": "skill.django",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T55",
+      "category": "DJANGO_FASTAPI",
+      "prompt": "Build a FastAPI endpoint with Pydantic validation.",
+      "expected_route": "skill.fastapi",
+      "actual_route": "skill.fastapi",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0006
+    },
+    {
+      "id": "T56",
+      "category": "DJANGO_FASTAPI",
+      "prompt": "Fix a FastAPI dependency injection bug.",
+      "expected_route": "skill.fastapi",
+      "actual_route": "skill.fastapi",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0004
+    },
+    {
+      "id": "T57",
+      "category": "DJANGO_FASTAPI",
+      "prompt": "Create a FastAPI route with GET and POST methods.",
+      "expected_route": "skill.fastapi",
+      "actual_route": "skill.fastapi",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0007
+    },
+    {
+      "id": "T58",
+      "category": "DJANGO_FASTAPI",
+      "prompt": "Explain async database access in FastAPI.",
+      "expected_route": "skill.fastapi",
+      "actual_route": "skill.fastapi",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0007
+    },
+    {
+      "id": "T59",
+      "category": "DJANGO_FASTAPI",
+      "prompt": "Refactor Django code to use class-based views.",
+      "expected_route": "skill.django",
+      "actual_route": "skill.django",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0007
+    },
+    {
+      "id": "T60",
+      "category": "DJANGO_FASTAPI",
+      "prompt": "Write a FastAPI test using TestClient.",
+      "expected_route": "skill.fastapi",
+      "actual_route": "skill.fastapi",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T61",
+      "category": "SQL_AND_DATABASES",
+      "prompt": "Write a SQL query to find duplicate rows.",
+      "expected_route": "skill.sql",
+      "actual_route": "skill.sql",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T62",
+      "category": "SQL_AND_DATABASES",
+      "prompt": "Optimize a slow PostgreSQL query.",
+      "expected_route": "skill.postgresql",
+      "actual_route": "skill.postgresql",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0004
+    },
+    {
+      "id": "T63",
+      "category": "SQL_AND_DATABASES",
+      "prompt": "Design a MongoDB schema for chat history.",
+      "expected_route": "skill.mongodb",
+      "actual_route": "skill.mongodb",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T64",
+      "category": "SQL_AND_DATABASES",
+      "prompt": "Explain SQL joins with examples.",
+      "expected_route": "skill.sql",
+      "actual_route": "skill.sql",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0004
+    },
+    {
+      "id": "T65",
+      "category": "SQL_AND_DATABASES",
+      "prompt": "Write a migration for a new database column.",
+      "expected_route": "skill.postgresql",
+      "actual_route": "skill.postgresql",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T66",
+      "category": "SQL_AND_DATABASES",
+      "prompt": "Refactor SQL to avoid nested subqueries.",
+      "expected_route": "skill.sql",
+      "actual_route": "skill.sql",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T67",
+      "category": "SQL_AND_DATABASES",
+      "prompt": "Write a MongoDB aggregation pipeline.",
+      "expected_route": "skill.mongodb",
+      "actual_route": "skill.mongodb",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0004
+    },
+    {
+      "id": "T68",
+      "category": "SQL_AND_DATABASES",
+      "prompt": "Explain indexing strategy for PostgreSQL.",
+      "expected_route": "skill.postgresql",
+      "actual_route": "skill.postgresql",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T69",
+      "category": "SQL_AND_DATABASES",
+      "prompt": "Create SQL schema for users and sessions.",
+      "expected_route": "skill.sql",
+      "actual_route": "skill.sql",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T70",
+      "category": "SQL_AND_DATABASES",
+      "prompt": "Debug a database connection string issue.",
+      "expected_route": "skill.sql",
+      "actual_route": "skill.sql",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0113
+    },
+    {
+      "id": "T71",
+      "category": "GIT_DOCKER_DEVOPS_LINUX",
+      "prompt": "Show me Git status and explain the changes.",
+      "expected_route": "skill.git",
+      "actual_route": "skill.git",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0007
+    },
+    {
+      "id": "T72",
+      "category": "GIT_DOCKER_DEVOPS_LINUX",
+      "prompt": "Write a clean Git commit message for these changes.",
+      "expected_route": "skill.git",
+      "actual_route": "skill.git",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0006
+    },
+    {
+      "id": "T73",
+      "category": "GIT_DOCKER_DEVOPS_LINUX",
+      "prompt": "Fix a merge conflict in Git.",
+      "expected_route": "skill.git",
+      "actual_route": "skill.git",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0007
+    },
+    {
+      "id": "T74",
+      "category": "GIT_DOCKER_DEVOPS_LINUX",
+      "prompt": "Create a Dockerfile for a Node app.",
+      "expected_route": "skill.docker",
+      "actual_route": "skill.docker",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0007
+    },
+    {
+      "id": "T75",
+      "category": "GIT_DOCKER_DEVOPS_LINUX",
+      "prompt": "Optimize a Docker image to reduce size.",
+      "expected_route": "skill.docker",
+      "actual_route": "skill.docker",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0007
+    },
+    {
+      "id": "T76",
+      "category": "GIT_DOCKER_DEVOPS_LINUX",
+      "prompt": "Write a docker-compose setup for app and database.",
+      "expected_route": "skill.docker",
+      "actual_route": "skill.docker",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0006
+    },
+    {
+      "id": "T77",
+      "category": "GIT_DOCKER_DEVOPS_LINUX",
+      "prompt": "Explain Linux file permissions.",
+      "expected_route": "skill.linux",
+      "actual_route": "skill.linux",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0004
+    },
+    {
+      "id": "T78",
+      "category": "GIT_DOCKER_DEVOPS_LINUX",
+      "prompt": "Write a shell command to find large files.",
+      "expected_route": "skill.linux",
+      "actual_route": "skill.linux",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T79",
+      "category": "GIT_DOCKER_DEVOPS_LINUX",
+      "prompt": "Design a CI/CD workflow for a web app.",
+      "expected_route": "skill.devops",
+      "actual_route": "skill.devops",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T80",
+      "category": "GIT_DOCKER_DEVOPS_LINUX",
+      "prompt": "Create a Kubernetes deployment manifest.",
+      "expected_route": "skill.kubernetes",
+      "actual_route": "skill.kubernetes",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.001
+    },
+    {
+      "id": "T81",
+      "category": "SECURITY_DSA_AI_ML",
+      "prompt": "Review this code for XSS and CSRF issues.",
+      "expected_route": "skill.web_security",
+      "actual_route": "skill.web_security",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0014
+    },
+    {
+      "id": "T82",
+      "category": "SECURITY_DSA_AI_ML",
+      "prompt": "Explain OWASP Top 10 with examples.",
+      "expected_route": "skill.web_security",
+      "actual_route": "skill.web_security",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0007
+    },
+    {
+      "id": "T83",
+      "category": "SECURITY_DSA_AI_ML",
+      "prompt": "Write a secure password hashing approach.",
+      "expected_route": "skill.web_security",
+      "actual_route": "skill.web_security",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T84",
+      "category": "SECURITY_DSA_AI_ML",
+      "prompt": "Solve this DSA problem with time complexity analysis.",
+      "expected_route": "skill.dsa",
+      "actual_route": "skill.dsa",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0006
+    },
+    {
+      "id": "T85",
+      "category": "SECURITY_DSA_AI_ML",
+      "prompt": "Explain dynamic programming for knapsack.",
+      "expected_route": "skill.dsa",
+      "actual_route": "skill.dsa",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0004
+    },
+    {
+      "id": "T86",
+      "category": "SECURITY_DSA_AI_ML",
+      "prompt": "Optimize this graph algorithm.",
+      "expected_route": "skill.dsa",
+      "actual_route": "skill.dsa",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0004
+    },
+    {
+      "id": "T87",
+      "category": "SECURITY_DSA_AI_ML",
+      "prompt": "Design an ML pipeline for text classification.",
+      "expected_route": "skill.ai_ml",
+      "actual_route": "skill.ai_ml",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T88",
+      "category": "SECURITY_DSA_AI_ML",
+      "prompt": "Explain overfitting and regularization.",
+      "expected_route": "skill.ai_ml",
+      "actual_route": "skill.ai_ml",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0004
+    },
+    {
+      "id": "T89",
+      "category": "SECURITY_DSA_AI_ML",
+      "prompt": "Write a Python training loop with evaluation.",
+      "expected_route": "skill.ai_ml",
+      "actual_route": "skill.ai_ml",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T90",
+      "category": "SECURITY_DSA_AI_ML",
+      "prompt": "Review this API for command injection risks.",
+      "expected_route": "skill.web_security",
+      "actual_route": "skill.web_security",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0005
+    },
+    {
+      "id": "T91",
+      "category": "CODING_AGENT_WORKFLOW_AND_TOOLS",
+      "prompt": "Read this file, summarize the bug, and suggest a patch.",
+      "expected_route": "coding_agent_read_file",
+      "actual_route": "coding_agent_read_file",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T92",
+      "category": "CODING_AGENT_WORKFLOW_AND_TOOLS",
+      "prompt": "Write a new file with the fixed code.",
+      "expected_route": "coding_agent_write_file",
+      "actual_route": "coding_agent_write_file",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T93",
+      "category": "CODING_AGENT_WORKFLOW_AND_TOOLS",
+      "prompt": "Detect the language in this file and route to the right skill.",
+      "expected_route": "coding_agent_detect_language",
+      "actual_route": "coding_agent_detect_language",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T94",
+      "category": "CODING_AGENT_WORKFLOW_AND_TOOLS",
+      "prompt": "Analyze the project, then list the best skills to use.",
+      "expected_route": "coding_agent_analyze_project",
+      "actual_route": "coding_agent_analyze_project",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T95",
+      "category": "CODING_AGENT_WORKFLOW_AND_TOOLS",
+      "prompt": "Show git status, then explain what should be committed.",
+      "expected_route": "coding_agent_git_status",
+      "actual_route": "coding_agent_git_status",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T96",
+      "category": "CODING_AGENT_WORKFLOW_AND_TOOLS",
+      "prompt": "Scan the repository and identify unsafe command usage.",
+      "expected_route": "coding_agent_scan",
+      "actual_route": "coding_agent_scan",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T97",
+      "category": "CODING_AGENT_WORKFLOW_AND_TOOLS",
+      "prompt": "Install the missing package and explain the risk.",
+      "expected_route": "coding_agent_install_package",
+      "actual_route": "coding_agent_install_package",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T98",
+      "category": "CODING_AGENT_WORKFLOW_AND_TOOLS",
+      "prompt": "Suggest the best coding skill for this repository.",
+      "expected_route": "coding_agent_suggest",
+      "actual_route": "coding_agent_suggest",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T99",
+      "category": "CODING_AGENT_WORKFLOW_AND_TOOLS",
+      "prompt": "Estimate the cost and complexity of the coding task.",
+      "expected_route": "coding_agent_costs",
+      "actual_route": "coding_agent_costs",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    },
+    {
+      "id": "T100",
+      "category": "CODING_AGENT_WORKFLOW_AND_TOOLS",
+      "prompt": "Run the full coding pipeline for this task and report the result.",
+      "expected_route": "coding_agent_pipeline",
+      "actual_route": "coding_agent_pipeline",
+      "verification": "ROUTE_MATCH",
+      "status": "PASSED",
+      "duration": 0.0
+    }
+  ]
+}

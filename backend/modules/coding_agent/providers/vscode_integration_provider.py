@@ -43,6 +43,13 @@ class VSCodeIntegrationProvider:
                 "success": False,
                 "error": "VS Code CLI not found on PATH. Ensure 'code' command is installed.",
             }
+        p = Path(folder_path).resolve()
+        if not p.exists():
+            return {
+                "success": False,
+                "error": f"Target folder '{folder_path}' does not exist.",
+                "folder": folder_path,
+            }
 
         def _run() -> tuple[bool, str]:
             args = ["code", "-n", folder_path] if new_window else ["code", folder_path]
@@ -56,6 +63,20 @@ class VSCodeIntegrationProvider:
             return result.returncode == 0, result.stderr
 
         success, error = await asyncio.to_thread(_run)
+        if success:
+            proc_running = False
+            try:
+                import psutil
+                for proc in psutil.process_iter(["name"]):
+                    if (proc.info.get("name") or "").lower() in ("code.exe", "code"):
+                        proc_running = True
+                        break
+            except Exception:
+                proc_running = True
+            if not proc_running:
+                success = False
+                error = "VS Code process launch could not be verified in running process list."
+
         return {
             "success": success,
             "error": error if not success else None,
@@ -69,6 +90,13 @@ class VSCodeIntegrationProvider:
             return {
                 "success": False,
                 "error": "VS Code CLI not found on PATH. Ensure 'code' command is installed.",
+            }
+        p = Path(file_path).resolve()
+        if not p.exists():
+            return {
+                "success": False,
+                "error": f"Target file '{file_path}' does not exist.",
+                "file": file_path,
             }
 
         def _run() -> tuple[bool, str]:
@@ -84,6 +112,20 @@ class VSCodeIntegrationProvider:
             return result.returncode == 0, result.stderr
 
         success, error = await asyncio.to_thread(_run)
+        if success:
+            proc_running = False
+            try:
+                import psutil
+                for proc in psutil.process_iter(["name"]):
+                    if (proc.info.get("name") or "").lower() in ("code.exe", "code"):
+                        proc_running = True
+                        break
+            except Exception:
+                proc_running = True
+            if not proc_running:
+                success = False
+                error = "VS Code process launch could not be verified in running process list."
+
         return {
             "success": success,
             "error": error if not success else None,
