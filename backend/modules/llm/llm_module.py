@@ -22,6 +22,7 @@ from backend.exceptions import (
     ProviderTimeoutError,
 )
 from backend.modules.llm.generation_config import GenerationConfig
+from backend.modules.llm.orchestrator import LLMProviderOrchestrator
 from backend.modules.llm.ports.llm_port import LLMPort
 from backend.modules.llm.safety import SafetyConfig
 from backend.types import LLMResponse, Message, ToolDef
@@ -31,7 +32,7 @@ _LOG = logging.getLogger("naira.llm")
 
 class LLMManager:
     """Central LLM manager — owns a collection of providers and routes
-    requests through a fallback chain.
+    requests through a fallback chain via LLMProviderOrchestrator.
 
     Conforms to ``ModuleInterface`` (``backend/types.py``).
 
@@ -65,6 +66,7 @@ class LLMManager:
         active_provider: str = "gemini",
         fallback_chain: tuple[str, ...] = ("gemini",),
         event_bus: object | None = None,
+        interaction_manager: object | None = None,
     ) -> None:
         self._config = config
         self._logger = logger or _LOG
@@ -78,6 +80,12 @@ class LLMManager:
         self._provider_failure_count: dict[str, int] = {}
         self._degraded: bool = False
         self._initialized: bool = False
+        self._orchestrator = LLMProviderOrchestrator(
+            providers=dict(self._providers),
+            fallback_chain=self._fallback_chain,
+            logger=self._logger,
+            interaction_manager=interaction_manager,
+        )
 
     # ------------------------------------------------------------------
     # Module lifecycle  (ModuleInterface protocol)
@@ -153,12 +161,10 @@ class LLMManager:
     @property
     def fallback_chain(self) -> tuple[str, ...]:
         """Return the ordered fallback chain."""
-        return self._fallback_chain
-
     @property
-    def registered_providers(self) -> dict[str, LLMPort]:
-        """Return a copy of all registered providers (read-only snapshot)."""
-        return dict(self._providers)
+    def orchestrator(self) -> LLMProviderOrchestrator:
+        """Return the underlying provider orchestrator."""
+        return self._orchestrator
 
     async def register_provider(self, name: str, provider: LLMPort) -> None:
         """Register a new provider at runtime.
@@ -173,6 +179,7 @@ class LLMManager:
             Provider instance implementing ``LLMPort``.
         """
         self._providers[name] = provider
+        self._orchestrator.register_provider(name, provider)
         if self._degraded and self._providers.get(self._active_provider_name):
             self._degraded = False
         self._logger.info("Provider registered: %s", name)
@@ -190,6 +197,7 @@ class LLMManager:
             - degraded — whether the manager is degraded
             - provider_statistics — statistics for each provider
             - available_providers — list of available providers
+            - orchestrator_metrics — list of ProviderHealthMetrics from orchestrator
         """
         provider_stats = {}
         available_providers = []
@@ -231,6 +239,18 @@ class LLMManager:
             )
         }
 
+        orchestrator_metrics = [
+            {
+                "provider_name": m.provider_name,
+                "health_score": m.health_score,
+                "average_latency": m.average_latency,
+                "success_rate": m.success_rate,
+                "last_failure": m.last_failure,
+                "current_status": m.current_status,
+            }
+            for m in self._orchestrator.get_health_metrics()
+        ]
+
         return {
             "active_provider": self._active_provider_name,
             "registered_providers": list(self._providers.keys()),
@@ -239,6 +259,7 @@ class LLMManager:
             "provider_statistics": provider_stats,
             "available_providers": available_providers,
             "provider_runtime_metrics": provider_runtime_metrics,
+            "orchestrator_metrics": orchestrator_metrics,
         }
 
     # ------------------------------------------------------------------
@@ -251,78 +272,20 @@ class LLMManager:
         context: list[Message],
         tools: list[ToolDef] | None = None,
     ) -> LLMResponse:
-        """Generate a response using the fallback chain.
-
-        Tries each provider in ``fallback_chain`` in order.  On transient
-        failure (timeout, rate limit, server error) it falls to the next
-        provider.  Auth errors are raised immediately.
-
-        Parameters
-        ----------
-        prompt : str
-            System prompt / instruction text.
-        context : list[Message]
-            Conversation history.
-        tools : list[ToolDef] | None
-            Available tool definitions.
-
-        Returns
-        -------
-        LLMResponse
-            The first successful response from the chain.
-
-        Raises
-        ------
-        ModuleDegradedError
-            If the manager is degraded.
-        LLMError
-            If all providers in the fallback chain fail.
-        """
+        """Generate a response using LLMProviderOrchestrator."""
         self._ensure_not_degraded()
 
-        errors: dict[str, Exception] = {}
-        for provider_name in self._fallback_chain:
-            provider = self._providers.get(provider_name)
-            if provider is None:
-                continue
-
-            try:
-                response = await provider.generate(prompt, context, tools)
-                self._provider_success_count[provider_name] = (
-                    self._provider_success_count.get(provider_name, 0) + 1
-                )
-                self._logger.info(
-                    "Generated response — provider=%s tokens=%d duration=%.0fms",
-                    provider_name,
-                    response.token_usage.total_tokens,
-                    response.duration_ms,
-                )
-                return response
-            except asyncio.CancelledError:
-                raise
-            except ProviderAuthError:
-                raise
-            except (ProviderTimeoutError, ProviderRateLimitError, LLMError) as exc:
-                self._provider_failure_count[provider_name] = (
-                    self._provider_failure_count.get(provider_name, 0) + 1
-                )
-                errors[provider_name] = exc
-                self._logger.warning(
-                    "Provider '%s' failed (%s), %d provider(s) remaining in chain",
-                    provider_name,
-                    type(exc).__name__,
-                    len(self._fallback_chain) - len(errors),
-                )
-                continue
-
-        raise LLMError(
-            "All providers in the fallback chain failed",
-            context={
-                "module": "llm",
-                "fallback_chain": list(self._fallback_chain),
-                "errors": {k: str(v) for k, v in errors.items()},
-            },
+        response = await self._orchestrator.generate(
+            prompt=prompt,
+            context=context,
+            tools=tools,
+            preferred_provider=self._active_provider_name,
         )
+        if response.provider:
+            self._provider_success_count[response.provider] = (
+                self._provider_success_count.get(response.provider, 0) + 1
+            )
+        return response
 
     async def generate_stream(
         self,
@@ -330,71 +293,11 @@ class LLMManager:
         context: list[Message],
         tools: list[ToolDef] | None = None,
     ) -> AsyncIterator[str]:
-        """Stream tokens from the active provider.
-
-        Uses ``generate_stream()`` on the first responding provider in
-        the fallback chain.
-
-        Parameters
-        ----------
-        prompt : str
-            System prompt.
-        context : list[Message]
-            Conversation history.
-        tools : list[ToolDef] | None
-            Available tool definitions.
-
-        Yields
-        ------
-        str
-            Successive text chunks.
-
-        Raises
-        ------
-        ModuleDegradedError
-            If the manager is degraded.
-        LLMError
-            If all providers fail.
-        """
+        """Stream tokens using LLMProviderOrchestrator."""
         self._ensure_not_degraded()
 
-        errors: dict[str, Exception] = {}
-        for provider_name in self._fallback_chain:
-            provider = self._providers.get(provider_name)
-            if provider is None:
-                continue
-
-            try:
-                async for chunk in provider.generate_stream(prompt, context, tools):
-                    yield chunk
-                self._provider_success_count[provider_name] = (
-                    self._provider_success_count.get(provider_name, 0) + 1
-                )
-                return
-            except asyncio.CancelledError:
-                raise
-            except ProviderAuthError:
-                raise
-            except (ProviderTimeoutError, ProviderRateLimitError, LLMError) as exc:
-                self._provider_failure_count[provider_name] = (
-                    self._provider_failure_count.get(provider_name, 0) + 1
-                )
-                errors[provider_name] = exc
-                self._logger.warning(
-                    "Stream provider '%s' failed (%s), falling back",
-                    provider_name,
-                    type(exc).__name__,
-                )
-                continue
-
-        raise LLMError(
-            "All providers in the fallback chain failed (stream)",
-            context={
-                "module": "llm",
-                "fallback_chain": list(self._fallback_chain),
-                "errors": {k: str(v) for k, v in errors.items()},
-            },
-        )
+        async for chunk in self._orchestrator.generate_stream(prompt, context, tools):
+            yield chunk
 
     async def count_tokens(self, text: str) -> int:
         """Count tokens using the active provider.

@@ -73,7 +73,7 @@ class TestFullBoot:
 
         try:
             expected_modules = {
-                "settings", "memory", "analytics", "context", "capability", "tools",
+                "settings", "memory", "analytics", "context", "capability", "skills", "tools",
                 "security", "browser", "vision", "voice", "pc_control",
                 "coding_agent", "planning", "decision", "llm", "prompt",
                 "conversation", "context_intelligence", "runtime",
@@ -92,6 +92,7 @@ class TestFullBoot:
             assert di_container.get("memory_manager") is modules["memory"]
             assert di_container.get("context_manager") is modules["context"]
             assert di_container.get("capability_manager") is modules["capability"]
+            assert di_container.get("skill_manager") is modules["skills"]
             assert di_container.get("tool_manager") is modules["tools"]
             assert di_container.get("security_manager") is modules["security"]
             assert di_container.get("vision_manager") is modules["vision"]
@@ -656,7 +657,7 @@ class TestShutdownOrder:
         try:
             init_order = orchestrator._module_init_order  # type: ignore[attr-defined]
             expected_boot = [
-                "settings", "memory", "analytics", "context", "capability", "tools",
+                "settings", "memory", "analytics", "context", "capability", "skills", "tools",
                 "security", "browser", "vision", "voice", "pc_control",
                 "coding_agent", "planning", "decision", "llm", "prompt",
                 "conversation", "context_intelligence", "runtime",

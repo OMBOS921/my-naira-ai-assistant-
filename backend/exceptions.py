@@ -81,6 +81,22 @@ class ProviderAuthError(LLMError):
     """LLM provider authentication failure."""
 
 
+class ProviderInvalidRequestError(LLMError):
+    """LLM provider invalid request error (400/422/bad payload). Non-retryable."""
+
+
+class ProviderAPIError(LLMError):
+    """LLM provider internal API/server error (500/502/503/504)."""
+
+
+class ProviderNetworkError(LLMError):
+    """LLM provider network connection or socket error."""
+
+
+class ProviderUnavailableError(LLMError):
+    """LLM provider unavailable or circuit open."""
+
+
 class MemoryError(NairaError):
     """Base for database and cache errors."""
 

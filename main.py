@@ -52,10 +52,7 @@ from backend.modules.utils.di import DIContainer
 from backend.modules.utils.log import install_excepthook, setup_logging
 from backend.eventbus import EventBus
 from backend.orchestrator import FSMState, Orchestrator
-from backend.types import UserRequest
-
-# Import the Master FCR
-from backend.runtime.fast_command_router import FastCommandRouter
+from backend.types import UserRequest, UserResponse
 
 _SHUTDOWN_GRACE_S: Final[float] = 3.0
 
@@ -66,71 +63,23 @@ _container: DIContainer | None = None
 _active_websockets: set[WebSocket] = set()
 
 # =====================================================================
-# 2. GLOBAL ROUTERS & MEMORY
+# 2. CORE REQUEST ROUTER (Clean Architecture Entry Point)
 # =====================================================================
-fcr = FastCommandRouter()
+async def process_user_input(user_text: str, session_id: str = "default") -> str:
+    """Route input through the central Orchestrator mediator and Runtime pipeline."""
+    if _orchestrator is None:
+        _LOG.error("[MAIN] Orchestrator is not initialized — request rejected.")
+        return "[System Error]: Orchestrator is not initialized."
 
-naira_memory: dict[str, str] = {
-    "name": "Boss",
-    "role": "Lead Architect"
-}
-
-async def process_llm(user_text: str) -> str:
-    """Complex LLM Router: Sends complex queries to Gemini via google.genai SDK."""
-    _LOG.info("[LLM ROUTER] Forwarding complex command to Gemini: '%s'", user_text)
-    
-    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("NAIRA_API_KEY")
-    name = naira_memory.get("name", "Boss")
-    role = naira_memory.get("role", "Lead Architect")
-    
-    system_instruction = f"You are Naira, an advanced autonomous operating system. Your boss and creator is {name}, the {role}. Keep responses sharp, highly technical, and brief."
-
-    if not api_key:
-        return "[LLM Error]: API Key is missing. Please check your .env file."
-
-    try:
-        client = genai.Client(api_key=api_key)
-        response = await client.aio.models.generate_content(
-            model="gemini-3.5-flash",
-            contents=user_text,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction
-            )
-        )
-        return response.text if (response and response.text) else "[LLM]: No response text."
-    except Exception as exc:
-        _LOG.error("[LLM ROUTER] Gemini API call error: %s", exc)
-        return f"[LLM Error]: Unable to query Gemini ({exc})."
-
-async def process_command(user_text: str) -> str:
-    """Fast Command Router (FCR): Evaluates user input via Master FCR, identity memory check, or LLM."""
-    
-    # 1. Try Master FastCommandRouter First (Bypasses LLM entirely)
-    if fcr and fcr.is_fast_command(user_text):
-        _LOG.info("[FCR] Command matched by FastCommandRouter: '%s'", user_text)
-        try:
-            result = await fcr.execute_fast_command(user_text)
-            if result:
-                return result
-        except Exception as exc:
-            _LOG.error("[FCR] Execution error: %s", exc)
-
-    # 2. Basic Identity Memory Check
-    text_lower = user_text.lower().strip()
-    name = naira_memory.get("name", "Boss")
-    role = naira_memory.get("role", "Lead Architect")
-
-    if any(k in text_lower for k in ["who are you", "what is your name"]):
-        return "I am Naira your autonomous operating system."
-
-    if any(k in text_lower for k in ["who am i", "my name", "my role"]):
-        return f"You are {name}, the {role}."
-
-    if any(k in text_lower for k in ["hello", "hi", "hey", "wake up"]):
-        return f"Hello {name}. Neural links initialized and systems operational."
-
-    # 3. Fallback to Gemini LLM for Complex Queries
-    return await process_llm(user_text)
+    request = UserRequest(
+        id=uuid.uuid4(),
+        source="websocket",
+        text=user_text,
+        session_id=session_id,
+        timestamp=time.time(),
+    )
+    response = await _orchestrator.process_user_request(request)
+    return response.text
 
 # =====================================================================
 # 3. FASTAPI SERVER SETUP
@@ -140,7 +89,6 @@ async def lifespan(app: FastAPI):
     """Boot all core modules on startup; shut them down on exit."""
     global _modules, _orchestrator, _container, _LOG
 
-    # The ENV mapping is already done at the top, so this will pass now!
     try:
         env = EnvironmentSnapshot.load()
     except SystemExit:
@@ -209,7 +157,7 @@ async def websocket_naira_endpoint(websocket: WebSocket) -> None:
                 ws_msg = await websocket.receive()
             except WebSocketDisconnect:
                 break
-            except Exception as e:
+            except Exception:
                 break
 
             user_text = ""
@@ -221,10 +169,7 @@ async def websocket_naira_endpoint(websocket: WebSocket) -> None:
                         payload = json.loads(raw_text)
                         msg_type = payload.get("type", "")
                         if msg_type == "system_init":
-                            name = payload.get("name", naira_memory["name"])
-                            role = payload.get("role", naira_memory["role"])
-                            naira_memory["name"] = name
-                            naira_memory["role"] = role
+                            name = payload.get("name", "User")
                             await websocket.send_json({
                                 "sender": "naira",
                                 "text": f"Identity synced to Relation Engine: Welcome, {name}."
@@ -238,7 +183,7 @@ async def websocket_naira_endpoint(websocket: WebSocket) -> None:
 
             if user_text:
                 _LOG.info("[WS-NAIRA] Received command: %s", user_text)
-                response_text = await process_command(user_text)
+                response_text = await process_user_input(user_text)
                 await websocket.send_json({
                     "sender": "naira",
                     "text": response_text

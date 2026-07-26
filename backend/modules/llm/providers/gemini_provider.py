@@ -22,7 +22,16 @@ try:
 except ImportError:
     pass
 
-from backend.exceptions import LLMError, ProviderAuthError, ProviderRateLimitError, ProviderTimeoutError
+from backend.exceptions import (
+    LLMError,
+    ProviderAPIError,
+    ProviderAuthError,
+    ProviderInvalidRequestError,
+    ProviderNetworkError,
+    ProviderRateLimitError,
+    ProviderTimeoutError,
+)
+from backend.modules.llm.capabilities import ModelCapabilities
 from backend.modules.llm.provider_base import ProviderBase
 from backend.types import LLMResponse, Message, TokenUsage, ToolCall, ToolDef
 
@@ -47,11 +56,14 @@ class GeminiProvider(ProviderBase):
         )
         self._api_key = api_key
         self._model = model or "gemini-3.5-flash"
-        self._fallback_models = [
-            "gemini-3.5-flash",
-            "gemini-2.0-flash-exp",
-            "gemini-2.5-flash",
-        ]
+        self.capabilities = ModelCapabilities(
+            supports_tools=True,
+            supports_streaming=True,
+            supports_vision=True,
+            supports_reasoning=True,
+            max_context_tokens=1000000,
+            max_output_tokens=8192,
+        )
 
     @property
     def model(self) -> str:
@@ -199,7 +211,7 @@ class GeminiProvider(ProviderBase):
                 ) from exc
             except requests.ConnectionError as exc:
                 elapsed_ms = (time.monotonic() - start_time) * 1000
-                raise LLMError(
+                raise ProviderNetworkError(
                     f"Gemini connection error: {exc}",
                     context={
                         "request_id": request_id,
@@ -214,7 +226,7 @@ class GeminiProvider(ProviderBase):
                 ) from exc
             except requests.HTTPError as exc:
                 elapsed_ms = (time.monotonic() - start_time) * 1000
-                raise LLMError(
+                raise ProviderAPIError(
                     f"Gemini HTTP error: {exc}",
                     context={
                         "request_id": request_id,
@@ -229,7 +241,7 @@ class GeminiProvider(ProviderBase):
                 ) from exc
             except requests.RequestException as exc:
                 elapsed_ms = (time.monotonic() - start_time) * 1000
-                raise LLMError(
+                raise ProviderNetworkError(
                     f"Gemini request error: {exc}",
                     context={
                         "request_id": request_id,
@@ -281,7 +293,9 @@ class GeminiProvider(ProviderBase):
                     raise ProviderAuthError(f"Gemini auth failed (status {resp.status_code})", context=err_context)
                 if resp.status_code == 429:
                     raise ProviderRateLimitError(f"Gemini rate limit exceeded (status {resp.status_code})", context=err_context)
-                raise LLMError(f"Gemini API error (status {resp.status_code})", context=err_context)
+                if resp.status_code in (400, 422):
+                    raise ProviderInvalidRequestError(f"Gemini invalid request (status {resp.status_code})", context=err_context)
+                raise ProviderAPIError(f"Gemini API error (status {resp.status_code})", context=err_context)
 
         if response is None:
             elapsed_ms = (time.monotonic() - start_time) * 1000

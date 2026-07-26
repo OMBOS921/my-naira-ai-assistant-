@@ -41,6 +41,7 @@ from backend.modules.plugins import PluginManager
 from backend.modules.prompt import PromptManager
 from backend.modules.security import SecurityManager
 from backend.modules.settings import AppConfig, SettingsManager
+from backend.modules.skills import SkillManager
 from backend.modules.tools import ToolManager
 from backend.modules.utils.di import DIContainer
 from backend.modules.vision import VisionManager
@@ -83,6 +84,7 @@ _SHUTDOWN_ORDER: tuple[str, ...] = (
     "plugins",
     "integrations",
     "security",
+    "skills",
     "tools",
     "capability",
     "context",
@@ -97,6 +99,7 @@ _BOOT_ORDER: tuple[str, ...] = (
     "analytics",
     "context",
     "capability",
+    "skills",
     "tools",
     "security",
     "integrations",
@@ -231,6 +234,21 @@ async def boot_core_modules(
         if getattr(capability_mgr, "degraded", False):
             degraded_modules.append("capability")
         _LOG.info("[BOOT] Capability initialised")
+
+        # 7d2 – SkillManager (Layer 4 — Orchestration & Central Catalog)
+        _LOG.info("[BOOT]   Initialising SkillManager ...")
+        skill_mgr = SkillManager(
+            config=config,
+            event_bus=event_bus,
+            capability_registry=getattr(capability_mgr, "registry", capability_mgr),
+        )
+        await skill_mgr.async_init()
+        modules["skills"] = skill_mgr
+        container.register("skill_manager", skill_mgr)
+        orchestrator.register_module("skills", skill_mgr)
+        if getattr(skill_mgr, "degraded", False):
+            degraded_modules.append("skills")
+        _LOG.info("[BOOT] Skills initialised")
 
         # 7e – ToolManager (Layer 4 — Orchestration)
         _LOG.info("[BOOT]   Initialising ToolManager ...")
@@ -797,6 +815,7 @@ async def boot_core_modules(
             decision_manager=decision_mgr,
             analytics_manager=analytics_mgr,
             planning_manager=planning_mgr,
+            security_manager=security_mgr if 'security_mgr' in locals() else None,
             event_bus=event_bus,
             max_tool_iterations=config.tools.max_retries + 1,
         )
@@ -949,7 +968,7 @@ def verify_boot_health(
         - ``service_count`` — total DI service count
     """
     expected_modules = {
-        "settings", "memory", "analytics", "context", "capability", "tools", "security",
+        "settings", "memory", "analytics", "context", "capability", "skills", "tools", "security",
         "integrations", "plugins", "vision", "voice", "browser", "pc_control", "coding_agent", "llm", "prompt",
         "conversation", "context_intelligence", "autonomous_tasks", "multi_agent", "runtime",
     }
@@ -959,6 +978,7 @@ def verify_boot_health(
         "analytics_manager",
         "context_manager",
         "capability_manager",
+        "skill_manager",
         "tool_manager",
         "security_manager",
         "integrations_manager",

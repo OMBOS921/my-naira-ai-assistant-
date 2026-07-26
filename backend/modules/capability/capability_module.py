@@ -48,7 +48,7 @@ class CapabilityManager:
         self._config = config
         self._logger = logger or _LOG
         self._event_bus = event_bus
-        self._registry = CapabilityRegistry()
+        self._registry = CapabilityRegistry(event_bus=event_bus)
         self._dependency_graph = DependencyGraph()
         self._permissions = PermissionIntegration()
         self._providers: dict[str, CapabilityProvider] = {}
@@ -402,3 +402,76 @@ class CapabilityManager:
                 "CapabilityManager is degraded",
                 context={"module": "capability"},
             )
+
+    # ------------------------------------------------------------------
+    # Capability Registry Real-Time Discovery API
+    # ------------------------------------------------------------------
+
+    @property
+    def registry(self) -> CapabilityRegistry:
+        """Return the central internal CapabilityRegistry."""
+        return self._registry
+
+    def is_app_installed(self, app_name: str) -> bool:
+        """Return True if the specified application is installed."""
+        return self._registry.is_app_installed(app_name)
+
+    def find_best_browser(self) -> dict[str, Any] | None:
+        """Find best available browser with path details."""
+        return self._registry.find_best_browser()
+
+    def has_gpu(self) -> bool:
+        """Return True if a dedicated GPU is available."""
+        return self._registry.has_gpu()
+
+    def has_internet(self) -> bool:
+        """Return True if internet connectivity is verified."""
+        return self._registry.has_internet()
+
+    def find_python(self) -> dict[str, Any] | None:
+        """Find Python installations and active executable."""
+        return self._registry.find_python()
+
+    def find_adb(self) -> dict[str, Any] | None:
+        """Find Android Debug Bridge (ADB) installation."""
+        return self._registry.find_adb()
+
+    def find_ollama(self) -> dict[str, Any] | None:
+        """Find Ollama local AI daemon status."""
+        return self._registry.find_ollama()
+
+    def find_available_microphones(self) -> list[dict[str, Any]]:
+        """Return list of available microphone input devices."""
+        return self._registry.find_available_microphones()
+
+    def find_best_llm_provider(self) -> dict[str, Any] | None:
+        """Evaluate best available local LLM provider."""
+        return self._registry.find_best_llm_provider()
+
+    def query_capabilities(
+        self,
+        *,
+        category: str | None = None,
+        min_confidence: float = 0.0,
+        force_refresh: bool = False,
+    ) -> list[Any]:
+        """Query real-time local capabilities matching criteria."""
+        return self._registry.query_capabilities(
+            category=category,
+            min_confidence=min_confidence,
+            force_refresh=force_refresh,
+        )
+
+    def get_capability_info(self, name: str) -> Any | None:
+        """Retrieve real-time local capability information by name."""
+        return self._registry.get_capability_info(name)
+
+    def register_hotplug_device(
+        self,
+        name: str,
+        category: str,
+        details: dict[str, Any] | None = None,
+    ) -> Any:
+        """Register a hot-plug device dynamically added at runtime."""
+        return self._registry.register_hotplug_device(name, category, details)
+

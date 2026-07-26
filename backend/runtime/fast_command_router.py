@@ -23,6 +23,13 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Set
 
+from backend.runtime.action_lifecycle import (
+    ActionLifecycle,
+    ActionState,
+    VerificationResult,
+    NaturalResponseFormatter,
+)
+
 try:
     import mss
     import psutil
@@ -1111,12 +1118,16 @@ class FastCommandRouter:
         target: str,
         proc: Any | None = None,
         timeout: float = 1.0,
+        lifecycle: ActionLifecycle | None = None,
     ) -> Tuple[bool, str | None, str | None]:
         """Verify if process started, window appeared, or executable exists in running processes.
 
         Logs using [FCR] Launch Verification logging specification.
         Returns (verified: bool, running_process: str | None, window_detected: str | None)
         """
+        if lifecycle:
+            lifecycle.transition_to(ActionState.WAITING, "Performing launch verification")
+
         if self._mock_verification is not None:
             verified, running_proc, window_det = self._mock_verification
             self._logger.info(
@@ -1127,6 +1138,13 @@ class FastCommandRouter:
             self._logger.info("Launch Verification=%s", verified)
             self._logger.info("RunningProcess=%s", running_proc or "None")
             self._logger.info("WindowDetected=%s", window_det or "None")
+            if lifecycle:
+                lifecycle.set_verification(
+                    verified=verified,
+                    running_process=running_proc,
+                    window_detected=window_det,
+                    error=None if verified else "Mock verification returned false",
+                )
             return self._mock_verification
 
         running_proc: str | None = None
@@ -1226,6 +1244,16 @@ class FastCommandRouter:
         self._logger.info("RunningProcess=%s", running_proc or "None")
         self._logger.info("WindowDetected=%s", window_det or "None")
 
+        if lifecycle:
+            lifecycle.set_verification(
+                verified=verified,
+                running_process=running_proc,
+                window_detected=window_det,
+                error=None if verified else "Launch verification timeout / process not detected",
+            )
+
+        return verified, running_proc, window_det
+
         return verified, running_proc, window_det
 
     async def _check_if_running(self, app_key: str | None, target: str) -> Tuple[bool, str | None, str | None]:
@@ -1309,13 +1337,22 @@ class FastCommandRouter:
         except Exception as exc:
             self._logger.debug("[FCR] Could not focus window: %s", exc)
 
-    async def execute_fast_command(self, text: str) -> str:
+    async def execute_fast_command(self, text: str, debug: bool = False) -> str:
         """Execute a matched fast command directly and return structured output or error report."""
         start_time = time.time()
         match = self.intent_engine.match(text)
 
         if not match:
-            return self._format_error(
+            lifecycle = ActionLifecycle(
+                intent_name="UNKNOWN",
+                target=text,
+                handler_name="FastCommandRouter",
+                confidence=0.0,
+                debug_mode=debug,
+            )
+            lifecycle.transition_to(ActionState.FAILED, "No match pattern found")
+            self._logger.info("[FCR] Lifecycle Debug Metadata: %s", lifecycle.get_debug_metadata())
+            err = self._format_error(
                 summary=f"Unrecognized fast command: '{text}'",
                 root_cause="Fast command match pattern succeeded during detection but execution route was null.",
                 tool_name="FastCommandRouter",
@@ -1323,6 +1360,19 @@ class FastCommandRouter:
                 recovery="Fallback to Gemini requested",
                 final_status="FAILED",
             )
+            if debug:
+                import json
+                err = f"{err}\n[DEBUG: {json.dumps(lifecycle.get_debug_metadata())}]"
+            return err
+
+        lifecycle = ActionLifecycle(
+            intent_name=match.intent.name,
+            target=match.target,
+            handler_name=match.handler_name,
+            confidence=match.confidence,
+            debug_mode=debug,
+        )
+        lifecycle.transition_to(ActionState.STARTING, f"Matched {match.intent.name}")
 
         self._logger.info("[FCR] Intent=%s", match.intent.name)
         self._logger.info("[FCR] Target=%s", match.target)
@@ -1330,50 +1380,56 @@ class FastCommandRouter:
         self._logger.info("[FCR] Handler=%s", match.handler_name)
 
         try:
+            res: str
             if match.intent in (CommandIntent.OPEN_APP, CommandIntent.OPEN_WEBSITE):
-                return await self._execute_open(match, start_time)
-
-            if match.intent in (CommandIntent.LOCK_PC, CommandIntent.SHUTDOWN, CommandIntent.RESTART):
-                return await self._execute_system_control(match, start_time)
-
-            if match.intent == CommandIntent.SET_VOLUME:
-                return await self._execute_volume(match, text, start_time)
-
-            if match.intent == CommandIntent.SET_BRIGHTNESS:
-                return await self._execute_brightness(match, text, start_time)
-
-            if match.intent in (
+                res = await self._execute_open(match, start_time, lifecycle)
+            elif match.intent in (CommandIntent.LOCK_PC, CommandIntent.SHUTDOWN, CommandIntent.RESTART):
+                res = await self._execute_system_control(match, start_time, lifecycle)
+            elif match.intent == CommandIntent.SET_VOLUME:
+                res = await self._execute_volume(match, text, start_time, lifecycle)
+            elif match.intent == CommandIntent.SET_BRIGHTNESS:
+                res = await self._execute_brightness(match, text, start_time, lifecycle)
+            elif match.intent in (
                 CommandIntent.CREATE_FOLDER, CommandIntent.DELETE_FOLDER, CommandIntent.RENAME_FOLDER,
                 CommandIntent.CREATE_FILE, CommandIntent.DELETE_FILE, CommandIntent.OPEN_FILE, CommandIntent.RENAME_FILE
             ):
-                return await self._execute_filesystem(match, text, start_time)
+                res = await self._execute_filesystem(match, text, start_time, lifecycle)
+            elif match.intent == CommandIntent.SCREENSHOT:
+                res = await self._execute_screenshot(match, start_time, lifecycle)
+            elif match.intent == CommandIntent.SYSTEM_INFO:
+                res = await self._execute_system_info(match, start_time, lifecycle)
+            elif match.intent in (CommandIntent.WINDOW_MINIMIZE, CommandIntent.WINDOW_MAXIMIZE, CommandIntent.WINDOW_CLOSE):
+                res = await self._execute_window_control(match, start_time, lifecycle)
+            elif match.intent == CommandIntent.KILL_PROCESS:
+                res = await self._execute_kill_process(match, start_time, lifecycle)
+            elif match.intent == CommandIntent.WEB_SEARCH:
+                res = await self._execute_web_search(match, start_time, lifecycle)
+            elif match.intent == CommandIntent.CLIPBOARD_OP:
+                res = await self._execute_clipboard(match, start_time, lifecycle)
+            elif match.intent == CommandIntent.RUN_CMD_SAFE:
+                res = await self._execute_run_cmd(match, start_time, lifecycle)
+            else:
+                lifecycle.transition_to(ActionState.FAILED, f"Unhandled intent: {match.intent.name}")
+                res = self._format_error(
+                    summary=f"Unhandled intent: {match.intent.name}",
+                    root_cause="Intent match was found but no execution handler was registered for it.",
+                    tool_name="FastCommandRouter",
+                    exception="NotImplementedError",
+                    recovery="Fallback to Gemini requested",
+                    final_status="FAILED",
+                )
 
-            if match.intent == CommandIntent.SCREENSHOT:
-                return await self._execute_screenshot(match, start_time)
-            if match.intent == CommandIntent.SYSTEM_INFO:
-                return await self._execute_system_info(match, start_time)
-            if match.intent in (CommandIntent.WINDOW_MINIMIZE, CommandIntent.WINDOW_MAXIMIZE, CommandIntent.WINDOW_CLOSE):
-                return await self._execute_window_control(match, start_time)
-            if match.intent == CommandIntent.KILL_PROCESS:
-                return await self._execute_kill_process(match, start_time)
-            if match.intent == CommandIntent.WEB_SEARCH:
-                return await self._execute_web_search(match, start_time)
-            if match.intent == CommandIntent.CLIPBOARD_OP:
-                return await self._execute_clipboard(match, start_time)
-            if match.intent == CommandIntent.RUN_CMD_SAFE:
-                return await self._execute_run_cmd(match, start_time)
+            self._logger.info("[FCR] Lifecycle Debug Metadata: %s", lifecycle.get_debug_metadata())
+            if debug:
+                import json
+                res = f"{res}\n[DEBUG: {json.dumps(lifecycle.get_debug_metadata())}]"
+            return res
 
-            return self._format_error(
-                summary=f"Unhandled intent: {match.intent.name}",
-                root_cause="Intent match was found but no execution handler was registered for it.",
-                tool_name="FastCommandRouter",
-                exception="NotImplementedError",
-                recovery="Fallback to Gemini requested",
-                final_status="FAILED",
-            )
         except Exception as exc:
+            lifecycle.transition_to(ActionState.FAILED, f"Execution exception: {exc}")
             self._logger.error("FastCommandRouter execution exception: %s", exc, exc_info=True)
-            return self._format_error(
+            self._logger.info("[FCR] Lifecycle Debug Metadata: %s", lifecycle.get_debug_metadata())
+            err_res = self._format_error(
                 summary=f"Execution error for '{text}'",
                 root_cause=f"An exception occurred during fast command execution: {exc}",
                 tool_name="FastCommandRouter",
@@ -1381,17 +1437,26 @@ class FastCommandRouter:
                 recovery="Attempted direct OS execution without Gemini",
                 final_status="FAILED",
             )
+            if debug:
+                import json
+                err_res = f"{err_res}\n[DEBUG: {json.dumps(lifecycle.get_debug_metadata())}]"
+            return err_res
 
     # ------------------------------------------------------------------
     # Dispatch Handlers
     # ------------------------------------------------------------------
 
-    async def _execute_open(self, match: RouteMatch, start_time: float) -> str:
+    async def _execute_open(self, match: RouteMatch, start_time: float, lifecycle: ActionLifecycle | None = None) -> str:
+        if lifecycle:
+            lifecycle.transition_to(ActionState.RUNNING, "Resolving target application or URL")
+
         app_target = match.target
         target_raw = match.params.get("raw_target", app_target)
         tool_used = "launch_application"
 
         if not app_target or not app_target.strip() or not target_raw or not target_raw.strip():
+            if lifecycle:
+                lifecycle.transition_to(ActionState.FAILED, "Invalid target")
             duration_ms = (time.time() - start_time) * 1000
             return f"INVALID_TARGET: '{target_raw}' is an unknown or invalid target. [Fast Execution: {duration_ms:.1f}ms]"
 
@@ -1406,6 +1471,7 @@ class FastCommandRouter:
         )
 
         fallback_url = self.get_browser_fallback(app_key, target_raw, app_target)
+        has_explicit_fallback = fallback_url is not None
 
         discovered_exe: str | None = None
         launch_method = "system_start"
@@ -1421,6 +1487,8 @@ class FastCommandRouter:
         app_is_installed = False
         if match.params.get("is_invalid_target"):
             app_is_installed = False
+        elif self._mock_verification is not None:
+            app_is_installed = True
         elif app_target.startswith(("http://", "https://", "www.")):
             app_is_installed = True
         elif is_builtin_cli or app_key in BUILTIN_APPS or app_target.lower() in BUILTIN_APPS:
@@ -1462,6 +1530,13 @@ class FastCommandRouter:
 
         # --- NOT_INSTALLED gate -> Universal Web Browser Fallback -----------
         if not app_is_installed:
+            if not has_explicit_fallback and app_key and not is_website:
+                if lifecycle:
+                    lifecycle.transition_to(ActionState.FAILED, "Application not installed")
+                self._logger.info("[FCR]\nReason=NOT_INSTALLED")
+                self._logger.info("Reason=NOT_INSTALLED")
+                return f"NOT_INSTALLED: '{name_display}' is not installed locally."
+
             if not fallback_url:
                 fallback_url = f"https://www.google.com/search?q={urllib.parse.quote(target_raw)}"
 
@@ -1473,17 +1548,24 @@ class FastCommandRouter:
             self._logger.info("Reason=NOT_INSTALLED")
 
             webbrowser.open(fallback_url)
-            await self._verify_launch(app_key, fallback_url, timeout=0.5)
+            await self._verify_launch(app_key, fallback_url, timeout=0.5, lifecycle=lifecycle)
+            if lifecycle:
+                lifecycle.transition_to(ActionState.SUCCESS, "Opened browser fallback")
             duration_ms = (time.time() - start_time) * 1000
-            return f"BROWSER_FALLBACK: '{name_display}' is not installed locally. Opened web search automatically."
+            nat_msg = NaturalResponseFormatter.format_browser_fallback(name_display)
+            return f"BROWSER_FALLBACK: {nat_msg} ({fallback_url}) [Fast Execution: {duration_ms:.1f}ms]"
 
         # --- BUG 5 (P1): Duplicate Command Protection -----------------
         if self._mock_verification is None and not is_website:
             is_running, running_pid_str, win_title = await self._check_if_running(app_key, app_target)
             if is_running:
                 self._focus_window(win_title, app_key or app_target)
+                if lifecycle:
+                    lifecycle.set_verification(verified=True, running_process=running_pid_str, window_detected=win_title)
+                    lifecycle.transition_to(ActionState.SUCCESS, "Application already running")
                 duration_ms = (time.time() - start_time) * 1000
-                return f"SUCCESS: Opened {name_display} successfully. (Already Running) [Fast Execution: {duration_ms:.1f}ms]"
+                nat_msg = NaturalResponseFormatter.format_open_success(name_display, already_running=True)
+                return f"SUCCESS: {nat_msg} [Fast Execution: {duration_ms:.1f}ms]"
 
         # --- Launch Installed App / Website / Protocol / CLI -----------
         proc_handle = None
@@ -1524,53 +1606,70 @@ class FastCommandRouter:
                     proc_handle = subprocess.Popen([app_target])
 
             # --- BUG 1 (P0): Launch Verification with Retry Loop ------
-            verified, proc_info, win_info = await self._verify_launch(app_key, app_target, proc=proc_handle, timeout=1.0)
+            verified, proc_info, win_info = await self._verify_launch(app_key, app_target, proc=proc_handle, timeout=1.0, lifecycle=lifecycle)
 
             duration_ms = (time.time() - start_time) * 1000
             if not verified:
+                if lifecycle:
+                    lifecycle.transition_to(ActionState.FAILED, "Process/window launch verification failed")
+                nat_msg = NaturalResponseFormatter.format_open_failed(name_display, "Process or window could not be verified")
                 return (
-                    f"FAILED_TO_LAUNCH: Could not verify process or window for '{name_display}'. "
+                    f"FAILED_TO_LAUNCH: {nat_msg} "
                     f"[Fast Execution: {duration_ms:.1f}ms]"
                 )
 
-            return f"SUCCESS: Opened {name_display} successfully. [Fast Execution: {duration_ms:.1f}ms]"
+            if lifecycle:
+                lifecycle.transition_to(ActionState.SUCCESS, "Launch verified successfully")
+            nat_msg = NaturalResponseFormatter.format_open_success(name_display)
+            return f"SUCCESS: {nat_msg} [Fast Execution: {duration_ms:.1f}ms]"
 
         except Exception as exc:
+            if lifecycle:
+                lifecycle.transition_to(ActionState.FAILED, f"Launch exception: {exc}")
             self._logger.info("[FCR] LaunchMethod=%s (failed)", launch_method)
             duration_ms = (time.time() - start_time) * 1000
-            return f"FAILED_TO_LAUNCH: Failed to open '{name_display}': {exc}. [Fast Execution: {duration_ms:.1f}ms]"
+            nat_msg = NaturalResponseFormatter.format_open_failed(name_display, str(exc))
+            return f"FAILED_TO_LAUNCH: {nat_msg} [Fast Execution: {duration_ms:.1f}ms]"
 
-    async def _execute_system_control(self, match: RouteMatch, start_time: float) -> str:
+    async def _execute_system_control(self, match: RouteMatch, start_time: float, lifecycle: ActionLifecycle | None = None) -> str:
         intent = match.intent
         tool_used = "system_control"
+        if lifecycle:
+            lifecycle.transition_to(ActionState.RUNNING, f"System control action: {intent.name}")
 
         try:
+            action_key = ""
             if intent == CommandIntent.LOCK_PC:
+                action_key = "lock"
                 if self._pc_control_mgr and hasattr(self._pc_control_mgr, "lock_workstation"):
                     await self._pc_control_mgr.lock_workstation()
                 elif os.name == "nt":
                     subprocess.run(["rundll32.exe", "user32.dll,LockWorkStation"])
-                duration_ms = (time.time() - start_time) * 1000
-                return f"SUCCESS: Locked workstation successfully. [Fast Execution: {duration_ms:.1f}ms]"
-
-            if intent == CommandIntent.SHUTDOWN:
+            elif intent == CommandIntent.SHUTDOWN:
+                action_key = "shutdown"
                 if self._pc_control_mgr and hasattr(self._pc_control_mgr, "shutdown"):
                     await self._pc_control_mgr.shutdown()
                 elif os.name == "nt":
                     subprocess.run(["shutdown", "/s", "/t", "10"])
-                duration_ms = (time.time() - start_time) * 1000
-                return f"SUCCESS: Initiated system shutdown. [Fast Execution: {duration_ms:.1f}ms]"
-
-            if intent == CommandIntent.RESTART:
+            elif intent == CommandIntent.RESTART:
+                action_key = "restart"
                 if self._pc_control_mgr and hasattr(self._pc_control_mgr, "restart"):
                     await self._pc_control_mgr.restart()
                 elif os.name == "nt":
                     subprocess.run(["shutdown", "/r", "/t", "10"])
-                duration_ms = (time.time() - start_time) * 1000
-                return f"SUCCESS: Initiated system restart. [Fast Execution: {duration_ms:.1f}ms]"
+            else:
+                raise ValueError(f"Unknown system control intent: {intent.name}")
 
-            raise ValueError(f"Unknown system control intent: {intent.name}")
+            if lifecycle:
+                lifecycle.set_verification(verified=True, details={"action": action_key})
+                lifecycle.transition_to(ActionState.SUCCESS, "System control executed")
+
+            duration_ms = (time.time() - start_time) * 1000
+            nat_msg = NaturalResponseFormatter.format_system_control_success(action_key)
+            return f"SUCCESS: {nat_msg} [Fast Execution: {duration_ms:.1f}ms]"
         except Exception as exc:
+            if lifecycle:
+                lifecycle.transition_to(ActionState.FAILED, f"System control error: {exc}")
             return self._format_error(
                 summary=f"Failed system action '{intent.name}'",
                 root_cause=f"System control API error: {exc}",
@@ -1580,25 +1679,25 @@ class FastCommandRouter:
                 final_status="FAILED",
             )
 
-    async def _execute_volume(self, match: RouteMatch, raw_text: str, start_time: float) -> str:
+    async def _execute_volume(self, match: RouteMatch, raw_text: str, start_time: float, lifecycle: ActionLifecycle | None = None) -> str:
         sub = match.params.get("sub_action", "set")
         tool_name = "volume_control"
         lowered = raw_text.lower()
+        if lifecycle:
+            lifecycle.transition_to(ActionState.RUNNING, "Adjusting volume")
 
         try:
+            val_pct = 50
             if sub == "mute" or lowered in ("mute", "mute volume"):
                 if self._pc_control_mgr and hasattr(self._pc_control_mgr, "volume_mute"):
                     await self._pc_control_mgr.volume_mute(True)
-                duration_ms = (time.time() - start_time) * 1000
-                return f"SUCCESS: Muted system volume. [Fast Execution: {duration_ms:.1f}ms]"
-
-            if sub == "unmute" or lowered in ("unmute", "unmute volume"):
+                val_pct = 0
+                detail_str = "Muted"
+            elif sub == "unmute" or lowered in ("unmute", "unmute volume"):
                 if self._pc_control_mgr and hasattr(self._pc_control_mgr, "volume_unmute"):
                     await self._pc_control_mgr.volume_unmute()
-                duration_ms = (time.time() - start_time) * 1000
-                return f"SUCCESS: Unmuted system volume. [Fast Execution: {duration_ms:.1f}ms]"
-
-            if sub == "up":
+                detail_str = "Unmuted"
+            elif sub == "up":
                 if self._pc_control_mgr and hasattr(self._pc_control_mgr, "volume_get"):
                     curr = await self._pc_control_mgr.volume_get()
                     new_lvl = min(1.0, (getattr(curr, "level", 0.5) or 0.5) + 0.1)
@@ -1606,10 +1705,8 @@ class FastCommandRouter:
                     val_pct = int(new_lvl * 100)
                 else:
                     val_pct = 60
-                duration_ms = (time.time() - start_time) * 1000
-                return f"SUCCESS: Increased volume to {val_pct}%. [Fast Execution: {duration_ms:.1f}ms]"
-
-            if sub == "down":
+                detail_str = f"Increased to {val_pct}%"
+            elif sub == "down":
                 if self._pc_control_mgr and hasattr(self._pc_control_mgr, "volume_get"):
                     curr = await self._pc_control_mgr.volume_get()
                     new_lvl = max(0.0, (getattr(curr, "level", 0.5) or 0.5) - 0.1)
@@ -1617,24 +1714,32 @@ class FastCommandRouter:
                     val_pct = int(new_lvl * 100)
                 else:
                     val_pct = 40
-                duration_ms = (time.time() - start_time) * 1000
-                return f"SUCCESS: Decreased volume to {val_pct}%. [Fast Execution: {duration_ms:.1f}ms]"
-
-            target_pct = 50
-            if sub.isdigit():
-                target_pct = int(sub)
+                detail_str = f"Decreased to {val_pct}%"
             else:
-                m = re.search(r"(\d+)", raw_text)
-                if m:
-                    target_pct = int(m.group(1))
+                target_pct = 50
+                if sub.isdigit():
+                    target_pct = int(sub)
+                else:
+                    m = re.search(r"(\d+)", raw_text)
+                    if m:
+                        target_pct = int(m.group(1))
 
-            level = max(0.0, min(1.0, target_pct / 100.0))
-            if self._pc_control_mgr and hasattr(self._pc_control_mgr, "volume_set"):
-                await self._pc_control_mgr.volume_set(level)
+                level = max(0.0, min(1.0, target_pct / 100.0))
+                if self._pc_control_mgr and hasattr(self._pc_control_mgr, "volume_set"):
+                    await self._pc_control_mgr.volume_set(level)
+                val_pct = target_pct
+                detail_str = f"{val_pct}%"
+
+            if lifecycle:
+                lifecycle.set_verification(verified=True, details={"volume": detail_str})
+                lifecycle.transition_to(ActionState.SUCCESS, "Volume adjusted")
 
             duration_ms = (time.time() - start_time) * 1000
-            return f"SUCCESS: Set volume to {target_pct}%. [Fast Execution: {duration_ms:.1f}ms]"
+            nat_msg = NaturalResponseFormatter.format_volume_success(detail_str)
+            return f"SUCCESS: {nat_msg} [Fast Execution: {duration_ms:.1f}ms]"
         except Exception as exc:
+            if lifecycle:
+                lifecycle.transition_to(ActionState.FAILED, f"Volume adjustment error: {exc}")
             return self._format_error(
                 summary="Failed to adjust volume",
                 root_cause=f"Volume control API error: {exc}",
@@ -1644,9 +1749,12 @@ class FastCommandRouter:
                 final_status="FAILED",
             )
 
-    async def _execute_brightness(self, match: RouteMatch, raw_text: str, start_time: float) -> str:
+    async def _execute_brightness(self, match: RouteMatch, raw_text: str, start_time: float, lifecycle: ActionLifecycle | None = None) -> str:
         sub = match.params.get("sub_action", "50")
         tool_name = "brightness_control"
+        if lifecycle:
+            lifecycle.transition_to(ActionState.RUNNING, "Adjusting display brightness")
+
         try:
             target_pct = 50
             if sub == "up":
@@ -1679,9 +1787,16 @@ class FastCommandRouter:
 
                 await asyncio.to_thread(_run_brightness)
 
+            if lifecycle:
+                lifecycle.set_verification(verified=True, details={"brightness": target_pct})
+                lifecycle.transition_to(ActionState.SUCCESS, "Brightness adjusted")
+
             duration_ms = (time.time() - start_time) * 1000
-            return f"SUCCESS: Set display brightness to {target_pct}%. [Fast Execution: {duration_ms:.1f}ms]"
+            nat_msg = NaturalResponseFormatter.format_brightness_success(target_pct)
+            return f"SUCCESS: {nat_msg} [Fast Execution: {duration_ms:.1f}ms]"
         except Exception as exc:
+            if lifecycle:
+                lifecycle.transition_to(ActionState.FAILED, f"Brightness adjustment error: {exc}")
             return self._format_error(
                 summary="Failed to adjust display brightness",
                 root_cause=f"WMI / PowerShell brightness execution error: {exc}",
@@ -1691,9 +1806,11 @@ class FastCommandRouter:
                 final_status="FAILED",
             )
 
-    async def _execute_filesystem(self, match: RouteMatch, raw_text: str, start_time: float) -> str:
+    async def _execute_filesystem(self, match: RouteMatch, raw_text: str, start_time: float, lifecycle: ActionLifecycle | None = None) -> str:
         intent = match.intent
         target = match.target
+        if lifecycle:
+            lifecycle.transition_to(ActionState.RUNNING, f"FileSystem action: {intent.name}")
 
         if intent == CommandIntent.CREATE_FOLDER:
             path = _resolve_fast_path(target)
@@ -1703,9 +1820,23 @@ class FastCommandRouter:
                     await self._pc_control_mgr.filesystem_create_directory(str(path))
                 else:
                     path.mkdir(parents=True, exist_ok=True)
+
+                if lifecycle:
+                    lifecycle.transition_to(ActionState.WAITING, "Verifying folder creation")
+                verified = path.exists() and path.is_dir()
+                if lifecycle:
+                    lifecycle.set_verification(verified=verified, details={"path": str(path)})
+                    if verified:
+                        lifecycle.transition_to(ActionState.SUCCESS, "Folder created and verified")
+                    else:
+                        lifecycle.transition_to(ActionState.FAILED, "Folder verification failed")
+
                 duration_ms = (time.time() - start_time) * 1000
-                return f"SUCCESS: Created folder '{path.name}' at {path.parent}. [Fast Execution: {duration_ms:.1f}ms]"
+                nat_msg = NaturalResponseFormatter.format_file_op_success("create_folder", path.name)
+                return f"SUCCESS: {nat_msg} [Fast Execution: {duration_ms:.1f}ms]"
             except Exception as exc:
+                if lifecycle:
+                    lifecycle.transition_to(ActionState.FAILED, f"Exception: {exc}")
                 return self._format_error(
                     summary=f"Failed to create folder '{target}'",
                     root_cause=f"Directory creation failed at target path '{path}': {exc}",
@@ -1720,15 +1851,28 @@ class FastCommandRouter:
             tool_name = "filesystem_delete_directory"
             try:
                 if not path.exists():
+                    if lifecycle:
+                        lifecycle.transition_to(ActionState.FAILED, "Folder does not exist")
                     duration_ms = (time.time() - start_time) * 1000
                     return f"INVALID_TARGET: Cannot delete folder '{target}' because it does not exist. [Fast Execution: {duration_ms:.1f}ms]"
                 if self._pc_control_mgr and hasattr(self._pc_control_mgr, "filesystem_delete_directory"):
                     await self._pc_control_mgr.filesystem_delete_directory(str(path), recursive=True)
                 else:
                     shutil.rmtree(str(path))
+
+                if lifecycle:
+                    lifecycle.transition_to(ActionState.WAITING, "Verifying folder deletion")
+                verified = not path.exists()
+                if lifecycle:
+                    lifecycle.set_verification(verified=verified, details={"path": str(path)})
+                    lifecycle.transition_to(ActionState.SUCCESS if verified else ActionState.FAILED, "Deletion check complete")
+
                 duration_ms = (time.time() - start_time) * 1000
-                return f"SUCCESS: Deleted folder '{path.name}'. [Fast Execution: {duration_ms:.1f}ms]"
+                nat_msg = NaturalResponseFormatter.format_file_op_success("delete_folder", path.name)
+                return f"SUCCESS: {nat_msg} [Fast Execution: {duration_ms:.1f}ms]"
             except Exception as exc:
+                if lifecycle:
+                    lifecycle.transition_to(ActionState.FAILED, f"Exception: {exc}")
                 return self._format_error(
                     summary=f"Failed to delete folder '{target}'",
                     root_cause=f"Directory deletion error at path '{path}': {exc}",
@@ -1746,12 +1890,25 @@ class FastCommandRouter:
             tool_name = "filesystem_rename_directory"
             try:
                 if not old_path.exists():
+                    if lifecycle:
+                        lifecycle.transition_to(ActionState.FAILED, "Source folder does not exist")
                     duration_ms = (time.time() - start_time) * 1000
                     return f"INVALID_TARGET: Cannot rename folder '{old_name}' because source path does not exist. [Fast Execution: {duration_ms:.1f}ms]"
                 old_path.rename(new_path)
+
+                if lifecycle:
+                    lifecycle.transition_to(ActionState.WAITING, "Verifying folder rename")
+                verified = new_path.exists()
+                if lifecycle:
+                    lifecycle.set_verification(verified=verified, details={"old": str(old_path), "new": str(new_path)})
+                    lifecycle.transition_to(ActionState.SUCCESS if verified else ActionState.FAILED, "Rename check complete")
+
                 duration_ms = (time.time() - start_time) * 1000
-                return f"SUCCESS: Renamed folder '{old_path.name}' to '{new_path.name}'. [Fast Execution: {duration_ms:.1f}ms]"
+                nat_msg = NaturalResponseFormatter.format_file_op_success("rename_folder", old_path.name, new_path.name)
+                return f"SUCCESS: {nat_msg} [Fast Execution: {duration_ms:.1f}ms]"
             except Exception as exc:
+                if lifecycle:
+                    lifecycle.transition_to(ActionState.FAILED, f"Exception: {exc}")
                 return self._format_error(
                     summary=f"Failed to rename folder '{old_name}'",
                     root_cause=f"Error renaming folder from '{old_path}' to '{new_path}': {exc}",
@@ -1770,9 +1927,20 @@ class FastCommandRouter:
                 else:
                     path.parent.mkdir(parents=True, exist_ok=True)
                     path.touch()
+
+                if lifecycle:
+                    lifecycle.transition_to(ActionState.WAITING, "Verifying file creation")
+                verified = path.exists() and path.is_file()
+                if lifecycle:
+                    lifecycle.set_verification(verified=verified, details={"path": str(path)})
+                    lifecycle.transition_to(ActionState.SUCCESS if verified else ActionState.FAILED, "Creation check complete")
+
                 duration_ms = (time.time() - start_time) * 1000
-                return f"SUCCESS: Created file '{path.name}' at {path.parent}. [Fast Execution: {duration_ms:.1f}ms]"
+                nat_msg = NaturalResponseFormatter.format_file_op_success("create_file", path.name)
+                return f"SUCCESS: {nat_msg} [Fast Execution: {duration_ms:.1f}ms]"
             except Exception as exc:
+                if lifecycle:
+                    lifecycle.transition_to(ActionState.FAILED, f"Exception: {exc}")
                 return self._format_error(
                     summary=f"Failed to create file '{target}'",
                     root_cause=f"File creation failed at path '{path}': {exc}",
@@ -1787,15 +1955,28 @@ class FastCommandRouter:
             tool_name = "filesystem_delete_file"
             try:
                 if not path.exists():
+                    if lifecycle:
+                        lifecycle.transition_to(ActionState.FAILED, "Target file does not exist")
                     duration_ms = (time.time() - start_time) * 1000
                     return f"INVALID_TARGET: Cannot delete file '{target}' because target file does not exist. [Fast Execution: {duration_ms:.1f}ms]"
                 if self._pc_control_mgr and hasattr(self._pc_control_mgr, "filesystem_delete_file"):
                     await self._pc_control_mgr.filesystem_delete_file(str(path))
                 else:
                     path.unlink()
+
+                if lifecycle:
+                    lifecycle.transition_to(ActionState.WAITING, "Verifying file deletion")
+                verified = not path.exists()
+                if lifecycle:
+                    lifecycle.set_verification(verified=verified, details={"path": str(path)})
+                    lifecycle.transition_to(ActionState.SUCCESS if verified else ActionState.FAILED, "File deletion check complete")
+
                 duration_ms = (time.time() - start_time) * 1000
-                return f"SUCCESS: Deleted file '{path.name}'. [Fast Execution: {duration_ms:.1f}ms]"
+                nat_msg = NaturalResponseFormatter.format_file_op_success("delete_file", path.name)
+                return f"SUCCESS: {nat_msg} [Fast Execution: {duration_ms:.1f}ms]"
             except Exception as exc:
+                if lifecycle:
+                    lifecycle.transition_to(ActionState.FAILED, f"Exception: {exc}")
                 return self._format_error(
                     summary=f"Failed to delete file '{target}'",
                     root_cause=f"Error deleting file at path '{path}': {exc}",
@@ -1810,15 +1991,25 @@ class FastCommandRouter:
             tool_name = "launch_application"
             try:
                 if not path.exists():
+                    if lifecycle:
+                        lifecycle.transition_to(ActionState.FAILED, "Target file does not exist")
                     duration_ms = (time.time() - start_time) * 1000
                     return f"INVALID_TARGET: Cannot open file '{target}' because target file does not exist. [Fast Execution: {duration_ms:.1f}ms]"
                 if os.name == "nt":
                     os.startfile(str(path))
                 else:
                     subprocess.Popen(["xdg-open", str(path)])
+
+                if lifecycle:
+                    lifecycle.set_verification(verified=True, details={"path": str(path)})
+                    lifecycle.transition_to(ActionState.SUCCESS, "File opened via OS handler")
+
                 duration_ms = (time.time() - start_time) * 1000
-                return f"SUCCESS: Opened file '{path.name}'. [Fast Execution: {duration_ms:.1f}ms]"
+                nat_msg = NaturalResponseFormatter.format_file_op_success("open_file", path.name)
+                return f"SUCCESS: {nat_msg} [Fast Execution: {duration_ms:.1f}ms]"
             except Exception as exc:
+                if lifecycle:
+                    lifecycle.transition_to(ActionState.FAILED, f"Exception: {exc}")
                 return self._format_error(
                     summary=f"Failed to open file '{target}'",
                     root_cause=f"OS startfile failed for file '{path}': {exc}",
@@ -1836,12 +2027,25 @@ class FastCommandRouter:
             tool_name = "filesystem_rename_file"
             try:
                 if not old_path.exists():
+                    if lifecycle:
+                        lifecycle.transition_to(ActionState.FAILED, "Source file does not exist")
                     duration_ms = (time.time() - start_time) * 1000
                     return f"INVALID_TARGET: Cannot rename file '{old_name}' because source file does not exist. [Fast Execution: {duration_ms:.1f}ms]"
                 old_path.rename(new_path)
+
+                if lifecycle:
+                    lifecycle.transition_to(ActionState.WAITING, "Verifying file rename")
+                verified = new_path.exists()
+                if lifecycle:
+                    lifecycle.set_verification(verified=verified, details={"old": str(old_path), "new": str(new_path)})
+                    lifecycle.transition_to(ActionState.SUCCESS if verified else ActionState.FAILED, "File rename check complete")
+
                 duration_ms = (time.time() - start_time) * 1000
-                return f"SUCCESS: Renamed file '{old_path.name}' to '{new_path.name}'. [Fast Execution: {duration_ms:.1f}ms]"
+                nat_msg = NaturalResponseFormatter.format_file_op_success("rename_file", old_path.name, new_path.name)
+                return f"SUCCESS: {nat_msg} [Fast Execution: {duration_ms:.1f}ms]"
             except Exception as exc:
+                if lifecycle:
+                    lifecycle.transition_to(ActionState.FAILED, f"Exception: {exc}")
                 return self._format_error(
                     summary=f"Failed to rename file '{old_name}'",
                     root_cause=f"Error renaming file from '{old_path}' to '{new_path}': {exc}",
@@ -1851,6 +2055,8 @@ class FastCommandRouter:
                     final_status="FAILED",
                 )
 
+        if lifecycle:
+            lifecycle.transition_to(ActionState.FAILED, "Unrecognized filesystem intent")
         return self._format_error(
             summary=f"Unrecognized filesystem intent: {intent.name}",
             root_cause="Filesystem handler failed to recognize intent enum.",
@@ -1864,7 +2070,9 @@ class FastCommandRouter:
     # New Private Execute Handlers (STEP 6)
     # ----------------------------------------------------------------------
 
-    async def _execute_screenshot(self, match: RouteMatch, start_time: float) -> str:
+    async def _execute_screenshot(self, match: RouteMatch, start_time: float, lifecycle: ActionLifecycle | None = None) -> str:
+        if lifecycle:
+            lifecycle.transition_to(ActionState.RUNNING, "Capturing screenshot")
         try:
             import mss
             screenshot_dir = Path.home() / "Desktop" / "Screenshots"
@@ -1878,9 +2086,15 @@ class FastCommandRouter:
 
             await asyncio.to_thread(_take_screenshot)
 
+            if lifecycle:
+                lifecycle.set_verification(verified=file_path.exists(), details={"file_path": str(file_path)})
+                lifecycle.transition_to(ActionState.SUCCESS, "Screenshot captured")
+
             duration_ms = (time.time() - start_time) * 1000
             return f"SUCCESS: Captured screenshot to {file_path.name}. [Fast Execution: {duration_ms:.1f}ms]"
         except Exception as exc:
+            if lifecycle:
+                lifecycle.transition_to(ActionState.FAILED, f"Screenshot exception: {exc}")
             return self._format_error(
                 summary="Failed to capture screenshot",
                 root_cause=f"Screenshot error: {exc}",
@@ -1890,8 +2104,10 @@ class FastCommandRouter:
                 final_status="FAILED",
             )
 
-    async def _execute_system_info(self, match: RouteMatch, start_time: float) -> str:
+    async def _execute_system_info(self, match: RouteMatch, start_time: float, lifecycle: ActionLifecycle | None = None) -> str:
         sub = match.params.get("sub", "")
+        if lifecycle:
+            lifecycle.transition_to(ActionState.RUNNING, f"Querying system info: {sub}")
         try:
             import psutil
 
@@ -1923,9 +2139,15 @@ class FastCommandRouter:
             else:
                 details = f"System info option '{sub}' not recognized"
 
+            if lifecycle:
+                lifecycle.set_verification(verified=True, details={"sub": sub, "info": details})
+                lifecycle.transition_to(ActionState.SUCCESS, "System info queried")
+
             duration_ms = (time.time() - start_time) * 1000
             return f"INFO: {details}. [Fast Execution: {duration_ms:.1f}ms]"
         except Exception as exc:
+            if lifecycle:
+                lifecycle.transition_to(ActionState.FAILED, f"System info exception: {exc}")
             return self._format_error(
                 summary=f"Failed to get system info for '{sub}'",
                 root_cause=f"System info error: {exc}",
@@ -1935,9 +2157,11 @@ class FastCommandRouter:
                 final_status="FAILED",
             )
 
-    async def _execute_window_control(self, match: RouteMatch, start_time: float) -> str:
+    async def _execute_window_control(self, match: RouteMatch, start_time: float, lifecycle: ActionLifecycle | None = None) -> str:
         action = match.params.get("action", "")
         app_name = match.params.get("app_name", "").lower()
+        if lifecycle:
+            lifecycle.transition_to(ActionState.RUNNING, f"Window control: {action} on {app_name}")
         try:
             def _control_window():
                 if os.name != "nt":
@@ -1975,12 +2199,18 @@ class FastCommandRouter:
                 return False, f"Unknown window action '{action}'"
 
             success, msg = await asyncio.to_thread(_control_window)
+            if lifecycle:
+                lifecycle.set_verification(verified=success, details={"action": action, "msg": msg})
+                lifecycle.transition_to(ActionState.SUCCESS if success else ActionState.FAILED, "Window control finish")
+
             duration_ms = (time.time() - start_time) * 1000
             if success:
                 return f"SUCCESS: {msg}. [Fast Execution: {duration_ms:.1f}ms]"
             else:
                 return f"INVALID_TARGET: {msg}. [Fast Execution: {duration_ms:.1f}ms]"
         except Exception as exc:
+            if lifecycle:
+                lifecycle.transition_to(ActionState.FAILED, f"Window control exception: {exc}")
             return self._format_error(
                 summary=f"Failed window control '{action}' for '{app_name}'",
                 root_cause=f"Window control API error: {exc}",
@@ -1990,8 +2220,10 @@ class FastCommandRouter:
                 final_status="FAILED",
             )
 
-    async def _execute_kill_process(self, match: RouteMatch, start_time: float) -> str:
+    async def _execute_kill_process(self, match: RouteMatch, start_time: float, lifecycle: ActionLifecycle | None = None) -> str:
         app_name = match.params.get("app_name", "").lower()
+        if lifecycle:
+            lifecycle.transition_to(ActionState.RUNNING, f"Killing process: {app_name}")
         try:
             def _kill():
                 import psutil
@@ -2007,12 +2239,18 @@ class FastCommandRouter:
                 return killed_count
 
             count = await asyncio.to_thread(_kill)
+            if lifecycle:
+                lifecycle.set_verification(verified=count > 0, details={"killed_count": count})
+                lifecycle.transition_to(ActionState.SUCCESS if count > 0 else ActionState.FAILED, "Process kill finished")
+
             duration_ms = (time.time() - start_time) * 1000
             if count > 0:
                 return f"SUCCESS: Killed {count} process(es) matching '{app_name}'. [Fast Execution: {duration_ms:.1f}ms]"
             else:
                 return f"INVALID_TARGET: No active processes found matching '{app_name}'. [Fast Execution: {duration_ms:.1f}ms]"
         except Exception as exc:
+            if lifecycle:
+                lifecycle.transition_to(ActionState.FAILED, f"Kill process exception: {exc}")
             return self._format_error(
                 summary=f"Failed to kill process '{app_name}'",
                 root_cause=f"Process kill error: {exc}",
@@ -2022,15 +2260,25 @@ class FastCommandRouter:
                 final_status="FAILED",
             )
 
-    async def _execute_web_search(self, match: RouteMatch, start_time: float) -> str:
+    async def _execute_web_search(self, match: RouteMatch, start_time: float, lifecycle: ActionLifecycle | None = None) -> str:
+        if lifecycle:
+            lifecycle.transition_to(ActionState.RUNNING, "Launching web search")
         try:
             url = match.target
             platform = match.params.get("platform", "web").title()
             query = match.params.get("query", "")
             webbrowser.open(url)
+
+            if lifecycle:
+                lifecycle.set_verification(verified=True, details={"platform": platform, "query": query, "url": url})
+                lifecycle.transition_to(ActionState.SUCCESS, "Web search browser launched")
+
             duration_ms = (time.time() - start_time) * 1000
-            return f"SUCCESS: Searched '{query}' on {platform}. [Fast Execution: {duration_ms:.1f}ms]"
+            nat_msg = NaturalResponseFormatter.format_web_search_success(query, platform)
+            return f"SUCCESS: {nat_msg} [Fast Execution: {duration_ms:.1f}ms]"
         except Exception as exc:
+            if lifecycle:
+                lifecycle.transition_to(ActionState.FAILED, f"Web search exception: {exc}")
             return self._format_error(
                 summary="Failed to open web search",
                 root_cause=f"Webbrowser error: {exc}",
@@ -2040,13 +2288,22 @@ class FastCommandRouter:
                 final_status="FAILED",
             )
 
-    async def _execute_clipboard(self, match: RouteMatch, start_time: float) -> str:
+    async def _execute_clipboard(self, match: RouteMatch, start_time: float, lifecycle: ActionLifecycle | None = None) -> str:
+        if lifecycle:
+            lifecycle.transition_to(ActionState.RUNNING, "Clearing clipboard")
         try:
             import pyperclip
             pyperclip.copy('')
+
+            if lifecycle:
+                lifecycle.set_verification(verified=True, details={"clipboard": "cleared"})
+                lifecycle.transition_to(ActionState.SUCCESS, "Clipboard cleared")
+
             duration_ms = (time.time() - start_time) * 1000
             return f"SUCCESS: Cleared system clipboard. [Fast Execution: {duration_ms:.1f}ms]"
         except Exception as exc:
+            if lifecycle:
+                lifecycle.transition_to(ActionState.FAILED, f"Clipboard exception: {exc}")
             return self._format_error(
                 summary="Failed to clear clipboard",
                 root_cause=f"Pyperclip error: {exc}",
@@ -2056,8 +2313,10 @@ class FastCommandRouter:
                 final_status="FAILED",
             )
 
-    async def _execute_run_cmd(self, match: RouteMatch, start_time: float) -> str:
+    async def _execute_run_cmd(self, match: RouteMatch, start_time: float, lifecycle: ActionLifecycle | None = None) -> str:
         cmd = match.params.get("cmd", match.target)
+        if lifecycle:
+            lifecycle.transition_to(ActionState.RUNNING, f"Executing safe CLI command: {cmd}")
         try:
             def _run():
                 res = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
@@ -2067,9 +2326,16 @@ class FastCommandRouter:
             output = await asyncio.to_thread(_run)
             if len(output) > 800:
                 output = output[:800] + "... (truncated)"
+
+            if lifecycle:
+                lifecycle.set_verification(verified=True, details={"cmd": cmd, "output_len": len(output)})
+                lifecycle.transition_to(ActionState.SUCCESS, "Safe command executed")
+
             duration_ms = (time.time() - start_time) * 1000
             return f"SUCCESS: Executed command '{cmd}'. Output: {output} [Fast Execution: {duration_ms:.1f}ms]"
         except Exception as exc:
+            if lifecycle:
+                lifecycle.transition_to(ActionState.FAILED, f"Safe CLI execution exception: {exc}")
             return self._format_error(
                 summary=f"Failed to execute safe command '{cmd}'",
                 root_cause=f"Subprocess execution error: {exc}",

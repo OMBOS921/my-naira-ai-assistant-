@@ -23,7 +23,16 @@ except ImportError:
     def load_dotenv() -> None:
         pass
 
-from backend.exceptions import LLMError, ProviderAuthError, ProviderRateLimitError, ProviderTimeoutError
+from backend.exceptions import (
+    LLMError,
+    ProviderAPIError,
+    ProviderAuthError,
+    ProviderInvalidRequestError,
+    ProviderNetworkError,
+    ProviderRateLimitError,
+    ProviderTimeoutError,
+)
+from backend.modules.llm.capabilities import ModelCapabilities
 from backend.modules.llm.provider_base import ProviderBase
 from backend.types import LLMResponse, Message, TokenUsage, ToolCall, ToolDef
 _LOG = logging.getLogger("naira.llm.deepseek")
@@ -47,6 +56,14 @@ class DeepSeekProvider(ProviderBase):
         )
         self._api_key = api_key
         self._model = model
+        self.capabilities = ModelCapabilities(
+            supports_tools=True,
+            supports_streaming=True,
+            supports_vision=False,
+            supports_reasoning=True,
+            max_context_tokens=64000,
+            max_output_tokens=4096,
+        )
 
     @property
     def model(self) -> str:
@@ -155,7 +172,7 @@ class DeepSeekProvider(ProviderBase):
             ) from exc
         except requests.ConnectionError as exc:
             elapsed_ms = (time.monotonic() - start_time) * 1000
-            raise LLMError(
+            raise ProviderNetworkError(
                 f"DeepSeek connection error: {exc}",
                 context={
                     "request_id": request_id,
@@ -170,7 +187,7 @@ class DeepSeekProvider(ProviderBase):
             ) from exc
         except requests.HTTPError as exc:
             elapsed_ms = (time.monotonic() - start_time) * 1000
-            raise LLMError(
+            raise ProviderAPIError(
                 f"DeepSeek HTTP error: {exc}",
                 context={
                     "request_id": request_id,
@@ -185,7 +202,7 @@ class DeepSeekProvider(ProviderBase):
             ) from exc
         except requests.RequestException as exc:
             elapsed_ms = (time.monotonic() - start_time) * 1000
-            raise LLMError(
+            raise ProviderNetworkError(
                 f"DeepSeek request error: {exc}",
                 context={
                     "request_id": request_id,
@@ -230,7 +247,9 @@ class DeepSeekProvider(ProviderBase):
                 raise ProviderAuthError(f"DeepSeek auth failed (status {response.status_code})", context=err_context)
             if response.status_code == 429:
                 raise ProviderRateLimitError(f"DeepSeek rate limit exceeded (status {response.status_code})", context=err_context)
-            raise LLMError(f"DeepSeek API error (status {response.status_code})", context=err_context)
+            if response.status_code in (400, 422):
+                raise ProviderInvalidRequestError(f"DeepSeek invalid request (status {response.status_code})", context=err_context)
+            raise ProviderAPIError(f"DeepSeek API error (status {response.status_code})", context=err_context)
 
         try:
             data = response.json()

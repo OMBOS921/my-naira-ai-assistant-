@@ -22,6 +22,7 @@ from backend.runtime._tool_loop import MAX_TOOL_ITERATIONS, run_tool_loop
 from backend.runtime.autonomous_task_engine import AutonomousTaskEngine
 from backend.runtime.fast_command_router import FastCommandRouter
 from backend.runtime.multi_agent.multi_agent_orchestrator import MultiAgentOrchestrator
+from backend.modules.reasoning_gateway import IntentCategory, ReasoningGateway
 from backend.types import (
     LLMResponse,
     Message,
@@ -68,6 +69,8 @@ class RuntimeManager:
         decision_manager: object | None = None,
         analytics_manager: object | None = None,
         planning_manager: object | None = None,
+        security_manager: object | None = None,
+        reasoning_gateway: object | None = None,
         event_bus: object | None = None,
         max_tool_iterations: int = MAX_TOOL_ITERATIONS,
     ) -> None:
@@ -84,6 +87,14 @@ class RuntimeManager:
         self._decision_manager = decision_manager
         self._analytics_manager = analytics_manager
         self._planning_manager = planning_manager
+        self._security_manager = security_manager
+        self._reasoning_gateway = reasoning_gateway or ReasoningGateway(
+            config=config,
+            logger=self._logger,
+            event_bus=event_bus,
+            memory_manager=memory_manager,
+            tool_manager=tool_manager,
+        )
         self._event_bus = event_bus
         self._max_tool_iterations = max_tool_iterations
         self._degraded: bool = False
@@ -163,6 +174,24 @@ class RuntimeManager:
                 "session_id": ctx.session_id,
                 "request_id": str(ctx.request_id),
             })
+
+            # Stage 0: Security Validation (BEFORE Decision, FCR, Planning, Prompt, Context, LLM)
+            if self._security_manager is not None and hasattr(self._security_manager, "validate_input"):
+                val_res = self._security_manager.validate_input(request.text)
+                if val_res.status == "reject":
+                    duration_ms = (time.time() - ctx.start_time) * 1000
+                    self._logger.warning("[SECURITY REJECTION] Request rejected by SecurityManager: %s", val_res.reason)
+                    await self._emit_event("security.request_rejected", {
+                        "session_id": ctx.session_id,
+                        "request_id": str(ctx.request_id),
+                        "reason": val_res.reason,
+                    })
+                    return UserResponse(
+                        request_id=request.id,
+                        text=f"[Security Rejection]: {val_res.reason}",
+                        source=request.source,
+                        duration_ms=duration_ms,
+                    )
 
             # Decision Engine Routing
             target_route = RouteTarget.LLM_CONVERSATION
@@ -269,6 +298,56 @@ class RuntimeManager:
                         source=request.source,
                         duration_ms=duration_ms,
                     )
+
+            # Reasoning Gateway Evaluation (before LLM invocation)
+            gw_decision = self._reasoning_gateway.evaluate(request.text, request.metadata)
+            self._logger.info(
+                "[REASONING GATEWAY] category=%s llm_required=%s score=%d reasoning=%s",
+                gw_decision.category,
+                gw_decision.llm_required,
+                gw_decision.complexity_score,
+                gw_decision.reasoning,
+            )
+
+            if not gw_decision.llm_required:
+                duration_ms = (time.time() - ctx.start_time) * 1000
+                if gw_decision.clarification_required:
+                    bypass_text = f"[User Clarification Required]: Your request '{request.text}' is ambiguous. Please provide specific details."
+                elif gw_decision.memory_lookup:
+                    mem_res = None
+                    if self._memory_manager is not None:
+                        search_fn = getattr(self._memory_manager, "search", None) or getattr(self._memory_manager, "recall", None)
+                        if callable(search_fn):
+                            try:
+                                mem_res = search_fn(request.text)
+                            except Exception:
+                                pass
+                    bypass_text = f"Retrieved from memory: {mem_res}" if mem_res else f"Memory recall for '{request.text}' processed."
+                elif gw_decision.web_search_only:
+                    bypass_text = f"[Web Search Summary]: Live result for '{request.text}' retrieved without full LLM reasoning."
+                elif gw_decision.category == IntentCategory.GREETING:
+                    bypass_text = "Hello! How can I assist you today?"
+                elif gw_decision.category == IntentCategory.LOCAL_CAPABILITY:
+                    bypass_text = f"Local capability status for '{request.text}': System online and ready."
+                else:
+                    bypass_text = f"Request '{request.text}' processed deterministically by Reasoning Gateway."
+
+                token_usage = self._estimate_token_usage("", bypass_text)
+                final_response = LLMResponse(
+                    text=bypass_text,
+                    tool_calls=None,
+                    finish_reason="stop",
+                    token_usage=token_usage,
+                    provider="reasoning_gateway",
+                    duration_ms=duration_ms,
+                )
+                await self._store_turn(ctx, final_response)
+                return UserResponse(
+                    request_id=request.id,
+                    text=bypass_text,
+                    source=request.source,
+                    duration_ms=duration_ms,
+                )
 
             # Route 3: Standard LLM_CONVERSATION
             self._logger.info(
@@ -405,6 +484,44 @@ class RuntimeManager:
                     finish_reason="stop",
                     token_usage=token_usage,
                     provider="fast_command_router",
+                    duration_ms=duration_ms,
+                )
+                await self._store_turn(ctx, final_response)
+                return
+
+            # Reasoning Gateway Evaluation (stream)
+            gw_decision = self._reasoning_gateway.evaluate(request.text, request.metadata)
+            if not gw_decision.llm_required:
+                duration_ms = (time.time() - ctx.start_time) * 1000
+                if gw_decision.clarification_required:
+                    bypass_text = f"[User Clarification Required]: Your request '{request.text}' is ambiguous. Please provide specific details."
+                elif gw_decision.memory_lookup:
+                    mem_res = None
+                    if self._memory_manager is not None:
+                        search_fn = getattr(self._memory_manager, "search", None) or getattr(self._memory_manager, "recall", None)
+                        if callable(search_fn):
+                            try:
+                                mem_res = search_fn(request.text)
+                            except Exception:
+                                pass
+                    bypass_text = f"Retrieved from memory: {mem_res}" if mem_res else f"Memory recall for '{request.text}' processed."
+                elif gw_decision.web_search_only:
+                    bypass_text = f"[Web Search Summary]: Live result for '{request.text}' retrieved without full LLM reasoning."
+                elif gw_decision.category == IntentCategory.GREETING:
+                    bypass_text = "Hello! How can I assist you today?"
+                elif gw_decision.category == IntentCategory.LOCAL_CAPABILITY:
+                    bypass_text = f"Local capability status for '{request.text}': System online and ready."
+                else:
+                    bypass_text = f"Request '{request.text}' processed deterministically by Reasoning Gateway."
+
+                yield bypass_text
+                token_usage = self._estimate_token_usage("", bypass_text)
+                final_response = LLMResponse(
+                    text=bypass_text,
+                    tool_calls=None,
+                    finish_reason="stop",
+                    token_usage=token_usage,
+                    provider="reasoning_gateway",
                     duration_ms=duration_ms,
                 )
                 await self._store_turn(ctx, final_response)

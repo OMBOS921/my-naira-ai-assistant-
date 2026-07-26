@@ -21,7 +21,7 @@ from backend.modules.security.permission_engine import (
     PermissionResult,
 )
 from backend.modules.security.ports.security_port import SecurityPort
-from backend.types import ToolResult
+from backend.types import ToolResult, ValidationResult
 
 _LOG = logging.getLogger("naira.security")
 
@@ -223,8 +223,49 @@ class SecurityManager:
         return self._adapter.permission_manager.check_permission(tool_name)
 
     # ------------------------------------------------------------------
-    # Public API — security checks
+    # Public API — security checks & input validation
     # ------------------------------------------------------------------
+
+    def validate_input(self, text: str) -> ValidationResult:
+        """Validate user input text for security violations and prompt injection attempts."""
+        self._ensure_not_degraded()
+
+        if text is None or not text.strip():
+            return ValidationResult(
+                status="reject",
+                reason="Empty request text provided.",
+            )
+
+        lowered = text.lower()
+
+        # Prompt injection detection patterns
+        injection_patterns = [
+            r"ignore\s+.*(instructions|rules|prompts)",
+            r"disregard\s+.*(instructions|rules|prompts)",
+            r"override\s+.*prompt",
+            r"bypass\s+security",
+            r"jailbreak",
+            r"forget\s+all\s+previous",
+            r"you\s+are\s+now\s+dan",
+        ]
+
+        import re
+        for pattern in injection_patterns:
+            if re.search(pattern, lowered):
+                self._logger.warning("Prompt injection detected matching pattern: %r", pattern)
+                self._emit_event_sync("security.prompt_injection_detected", {
+                    "pattern": pattern,
+                    "text_snippet": text[:50],
+                })
+                return ValidationResult(
+                    status="reject",
+                    reason="Potential prompt injection attempt detected.",
+                )
+
+        return ValidationResult(
+            status="pass",
+            sanitized_text=text.strip(),
+        )
 
     async def check_tool_execution(
         self,

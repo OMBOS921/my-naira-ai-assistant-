@@ -80,6 +80,7 @@ class RequestPipeline:
         prompt_manager: PromptManager | None = None,
         session_manager: SessionManager | None = None,
         tool_router: ToolRouter | None = None,
+        security_manager: object | None = None,
         event_bus: EventBus | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
@@ -87,6 +88,7 @@ class RequestPipeline:
         self._prompt_manager = prompt_manager
         self._session_manager = session_manager
         self._tool_router = tool_router
+        self._security_manager = security_manager
         self._event_bus = event_bus
         self._logger = logger or _LOG
         self._degraded: bool = False
@@ -147,6 +149,16 @@ class RequestPipeline:
             Complete context ready for LLM inference.
         """
         self._ensure_not_degraded()
+
+        # Stage 0: Security validation (BEFORE session, prompt, context, or LLM)
+        if self._security_manager is not None and hasattr(self._security_manager, "validate_input"):
+            val_res = self._security_manager.validate_input(request.text)
+            if val_res.status == "reject":
+                from backend.exceptions import InputRejectedError
+                raise InputRejectedError(
+                    val_res.reason or "Security validation failed.",
+                    context={"reason": val_res.reason, "request_id": str(request.id)},
+                )
 
         # Stage 1: Session resolution
         session = await self._resolve_session(request.session_id)

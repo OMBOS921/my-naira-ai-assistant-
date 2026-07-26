@@ -15,12 +15,21 @@ from backend.runtime.request_pipeline import RequestContextResult, RequestPipeli
 from backend.runtime.response_pipeline import GenerationResult, ResponsePipeline
 from backend.runtime.runtime import Runtime
 from backend.runtime.session_manager import SessionManager
-from backend.runtime.tool_router import ToolRouter
+from backend.runtime.interaction_manager import (
+    InteractionEvent,
+    InteractionManager,
+    InteractionPhase,
+    PersonalityMode,
+)
 
 __all__ = [
     "ContextRouter",
     "GenerationResult",
+    "InteractionEvent",
+    "InteractionManager",
+    "InteractionPhase",
     "MessageDispatcher",
+    "PersonalityMode",
     "RequestContextResult",
     "RequestPipeline",
     "ResponsePipeline",

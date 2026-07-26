@@ -13,6 +13,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from backend.eventbus import EventBus
+from backend.types import UserRequest, UserResponse
 
 if TYPE_CHECKING:
     from backend.modules.settings import AppConfig, EnvironmentSnapshot
@@ -42,11 +43,7 @@ class FSMState(StrEnum):
 
 
 class Orchestrator:
-    """Central mediator — owns the FSM, Event Bus, and module registry.
-
-    Placeholder — will be extended with capability registration,
-    request routing, and module lifecycle in Phase 1.
-    """
+    """Central mediator — owns the FSM, Event Bus, and module registry."""
 
     def __init__(self, event_bus: EventBus, config: AppConfig, env: EnvironmentSnapshot) -> None:
         self._state: FSMState = FSMState.BOOTING
@@ -77,6 +74,44 @@ class Orchestrator:
             self._module_init_order.append(name)
         self._logger.debug("Module registered: %s", name)
 
+    def get_module(self, name: str) -> object | None:
+        """Retrieve a registered module instance by name."""
+        return self._module_registry.get(name)
+
+    async def process_user_request(self, request: UserRequest) -> UserResponse:
+        """Mediate a user request through FSM transitions and delegate execution to Runtime."""
+        if self._state == FSMState.SHUTDOWN:
+            return UserResponse(
+                request_id=request.id,
+                text="[System Error]: Orchestrator is shut down.",
+                source=request.source,
+            )
+
+        self.state = FSMState.PROCESSING
+
+        try:
+            runtime_mgr = self._module_registry.get("runtime")
+            if runtime_mgr is not None and hasattr(runtime_mgr, "process_request"):
+                response = await runtime_mgr.process_request(request)
+                return response
+            else:
+                self._logger.warning("Runtime module not registered in orchestrator — fallback path triggered")
+                return UserResponse(
+                    request_id=request.id,
+                    text="[System Warning]: Core AI runtime module is unavailable.",
+                    source=request.source,
+                )
+        except Exception as exc:
+            self._logger.error("Error during request orchestration: %s", exc)
+            return UserResponse(
+                request_id=request.id,
+                text=f"[System Error]: Failed to process request ({exc}).",
+                source=request.source,
+            )
+        finally:
+            if self._state != FSMState.SHUTDOWN:
+                self.state = FSMState.IDLE
+
     async def shutdown(self) -> None:
         """Execute the shutdown sequence (18_Boot_Sequence.md §4).
 
@@ -94,3 +129,4 @@ class Orchestrator:
         )
         self._module_registry.clear()
         self._module_init_order.clear()
+
