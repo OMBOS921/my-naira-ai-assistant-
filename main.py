@@ -31,9 +31,68 @@ try:
         os.environ["NAIRA_API_KEY"] = gemini_key
         os.environ["API_KEY"] = gemini_key
         
-   
 except ImportError:
     pass
+
+def load_groq_api_key_from_vault(root_dir: Path, logger: logging.Logger | None = None) -> str:
+    """Dynamically load the Groq API key from memory/user_vault.json into os.environ.
+    
+    Implements graceful error handling if the file does not exist, JSON is invalid,
+    or the 'groq_api_key' field is missing/empty.
+    """
+    vault_path = root_dir / "memory" / "user_vault.json"
+    warning_msg = "Groq API key not found in user_vault.json. FastCommandRouter may be degraded."
+
+    if not vault_path.is_file():
+        if logger:
+            logger.warning(warning_msg)
+        else:
+            logging.warning(warning_msg)
+        os.environ["GROQ_API_KEY"] = ""
+        return ""
+
+    try:
+        import json
+        with open(vault_path, "r", encoding="utf-8") as f:
+            vault_data = json.load(f)
+
+        if not isinstance(vault_data, dict):
+            if logger:
+                logger.warning(warning_msg)
+            else:
+                logging.warning(warning_msg)
+            os.environ["GROQ_API_KEY"] = ""
+            return ""
+
+        groq_key = (
+            vault_data.get("groq_api_key")
+            or (vault_data.get("api_keys", {}).get("groq") if isinstance(vault_data.get("api_keys"), dict) else None)
+            or (vault_data.get("api_key") if vault_data.get("provider") == "groq" else "")
+            or ""
+        )
+
+        if isinstance(groq_key, str) and groq_key.strip():
+            groq_key = groq_key.strip()
+            os.environ["GROQ_API_KEY"] = groq_key
+            return groq_key
+        else:
+            if logger:
+                logger.warning(warning_msg)
+            else:
+                logging.warning(warning_msg)
+            os.environ["GROQ_API_KEY"] = ""
+            return ""
+
+    except Exception:
+        if logger:
+            logger.warning(warning_msg)
+        else:
+            logging.warning(warning_msg)
+        os.environ["GROQ_API_KEY"] = ""
+        return ""
+
+# Initialize Groq API key early from vault
+load_groq_api_key_from_vault(ROOT_DIR)
 
 from google import genai
 from google.genai import types
@@ -92,6 +151,7 @@ async def lifespan(app: FastAPI):
     _LOG = setup_logging(ROOT_DIR / config.log.directory, config.log.level)
     install_excepthook(_LOG)
     _LOG.info("[BOOT] Naira-OS v%s booting ...", __version__)
+    load_groq_api_key_from_vault(ROOT_DIR, _LOG)
 
     event_bus = EventBus()
     _container = DIContainer()
