@@ -23,6 +23,10 @@ Public API
 
 from __future__ import annotations
 
+from backend.modules.coding_agent._python_executor import (
+    LocalPythonExecutor,
+    PythonExecutionResult,
+)
 from backend.modules.coding_agent.coding_agent_module import CodingAgentManager
 from backend.modules.coding_agent.ports import (
     AgentRuntimePort,
@@ -40,6 +44,8 @@ from backend.modules.coding_agent.ports import (
 
 __all__ = [
     "CodingAgentManager",
+    "LocalPythonExecutor",
+    "PythonExecutionResult",
     "AgentRuntimePort",
     "CommandExecutorPort",
     "FileManagerPort",
@@ -52,3 +58,4 @@ __all__ = [
     "ToolSelectionPort",
     "WorkspaceManagerPort",
 ]
+

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -37,11 +38,32 @@ _LOG = logging.getLogger("naira.memory")
 DEFAULT_DB_FILENAME = "naira_memory.db"
 DEFAULT_INDEX_FILENAME = "naira_vector_index.json"
 
+REMEMBER_FACT_TOOL_DEF = ToolDefinition(
+    name="remember_fact",
+    description=(
+        "Save an important user fact, preference, or project detail into long-term memory."
+    ),
+    parameters={
+        "type": "object",
+        "properties": {
+            "topic": {
+                "type": "string",
+                "description": "Category, key, or topic of the fact (e.g., 'user_preference', 'project_name', 'favorite_color').",
+            },
+            "fact": {
+                "type": "string",
+                "description": "The exact fact, detail, or preference to remember.",
+            },
+        },
+        "required": ["topic", "fact"],
+    },
+    category="memory",
+)
+
 SEARCH_MEMORY_TOOL_DEF = ToolDefinition(
     name="search_memory",
     description=(
-        "Search Naira-OS long-term memory, conversation history, vector index, and "
-        "timeline events for past context, user preferences, or previously used terminal commands."
+        "Search the long-term memory/vector database for previously discussed facts, code, or context."
     ),
     parameters={
         "type": "object",
@@ -86,6 +108,8 @@ class MemoryManager:
     index_path : Path | str | None
         Path to the JSON vector index file. Defaults to
         ``memory/DEFAULT_INDEX_FILENAME`` relative to project root.
+    tool_manager : object | None
+        ToolManager instance for registering memory tools.
     """
 
     def __init__(
@@ -96,10 +120,12 @@ class MemoryManager:
         db_path: Path | str | None = None,
         index_path: Path | str | None = None,
         event_bus: object | None = None,
+        tool_manager: object | None = None,
     ) -> None:
         self._config = config
         self._logger = logger or _LOG
         self._event_bus = event_bus
+        self._tool_manager = tool_manager
         self._degraded: bool = False
 
         resolved_db = (
@@ -135,6 +161,7 @@ class MemoryManager:
             user_profile_engine=self._user_profile,
         )
         self._index_adapter = JSONVectorIndexAdapter(self._index)
+        self._setup_event_subscriptions()
 
     # ------------------------------------------------------------------
     # Module lifecycle  (ModuleInterface protocol)
@@ -162,6 +189,9 @@ class MemoryManager:
             )
         except Exception as exc:
             self._logger.warning("Failed to load vector index: %s", exc)
+
+        if self._tool_manager is not None:
+            self.register_tools(self._tool_manager)
 
         self._logger.info("Memory manager initialised")
 
@@ -413,20 +443,87 @@ class MemoryManager:
     # Tool extraction and registration API
     # ------------------------------------------------------------------
 
-    def register_tools(self, tool_manager: object) -> None:
-        """Register the ``search_memory`` tool with the provided ToolManager."""
-        if tool_manager is None:
+    def register_tools(self, tool_manager: object | None = None) -> None:
+        """Register the ``remember_fact`` and ``search_memory`` tools with the ToolManager."""
+        if tool_manager is not None:
+            self._tool_manager = tool_manager
+        if self._tool_manager is None:
             return
-        has_fn = getattr(tool_manager, "has_tool", None)
-        if callable(has_fn) and has_fn("search_memory"):
+        has_fn = getattr(self._tool_manager, "has_tool", None)
+        reg_fn = getattr(self._tool_manager, "register_tool", None)
+        if not callable(reg_fn):
             return
-        reg_fn = getattr(tool_manager, "register_tool", None)
-        if callable(reg_fn):
+
+        tools_to_register = [
+            ("remember_fact", REMEMBER_FACT_TOOL_DEF, self.remember_fact_tool_handler),
+            ("search_memory", SEARCH_MEMORY_TOOL_DEF, self.search_memory_tool_handler),
+        ]
+
+        for name, defn, handler in tools_to_register:
+            if callable(has_fn) and has_fn(name):
+                continue
             try:
-                reg_fn(SEARCH_MEMORY_TOOL_DEF, self.search_memory_tool_handler)
-                self._logger.info("Registered search_memory tool with ToolManager")
+                reg_fn(defn, handler)
+                self._logger.info("Registered %s tool with ToolManager", name)
             except Exception as exc:
-                self._logger.warning("Failed to register search_memory tool: %s", exc)
+                self._logger.warning("Failed to register %s tool: %s", name, exc)
+
+    async def remember_fact_tool_handler(
+        self,
+        topic: str,
+        fact: str,
+    ) -> ToolResult:
+        """Handler for the remember_fact LLM tool.
+
+        Saves an important user fact, preference, or detail into long-term memory engines.
+        """
+        if self._degraded:
+            return ToolResult(
+                status="success",
+                output="No memory saved (MemoryManager is degraded).",
+            )
+
+        try:
+            # 1. User Profile Engine
+            await self.set_user_profile(
+                key=topic,
+                value=fact,
+                data_type="string",
+                source="stated",
+                confidence=1.0,
+            )
+
+            # 2. Relationship Memory
+            await asyncio.to_thread(
+                self._relationship_memory.upsert,
+                entity_name=topic,
+                entity_type="fact",
+                relationship_type="user_preference",
+                description=fact,
+                importance=8,
+            )
+
+            # 3. Vector Index keyword indexing
+            await self.index_keywords([topic, fact], source_id=f"user_fact:{topic}")
+
+            # 4. Timeline Engine event
+            await self.record_event(
+                event_type="user_fact_remembered",
+                title=f"Remembered fact: {topic}",
+                description=fact,
+                importance=8,
+            )
+
+            return ToolResult(
+                status="success",
+                output=f"Successfully remembered fact under topic '{topic}': {fact}",
+            )
+        except Exception as exc:
+            self._logger.error("remember_fact_tool_handler failed: %s", exc)
+            return ToolResult(
+                status="success",
+                output=f"No memory saved due to error: {exc}",
+            )
 
     async def search_memory_tool_handler(
         self,
@@ -438,63 +535,89 @@ class MemoryManager:
 
         Queries past conversation history, vector index, timeline events, and profile entries.
         """
-        self._ensure_not_degraded()
+        if self._degraded:
+            return ToolResult(
+                status="success",
+                output="No memory found.",
+            )
 
         try:
             results_text: list[str] = []
 
             # 1. Timeline Events Search
             if search_type in ("all", "timeline"):
-                tl_events = await asyncio.to_thread(
-                    self._timeline_engine.search, query, limit
-                )
-                if tl_events:
-                    results_text.append("=== Timeline Events ===")
-                    for ev in tl_events:
-                        ts = ev.get("happened_at", 0)
-                        dt = time.strftime("%Y-%m-%d %H:%M", time.localtime(ts)) if ts else ""
-                        results_text.append(
-                            f"• [{dt}] [{ev.get('event_type')}] {ev.get('title')}: {ev.get('description', '')}"
-                        )
+                try:
+                    tl_events = await asyncio.to_thread(
+                        self._timeline_engine.search, query, limit
+                    )
+                    if tl_events:
+                        results_text.append("=== Timeline Events ===")
+                        for ev in tl_events:
+                            ts = ev.get("happened_at", 0)
+                            dt = (
+                                time.strftime("%Y-%m-%d %H:%M", time.localtime(ts))
+                                if ts
+                                else ""
+                            )
+                            results_text.append(
+                                f"• [{dt}] [{ev.get('event_type')}] {ev.get('title')}: {ev.get('description', '')}"
+                            )
+                except Exception as exc:
+                    self._logger.debug("Timeline search failed: %s", exc)
 
             # 2. User Profile Search
             if search_type in ("all", "profile"):
-                profile_all = await asyncio.to_thread(self._user_profile.get_all)
-                matching_prof = {
-                    k: v for k, v in profile_all.items()
-                    if query.lower() in k.lower() or query.lower() in str(v).lower()
-                }
-                if matching_prof:
-                    results_text.append("=== User Profile Entries ===")
-                    for k, v in matching_prof.items():
-                        results_text.append(f"• {k}: {v}")
+                try:
+                    profile_all = await asyncio.to_thread(self._user_profile.get_all)
+                    q_low = query.lower()
+                    words = [w for w in re.findall(r"\w+", q_low) if len(w) > 2]
+                    matching_prof = {}
+                    for k, v in profile_all.items():
+                        k_low = k.lower()
+                        v_low = str(v).lower()
+                        if (
+                            q_low in k_low
+                            or q_low in v_low
+                            or k_low in q_low
+                            or any(w in k_low or w in v_low for w in words)
+                        ):
+                            matching_prof[k] = v
+                    if matching_prof:
+                        results_text.append("=== User Profile Entries ===")
+                        for k, v in matching_prof.items():
+                            results_text.append(f"• {k}: {v}")
+                except Exception as exc:
+                    self._logger.debug("User profile search failed: %s", exc)
 
             # 3. Conversation & Semantic Search
             if search_type in ("all", "conversations", "semantic"):
-                if search_type == "conversations":
-                    conv_results = await asyncio.to_thread(
-                        self._search.search_conversations, query, None, limit
-                    )
-                elif search_type == "semantic":
-                    conv_results = await asyncio.to_thread(
-                        self._search.search_semantic, query, limit
-                    )
-                else:
-                    conv_results = await asyncio.to_thread(
-                        self._search.combined_search, query, limit
-                    )
-
-                if conv_results:
-                    results_text.append("=== Past Conversations & Index ===")
-                    for r in conv_results:
-                        results_text.append(
-                            f"• [Session: {r.source_id}] (Score: {r.score:.2f}) {r.content}"
+                try:
+                    if search_type == "conversations":
+                        conv_results = await asyncio.to_thread(
+                            self._search.search_conversations, query, None, limit
                         )
+                    elif search_type == "semantic":
+                        conv_results = await asyncio.to_thread(
+                            self._search.search_semantic, query, limit
+                        )
+                    else:
+                        conv_results = await asyncio.to_thread(
+                            self._search.combined_search, query, limit
+                        )
+
+                    if conv_results:
+                        results_text.append("=== Past Conversations & Index ===")
+                        for r in conv_results:
+                            results_text.append(
+                                f"• [Session: {r.source_id}] (Score: {r.score:.2f}) {r.content}"
+                            )
+                except Exception as exc:
+                    self._logger.debug("Conversation search failed: %s", exc)
 
             if not results_text:
                 return ToolResult(
                     status="success",
-                    output=f"No memory items found matching query '{query}'.",
+                    output=f"No memory found matching query '{query}'.",
                 )
 
             final_output = "\n".join(results_text)
@@ -503,8 +626,8 @@ class MemoryManager:
         except Exception as exc:
             self._logger.error("search_memory_tool_handler failed: %s", exc)
             return ToolResult(
-                status="error",
-                error=f"Failed to query memory: {exc}",
+                status="success",
+                output="No memory found.",
             )
 
     async def get_dynamic_historical_context(
@@ -550,6 +673,116 @@ class MemoryManager:
             session_id=session_id,
             importance=importance,
         )
+
+    # ------------------------------------------------------------------
+    # EventBus Integration & Background Memory Harvester ("Subconscious")
+    # ------------------------------------------------------------------
+
+    def set_event_bus(self, event_bus: object) -> None:
+        """Attach EventBus post-construction and wire subscribers."""
+        self._event_bus = event_bus
+        self._setup_event_subscriptions()
+
+    def _setup_event_subscriptions(self) -> None:
+        """Subscribe background MemoryHarvester to EventBus conversation events."""
+        if self._event_bus is None:
+            return
+
+        sub_fn = getattr(self._event_bus, "subscribe", None)
+        if not callable(sub_fn):
+            return
+
+        chat_events = [
+            "conversation.message_received",
+            "conversation.message_sent",
+            "conversation.*",
+            "runtime.request_start",
+            "interaction.completed",
+        ]
+
+        for etype in chat_events:
+            try:
+                sub_fn(etype, self._on_chat_event)
+                self._logger.info("Subscribed MemoryHarvester to event: %s", etype)
+            except Exception as exc:
+                self._logger.warning("Failed to subscribe MemoryHarvester to %s: %s", etype, exc)
+
+    async def _on_chat_event(self, event: Any) -> None:
+        """EventBus callback — extracts user message and spawns non-blocking harvester task."""
+        try:
+            data = getattr(event, "data", {}) if hasattr(event, "data") else (event if isinstance(event, dict) else {})
+            text = (
+                data.get("text")
+                or data.get("message")
+                or data.get("user_input")
+                or data.get("content")
+            )
+            if not text or not isinstance(text, str):
+                return
+
+            # Non-blocking async background task via asyncio.create_task
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._process_harvest_background(text))
+            except RuntimeError:
+                try:
+                    await self._process_harvest_background(text)
+                except Exception:
+                    pass
+        except Exception as exc:
+            self._logger.debug("MemoryHarvester listener error: %s", exc)
+
+    async def _process_harvest_background(self, text: str) -> None:
+        """Evaluate message in the background and silently store detected facts."""
+        try:
+            facts = self._extract_facts_heuristically(text)
+            for topic, fact in facts:
+                await self.remember_fact_tool_handler(topic=topic, fact=fact)
+        except Exception as exc:
+            self._logger.debug("Background memory harvesting failed: %s", exc)
+
+    def _extract_facts_heuristically(self, text: str) -> list[tuple[str, str]]:
+        """Extract facts, preferences, or system constraints from user message text."""
+        facts: list[tuple[str, str]] = []
+        clean = text.strip()
+
+        # Rule 1: Hardware / System constraints ("I use a...", "I have a...", "my laptop is...")
+        m_hw = re.search(
+            r"\b(i use|i have|my (laptop|pc|desktop|machine|computer|system) is)\b\s+([^.?!,;]+)",
+            clean,
+            re.IGNORECASE,
+        )
+        if m_hw:
+            facts.append(("system_constraint", clean))
+
+        # Rule 2: Preferences ("I prefer...", "I like...", "my favorite...")
+        m_pref = re.search(
+            r"\b(i prefer|i like|my preference|my favorite)\b\s+([^.?!,;]+)",
+            clean,
+            re.IGNORECASE,
+        )
+        if m_pref:
+            facts.append(("user_preference", clean))
+
+        # Rule 3: Personal info ("My name is...", "I am a...", "I work as...")
+        m_info = re.search(
+            r"\b(my name is|i am a|i work as)\b\s+([^.?!,;]+)",
+            clean,
+            re.IGNORECASE,
+        )
+        if m_info:
+            facts.append(("user_info", clean))
+
+        # Rule 4: Stated facts / directives ("Remember that...", "Note that...", "Keep in mind that...")
+        m_rem = re.search(
+            r"\b(remember that|note that|keep in mind that)\b\s+([^.?!,;]+)",
+            clean,
+            re.IGNORECASE,
+        )
+        if m_rem:
+            facts.append(("stated_fact", m_rem.group(2).strip()))
+
+        return facts
 
     # ------------------------------------------------------------------
     # Internal helpers

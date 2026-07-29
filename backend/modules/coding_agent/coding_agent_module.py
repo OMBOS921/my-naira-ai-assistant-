@@ -950,6 +950,58 @@ class CodingAgentManager:
         except Exception as exc:
             return ToolResult(status="error", error=str(exc))
 
+    async def execute_local_python(
+        self,
+        script_code: str,
+        *,
+        timeout: float | None = None,
+    ) -> ToolResult:
+        """Execute a Python script locally using LocalPythonExecutor.
+
+        Parameters
+        ----------
+        script_code : str
+            The complete Python script code string to execute.
+        timeout : float | None
+            Execution timeout in seconds. Defaults to self._default_timeout.
+
+        Returns
+        -------
+        ToolResult
+            ToolResult containing stdout if successful, or stderr/error on failure.
+        """
+        self._ensure_not_degraded()
+        try:
+            from backend.modules.coding_agent._python_executor import LocalPythonExecutor
+
+            executor = LocalPythonExecutor(
+                file_manager=self._file_manager,
+                safety_layer=self._safety_layer,
+                command_executor=self._command_executor,
+                logger=self._logger,
+            )
+            eff_timeout = timeout if timeout is not None else self._default_timeout
+            res = await executor.execute(script_code, timeout=eff_timeout)
+            if res.success:
+                return ToolResult(
+                    status="success",
+                    output=res.stdout,
+                )
+            else:
+                err_msg = res.stderr or res.error or "Python script execution failed"
+                return ToolResult(
+                    status="error",
+                    output=err_msg,
+                    error=err_msg,
+                )
+        except Exception as exc:
+            err_msg = f"Python execution error: {exc}"
+            return ToolResult(
+                status="error",
+                output=err_msg,
+                error=err_msg,
+            )
+
     # ------------------------------------------------------------------
     # MCP Integration
     # ------------------------------------------------------------------
@@ -1794,6 +1846,26 @@ class CodingAgentManager:
                     self._handle_vscode_run_command_tool,
                 )
 
+                register(
+                    ToolDefinition(
+                        name="execute_local_python",
+                        description="Execute a complete Python script locally and return terminal output (stdout/stderr)",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "script_code": {
+                                    "type": "string",
+                                    "description": "The complete Python script code to execute",
+                                },
+                            },
+                            "required": ["script_code"],
+                        },
+                        category="coding_agent",
+                        timeout_seconds=self._default_timeout,
+                    ),
+                    self._handle_execute_python,
+                )
+
     async def _handle_vscode_open_folder_tool(
         self, folder_path: str, new_window: bool = False
     ) -> ToolResult:
@@ -1820,6 +1892,9 @@ class CodingAgentManager:
         self, command: str, cwd: str | None = None
     ) -> ToolResult:
         return await self.vscode_run_command(command, cwd=cwd)
+
+    async def _handle_execute_python(self, script_code: str) -> ToolResult:
+        return await self.execute_local_python(script_code)
 
     async def _handle_execute_task_tool(self, task_description: str) -> ToolResult:
         return await self.execute_task(task_description)

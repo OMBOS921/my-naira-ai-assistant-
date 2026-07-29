@@ -541,6 +541,7 @@ class VoiceManager:
                     return ToolResult(
                         status="success",
                         output=f"Speech synthesised — {result.duration_ms:.0f}ms, voice: {voice_label}, provider: {provider_name}",
+                        audio_bytes=result.audio.data,
                     )
 
             except Exception as exc:

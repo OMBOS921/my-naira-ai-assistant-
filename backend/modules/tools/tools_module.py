@@ -290,7 +290,50 @@ class ToolManager:
     ) -> ToolResult:
         """Execute a ``ToolCall`` (from an LLM response)."""
         self._ensure_not_degraded()
-        return await self._executor.execute_tool_call(tool_call, context)
+        script_code = (
+            tool_call.arguments.get("script_code")
+            or tool_call.arguments.get("code")
+            or ""
+        ) if isinstance(tool_call.arguments, dict) else ""
+
+        if tool_call.name == "execute_local_python" or script_code:
+            display_text = f"### 🛠️ Executing Tool: `{tool_call.name}`\n```python\n{script_code}\n```"
+        else:
+            args_str = ", ".join(f"{k}={v!r}" for k, v in tool_call.arguments.items()) if isinstance(tool_call.arguments, dict) and tool_call.arguments else ""
+            display_text = f"### 🛠️ Executing Tool: `{tool_call.name}({args_str})`"
+
+        session_id = context.get("session_id", "default") if isinstance(context, dict) else "default"
+
+        await self._emit_event_async("tool_execution_start", {
+            "session_id": session_id,
+            "tool": tool_call.name,
+            "name": tool_call.name,
+            "tool_call_id": tool_call.id,
+            "arguments": tool_call.arguments,
+            "script_code": script_code,
+            "text": display_text,
+        })
+
+        result = await self._executor.execute_tool_call(tool_call, context)
+
+        content = result.output or result.error or ""
+        stdout = result.output or ""
+        stderr = result.error or ""
+        output_display = f"### 📤 Execution Output:\n```text\n{content}\n```"
+
+        await self._emit_event_async("tool_execution_result", {
+            "session_id": session_id,
+            "tool": tool_call.name,
+            "name": tool_call.name,
+            "tool_call_id": tool_call.id,
+            "status": result.status,
+            "output": content,
+            "stdout": stdout,
+            "stderr": stderr,
+            "text": output_display,
+        })
+
+        return result
 
     async def execute_multi(
         self,

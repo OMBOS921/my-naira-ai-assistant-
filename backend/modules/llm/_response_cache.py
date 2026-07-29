@@ -108,7 +108,7 @@ class LLMResponseCache:
         response: LLMResponse,
     ) -> None:
         """Store an LLM response in the cache."""
-        if not response or not response.text or response.provider == "cache":
+        if not response or not response.text or response.provider == "cache" or response.tool_calls:
             return
 
         key = self._make_key(prompt, context, tools)

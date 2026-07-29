@@ -22,6 +22,7 @@ from backend.exceptions import (
     ProviderTimeoutError,
 )
 from backend.modules.llm._response_cache import LLMResponseCache
+from backend.modules.llm.llm_config_store import LLMProviderConfig
 from backend.modules.llm.generation_config import GenerationConfig
 from backend.modules.llm.orchestrator import LLMProviderOrchestrator
 from backend.modules.llm.ports.llm_port import LLMPort
@@ -50,10 +51,9 @@ class LLMManager:
     safety_config : SafetyConfig | None
         Default safety settings.  Falls back to ``SafetyConfig()``.
     active_provider : str
-        Primary provider name (default ``"gemini"``).
+        Primary provider name.
     fallback_chain : tuple[str, ...]
-        Ordered provider names to try on failure
-        (default ``("gemini", "ollama", "deepseek")``).
+        Ordered provider names to try on failure.
     """
 
     def __init__(
@@ -64,8 +64,8 @@ class LLMManager:
         providers: dict[str, LLMPort] | None = None,
         generation_config: GenerationConfig | None = None,
         safety_config: SafetyConfig | None = None,
-        active_provider: str = "gemini",
-        fallback_chain: tuple[str, ...] = ("gemini",),
+        active_provider: str = "",
+        fallback_chain: tuple[str, ...] = (),
         event_bus: object | None = None,
         interaction_manager: object | None = None,
     ) -> None:
@@ -88,6 +88,22 @@ class LLMManager:
             logger=self._logger,
             interaction_manager=interaction_manager,
         )
+
+    async def configure_from_vault(self, vault_config: LLMProviderConfig) -> None:
+        """Activate the adapter selected and verified through the local vault."""
+        if vault_config.provider == "gemini":
+            from backend.modules.llm.providers.gemini_provider import GeminiProvider
+            provider: LLMPort = GeminiProvider(api_key=vault_config.api_key, model=vault_config.model)
+        else:
+            from backend.modules.llm.providers.deepseek_provider import DeepSeekProvider
+            provider = DeepSeekProvider(api_key=vault_config.api_key, model=vault_config.model)
+        self._providers = {vault_config.provider: provider}
+        self._active_provider_name = vault_config.provider
+        self._fallback_chain = (vault_config.provider,)
+        self._orchestrator = LLMProviderOrchestrator(
+            providers=dict(self._providers), fallback_chain=self._fallback_chain, logger=self._logger
+        )
+        self._degraded = False
 
     @property
     def response_cache(self) -> LLMResponseCache:
@@ -296,7 +312,8 @@ class LLMManager:
             self._provider_success_count[response.provider] = (
                 self._provider_success_count.get(response.provider, 0) + 1
             )
-            self._cache.put(prompt, context, tools, response)
+            if not response.tool_calls:
+                self._cache.put(prompt, context, tools, response)
         return response
 
     async def generate_stream(

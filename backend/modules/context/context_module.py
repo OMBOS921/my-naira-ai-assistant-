@@ -8,6 +8,8 @@ ContextManager — the single public class for the context module.
 
 from __future__ import annotations
 
+import asyncio
+import concurrent.futures
 import logging
 
 from backend.exceptions import ModuleDegradedError
@@ -107,26 +109,8 @@ class ContextManager:
         2. Appends the current user message.
         3. Applies the sliding window if the token budget is exceeded.
         4. Queries memory engines for dynamic profile & timeline event context.
-        5. Returns an immutable ``Context`` dataclass.
-
-        Parameters
-        ----------
-        session_id : str
-            Active session identifier.
-        text : str
-            The current user message.
-        system_prompt : str
-            System prompt for this session.
-
-        Returns
-        -------
-        Context
-            Immutable context payload ready for prompt compilation.
-
-        Raises
-        ------
-        ModuleDegradedError
-            If the manager is in a degraded state.
+        5. Queries MemoryManager asynchronously for relevant memories (500ms timeout).
+        6. Returns an immutable ``Context`` dataclass.
         """
         self._ensure_not_degraded()
 
@@ -138,13 +122,88 @@ class ContextManager:
         conv.apply_sliding_window()
 
         dynamic_context = self._get_dynamic_memory_context(session_id)
+        relevant_memories = self._query_relevant_memories_sync(text, timeout=0.5)
 
         return ContextBuilder.build(
             system_prompt=system_prompt,
             messages=conv.messages,
             max_tokens=self._max_tokens,
             dynamic_context=dynamic_context,
+            relevant_memories=relevant_memories,
         )
+
+    async def build_context_async(
+        self,
+        session_id: str,
+        text: str,
+        system_prompt: str = "",
+        memory_timeout: float = 0.5,
+    ) -> Context:
+        """Build a ``Context`` asynchronously with auto-context memory retrieval (500ms timeout)."""
+        self._ensure_not_degraded()
+
+        conv = self._get_or_create_session(session_id)
+
+        user_msg = Message(role="user", content=text)
+        conv.add_message(user_msg)
+
+        conv.apply_sliding_window()
+
+        dynamic_context = self._get_dynamic_memory_context(session_id)
+        relevant_memories = await self._query_relevant_memories_async(text, timeout=memory_timeout)
+
+        return ContextBuilder.build(
+            system_prompt=system_prompt,
+            messages=conv.messages,
+            max_tokens=self._max_tokens,
+            dynamic_context=dynamic_context,
+            relevant_memories=relevant_memories,
+        )
+
+    async def _query_relevant_memories_async(
+        self, text: str, timeout: float = 0.5
+    ) -> str:
+        """Query MemoryManager for relevant memories matching text within strict timeout."""
+        if self._memory_manager is None or not text or not text.strip():
+            return ""
+
+        handler = getattr(self._memory_manager, "search_memory_tool_handler", None)
+        if not callable(handler):
+            return ""
+
+        try:
+            res = await asyncio.wait_for(
+                handler(query=text, search_type="all", limit=3),
+                timeout=timeout,
+            )
+            if getattr(res, "status", None) == "success" and getattr(res, "output", None):
+                out_str = str(res.output).strip()
+                if out_str and "No memory found" not in out_str:
+                    return out_str
+        except Exception as exc:
+            self._logger.debug("Relevant memory retrieval timeout or failure: %s", exc)
+
+        return ""
+
+    def _query_relevant_memories_sync(self, text: str, timeout: float = 0.5) -> str:
+        """Synchronous wrapper for relevant memory query with strict timeout."""
+        if self._memory_manager is None or not text or not text.strip():
+            return ""
+        try:
+            try:
+                loop = asyncio.get_running_loop()
+                if loop.is_running():
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                        fut = pool.submit(
+                            asyncio.run, self._query_relevant_memories_async(text, timeout=timeout)
+                        )
+                        return fut.result(timeout=timeout + 0.1)
+            except RuntimeError:
+                return asyncio.run(self._query_relevant_memories_async(text, timeout=timeout))
+        except Exception as exc:
+            self._logger.debug("Sync relevant memory query failed: %s", exc)
+
+        return ""
 
     def _get_dynamic_memory_context(self, session_id: str) -> str:
         """Fetch user profile and top 3 recent session milestone events."""

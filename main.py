@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Naira-OS Bootstrap — Main Entry Point.
-Fixed: Environment Variable strict checking & Master FCR Integration.
+Fixed: Environment Variable strict checking, Master FCR Integration & n8n Mega Suite Testing Support.
 """
 
 from __future__ import annotations
@@ -22,18 +22,16 @@ from typing import Any, Final
 ROOT_DIR: Final[Path] = Path(__file__).resolve().parent
 ENV_PATH: Final[Path] = ROOT_DIR / ".env"
 
-# =====================================================================
-# 1. SMART ENV LOADER (The Fix for Boot Crash)
-# =====================================================================
 try:
     from dotenv import load_dotenv
     load_dotenv(dotenv_path=ENV_PATH, override=True)
     
-    # Map Gemini keys to satisfy Naira's strict EnvironmentSnapshot
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("VITE_GEMINI_API_KEY")
     if gemini_key and not os.getenv("NAIRA_API_KEY"):
         os.environ["NAIRA_API_KEY"] = gemini_key
         os.environ["API_KEY"] = gemini_key
+        
+   
 except ImportError:
     pass
 
@@ -54,6 +52,7 @@ from backend.eventbus import EventBus
 from backend.orchestrator import FSMState, Orchestrator
 from backend.runtime.proactive_watchdog import ProactiveWatchdog
 from backend.types import UserRequest, UserResponse
+from backend.api.settings import router as settings_router
 
 _SHUTDOWN_GRACE_S: Final[float] = 3.0
 
@@ -64,18 +63,14 @@ _container: DIContainer | None = None
 _active_websockets: set[WebSocket] = set()
 _watchdog: ProactiveWatchdog | None = None
 
-# =====================================================================
-# 2. CORE REQUEST ROUTER (Clean Architecture Entry Point)
-# =====================================================================
-async def process_user_input(user_text: str, session_id: str = "default") -> str:
-    """Route input through the central Orchestrator mediator and Runtime pipeline."""
+async def process_user_input(user_text: str, session_id: str = "default", modality: str = "text") -> str:
     if _orchestrator is None:
         _LOG.error("[MAIN] Orchestrator is not initialized — request rejected.")
         return "[System Error]: Orchestrator is not initialized."
 
     request = UserRequest(
         id=uuid.uuid4(),
-        source="websocket",
+        source="websocket" if modality == "text" else "voice",
         text=user_text,
         session_id=session_id,
         timestamp=time.time(),
@@ -83,20 +78,15 @@ async def process_user_input(user_text: str, session_id: str = "default") -> str
     response = await _orchestrator.process_user_request(request)
     return response.text
 
-# =====================================================================
-# 3. FASTAPI SERVER SETUP
-# =====================================================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Boot all core modules on startup; shut them down on exit."""
     global _modules, _orchestrator, _container, _watchdog, _LOG
 
     try:
         env = EnvironmentSnapshot.load()
     except SystemExit:
-        _LOG.critical("[BOOT] Missing required environment variables — aborting boot.")
-        yield
-        return
+        _LOG.warning("[BOOT] No environment key found; using local vault setup instead.")
+        env = EnvironmentSnapshot()
 
     config = AppConfig.load()
     _LOG = setup_logging(ROOT_DIR / config.log.directory, config.log.level)
@@ -109,6 +99,36 @@ async def lifespan(app: FastAPI):
     _container.register("config", config)
     _container.register("event_bus", event_bus)
 
+    async def _on_tool_ws_event(event: Any) -> None:
+        event_type = getattr(event, "type", "")
+        data = getattr(event, "data", {}) or {}
+        if event_type in (
+            "tool_execution_start",
+            "tool_execution_result",
+            "runtime.tool_execution_start",
+            "runtime.tool_execution_result",
+        ):
+            msg_type = "tool_execution_start" if "start" in event_type else "tool_execution_result"
+            payload = {
+                "sender": "naira",
+                "type": msg_type,
+                "tool": data.get("tool") or data.get("name", "tool"),
+                "tool_call_id": data.get("tool_call_id"),
+                "script_code": data.get("script_code"),
+                "output": data.get("output"),
+                "stdout": data.get("stdout"),
+                "stderr": data.get("stderr"),
+                "text": data.get("text", ""),
+            }
+            for ws in list(_active_websockets):
+                try:
+                    await ws.send_json(payload)
+                except Exception as ws_exc:
+                    _LOG.debug("Error sending tool WS event: %s", ws_exc)
+
+    event_bus.subscribe("tool_execution_start", _on_tool_ws_event)
+    event_bus.subscribe("tool_execution_result", _on_tool_ws_event)
+
     _orchestrator = Orchestrator(event_bus=event_bus, config=config, env=env)
     _container.register("orchestrator", _orchestrator)
     
@@ -120,6 +140,7 @@ async def lifespan(app: FastAPI):
             root_dir=ROOT_DIR,
             event_bus=event_bus,
         )
+        app.state.llm_manager = _modules.get("llm")
     except RuntimeError:
         _LOG.critical("[BOOT] Boot aborted — see errors above")
         _modules = {}
@@ -133,7 +154,7 @@ async def lifespan(app: FastAPI):
     _watchdog = ProactiveWatchdog(active_websockets=_active_websockets, check_interval=60.0, logger=_LOG)
     await _watchdog.start()
 
-    yield  # server runs here
+    yield
 
     _LOG.info("[BOOT] Shutdown sequence started ...")
     if _watchdog:
@@ -145,6 +166,7 @@ async def lifespan(app: FastAPI):
     logging.shutdown()
 
 app = FastAPI(lifespan=lifespan)
+app.include_router(settings_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -156,7 +178,6 @@ app.add_middleware(
 
 @app.websocket("/ws/naira")
 async def websocket_naira_endpoint(websocket: WebSocket) -> None:
-    """Real-time bi-directional WebSocket endpoint for Naira chat & control."""
     await websocket.accept()
     _active_websockets.add(websocket)
     _LOG.info("[WS-NAIRA] Client connected successfully")
@@ -179,6 +200,20 @@ async def websocket_naira_endpoint(websocket: WebSocket) -> None:
                         msg_type = payload.get("type", "")
                         if msg_type == "system_init":
                             name = payload.get("name", "User")
+                            session_id = payload.get("session_id", payload.get("sessionId", "default"))
+
+                            session_mgr = _modules.get("session")
+                            if session_mgr and hasattr(session_mgr, "get_or_create_session"):
+                                await session_mgr.get_or_create_session(session_id)
+
+                            conv_mgr = _modules.get("conversation")
+                            if conv_mgr and hasattr(conv_mgr, "get_session"):
+                                conv_mgr.get_session(session_id)
+
+                            interaction_mgr = _modules.get("interaction")
+                            if interaction_mgr and hasattr(interaction_mgr, "sync_session_state"):
+                                interaction_mgr.sync_session_state(session_id=session_id, user_name=name)
+
                             await websocket.send_json({
                                 "sender": "naira",
                                 "text": f"Identity synced to Relation Engine: Welcome, {name}."
@@ -204,14 +239,59 @@ async def websocket_naira_endpoint(websocket: WebSocket) -> None:
                 audio_interrupt_event.set()
                 _LOG.info("[WS-NAIRA] Received command: %s", user_text)
                 response_text = await process_user_input(user_text)
-                await websocket.send_json({
+
+                audio_b64 = None
+                voice_mgr = _modules.get("voice")
+                if voice_mgr and response_text:
+                    try:
+                        synth_res = await voice_mgr.synthesize(response_text)
+                        if synth_res and getattr(synth_res, "audio_bytes", None):
+                            audio_b64 = base64.b64encode(synth_res.audio_bytes).decode("utf-8")
+                            _LOG.info("[WS-NAIRA] TTS synthesized %d audio bytes via VoiceManager", len(synth_res.audio_bytes))
+                        else:
+                            active_name = getattr(voice_mgr, "active_tts_provider_name", "rvc") or "rvc"
+                            tts_providers = getattr(voice_mgr, "tts_providers", {})
+                            active_tts = tts_providers.get(active_name) or tts_providers.get("rvc")
+                            if active_tts and hasattr(active_tts, "synthesize"):
+                                raw_res = await active_tts.synthesize(response_text)
+                                if raw_res and hasattr(raw_res, "audio") and raw_res.audio.data:
+                                    audio_b64 = base64.b64encode(raw_res.audio.data).decode("utf-8")
+                                    _LOG.info("[WS-NAIRA] TTS synthesized %d audio bytes via active provider %s", len(raw_res.audio.data), active_name)
+                    except Exception as tts_exc:
+                        _LOG.error("[WS-NAIRA] TTS synthesis failed: %s", tts_exc)
+
+                payload: dict[str, Any] = {
                     "sender": "naira",
-                    "text": response_text
-                })
+                    "text": response_text,
+                }
+                if audio_b64:
+                    payload["audio"] = audio_b64
+
+                await websocket.send_json(payload)
     finally:
         _active_websockets.discard(websocket)
 
-# Serve Frontend
+@app.post("/api/chat")
+async def chat_endpoint(payload: dict[str, Any]):
+    user_text = payload.get("text") or payload.get("content") or payload.get("message", "")
+    session_id = payload.get("session_id", "n8n_test_session")
+    modality = payload.get("modality", "text") 
+    expected_route = payload.get("expected_route", "llm")
+
+    if not user_text:
+        return {"status": "error", "message": "No query text provided."}
+    
+    response_text = await process_user_input(user_text, session_id=session_id, modality=modality)
+    
+    return {
+        "status": "success",
+        "sender": "naira",
+        "session_id": session_id,
+        "response": response_text,
+        "modality_received": modality,
+        "route_checked": expected_route
+    }
+
 frontend_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend")
 assets_dir = os.path.join(frontend_dir, "assets")
 if os.path.exists(assets_dir):

@@ -1,17 +1,8 @@
-"""LLM providers — production provider implementations.
-
-Providers are lazy-loaded and gracefully handle missing dependencies.
-"""
+"""LLM providers package — concrete provider implementations."""
 
 from __future__ import annotations
 
-__all__ = [
-    "DeepSeekProvider",
-]
+from backend.modules.llm.providers.deepseek_provider import DeepSeekProvider
+from backend.modules.llm.providers.gemini_provider import GeminiProvider
 
-# Re-export for backward compatibility
-try:
-    from backend.modules.llm.providers.deepseek_provider import DeepSeekProvider
-except ImportError:
-    pass
-
+__all__ = ["DeepSeekProvider", "GeminiProvider"]

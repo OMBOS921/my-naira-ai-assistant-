@@ -129,9 +129,13 @@ TEST_CASES_TRUE = [
 
     # Filesystem Intents
     ("create folder demo_folder", CommandIntent.CREATE_FOLDER, "demo_folder"),
+    ("desktop pe folder banao projectx", CommandIntent.CREATE_FOLDER, "projectx"),
+    ("folder banao testfolder", CommandIntent.CREATE_FOLDER, "testfolder"),
     ("delete folder demo_folder", CommandIntent.DELETE_FOLDER, "demo_folder"),
     ("rename folder demo_folder to new_folder", CommandIntent.RENAME_FOLDER, "demo_folder -> new_folder"),
     ("create file test.txt", CommandIntent.CREATE_FILE, "test.txt"),
+    ("desktop pe file banao notes.txt", CommandIntent.CREATE_FILE, "notes.txt"),
+    ("file banao index.html", CommandIntent.CREATE_FILE, "index.html"),
     ("delete file test.txt", CommandIntent.DELETE_FILE, "test.txt"),
     ("open file test.txt", CommandIntent.OPEN_FILE, "test.txt"),
     ("rename file test.txt to sample.txt", CommandIntent.RENAME_FILE, "test.txt -> sample.txt"),
@@ -200,3 +204,28 @@ async def test_high_performance_benchmark():
 
     logger.info("Processed %d routing requests in %.4f seconds (%.2f ops/sec)", total_ops, total_time_sec, ops_per_sec)
     assert total_time_sec < 2.0, f"Routing 500+ commands took too long: {total_time_sec:.4f}s"
+
+
+@pytest.mark.asyncio
+async def test_resolve_fast_path_and_execution():
+    from backend.runtime.fast_command_router import _resolve_fast_path
+    from pathlib import Path
+
+    user_desktop = Path.home() / "Desktop"
+
+    # Test path resolution for desktop folder creation
+    p1 = _resolve_fast_path("projectx", "desktop pe folder banao projectx")
+    assert p1 == user_desktop / "projectx"
+
+    # Test folder creation & cleanup
+    router = FastCommandRouter()
+    res = await router.execute_fast_command("desktop pe folder banao test_naira_unit_folder")
+    assert "SUCCESS" in res
+    created_folder = user_desktop / "test_naira_unit_folder"
+    assert created_folder.exists() and created_folder.is_dir()
+
+    # Clean up created test folder
+    res_del = await router.execute_fast_command("delete folder test_naira_unit_folder")
+    assert "SUCCESS" in res_del
+    assert not created_folder.exists()
+

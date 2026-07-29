@@ -1015,3 +1015,13 @@ class InteractionManager:
     def get_history(self) -> List[InteractionEvent]:
         """Return full history of human interaction events."""
         return list(self._history)
+
+    def sync_session_state(self, session_id: str, user_name: str = "User") -> Dict[str, Any]:
+        """Synchronize and initialize session state across backend interaction layer."""
+        self._logger.info("[Interaction] Session synced — session_id=%s, user_name=%s", session_id, user_name)
+        return {
+            "session_id": session_id,
+            "user_name": user_name,
+            "status": "initialized",
+            "personality_mode": self.personality_mode.value,
+        }

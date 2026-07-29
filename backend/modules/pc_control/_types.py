@@ -208,6 +208,25 @@ class ApplicationLaunchResult:
     success: bool = True
 
 
+@dataclass
+class FileOpResult:
+    """Result of a file or directory filesystem operation.
+
+    Parameters
+    ----------
+    success : bool
+        Whether the operation succeeded.
+    path : str
+        Target file or directory path.
+    error : str | None
+        Error message if operation failed.
+    """
+
+    success: bool
+    path: str
+    error: str | None = None
+
+
 type PCControlAction = Literal[
     "mouse_move",
     "mouse_click",

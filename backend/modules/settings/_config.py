@@ -144,11 +144,11 @@ class VoiceConfig:
 
     # Provider architecture
     active_stt_provider: str = "faster-whisper"
-    active_tts_provider: str = "edge-tts"
+    active_tts_provider: str = "rvc"
     active_wake_word_provider: str = "porcupine"
 
     stt_fallback_chain: tuple[str, ...] = ("faster-whisper", "whisper")
-    tts_fallback_chain: tuple[str, ...] = ("edge-tts", "piper", "coqui", "elevenlabs")
+    tts_fallback_chain: tuple[str, ...] = ("rvc", "edge-tts", "piper", "coqui", "elevenlabs")
 
     # Audio configuration
     sample_rate: int = 16000
@@ -170,6 +170,10 @@ class VoiceConfig:
     coqui_model: str = "tts_models/en/ljspeech/tacotron2-DDC"
     porcupine_keywords: tuple[str, ...] = ("naira",)
     porcupine_sensitivity: float = 0.5
+    rvc_model_path: str = "backend/modules/voice/rvc_model/naira.pth"
+    rvc_index_path: str = "backend/modules/voice/rvc_model/naira.index"
+    rvc_pitch_shift: int = 0
+    rvc_f0_method: str = "rmvpe"
 
 
 @dataclass(frozen=True)

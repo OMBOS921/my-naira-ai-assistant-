@@ -130,6 +130,24 @@ class ToolRouter:
                 for tc in tool_calls
             ]
 
+        for tc in tool_calls:
+            script_code = tc.arguments.get("script_code") or tc.arguments.get("code") or "" if isinstance(tc.arguments, dict) else ""
+            if tc.name == "execute_local_python" or script_code:
+                display_text = f"### 🛠️ Executing Tool: `{tc.name}`\n```python\n{script_code}\n```"
+            else:
+                args_str = ", ".join(f"{k}={v!r}" for k, v in tc.arguments.items()) if isinstance(tc.arguments, dict) and tc.arguments else ""
+                display_text = f"### 🛠️ Executing Tool: `{tc.name}({args_str})`"
+
+            await self._emit_event("tool_execution_start", {
+                "session_id": session_id,
+                "tool": tc.name,
+                "name": tc.name,
+                "tool_call_id": tc.id,
+                "arguments": tc.arguments,
+                "script_code": script_code,
+                "text": display_text,
+            })
+
         await self._emit_event("runtime.tool_execution_start", {
             "session_id": session_id,
             "tool_calls": [{"id": tc.id, "name": tc.name} for tc in tool_calls],
@@ -158,6 +176,22 @@ class ToolRouter:
         messages: list[Message] = []
         for tc, result in zip(tool_calls, results, strict=True):
             content = result.output or result.error or ""
+            stdout = result.output or ""
+            stderr = result.error or ""
+            display_text = f"### 📤 Execution Output:\n```text\n{content}\n```"
+
+            await self._emit_event("tool_execution_result", {
+                "session_id": session_id,
+                "tool": tc.name,
+                "name": tc.name,
+                "tool_call_id": tc.id,
+                "status": result.status,
+                "output": content,
+                "stdout": stdout,
+                "stderr": stderr,
+                "text": display_text,
+            })
+
             messages.append(
                 Message(
                     role="tool",

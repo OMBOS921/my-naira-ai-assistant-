@@ -12,8 +12,6 @@ Public API
 - ``ModelCapabilities`` — Capabilities definition per model.
 - ``ProviderHealthMetrics``, ``ProviderHealthTracker`` — Health and latency metrics.
 - ``ProviderErrorCategory`` — Classified error categories.
-- ``GeminiProvider`` — Gemini provider implementation.
-- ``DeepSeekProvider`` — DeepSeek provider implementation.
 """
 
 from __future__ import annotations
@@ -30,8 +28,6 @@ from backend.modules.llm.llm_module import LLMManager
 from backend.modules.llm.orchestrator import LLMProviderOrchestrator
 from backend.modules.llm.ports.llm_port import LLMPort
 from backend.modules.llm.provider_base import ProviderBase, RetryPolicy
-from backend.modules.llm.providers.deepseek_provider import DeepSeekProvider
-from backend.modules.llm.providers.gemini_provider import GeminiProvider
 from backend.modules.llm.safety import SafetyConfig
 from backend.modules.llm.selector import ProviderSelector
 
@@ -50,6 +46,4 @@ __all__ = [
     "RetryPolicy",
     "GenerationConfig",
     "SafetyConfig",
-    "DeepSeekProvider",
-    "GeminiProvider",
 ]

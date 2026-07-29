@@ -58,7 +58,7 @@ class LLMProviderOrchestrator:
         self,
         *,
         providers: dict[str, LLMPort] | None = None,
-        fallback_chain: tuple[str, ...] = ("gemini", "deepseek"),
+        fallback_chain: tuple[str, ...] = (),
         logger: logging.Logger | None = None,
         interaction_manager: Any | None = None,
     ) -> None:
@@ -201,21 +201,13 @@ class LLMProviderOrchestrator:
 
             except ProviderInvalidRequestError as exc:
                 # Rule 9: NEVER retry invalid requests repeatedly! Fail immediately.
-                self._logger.debug(
-                    "Invalid request error on provider '%s': %s", provider_name, exc, exc_info=True
-                )
+                self._logger.error(f"LLM Generation CRASH: {exc}", exc_info=True)
                 raise exc
 
             except Exception as exc:
                 cat, _ = classify_provider_error(exc)
                 errors_summary[provider_name] = f"{cat.value}: {exc}"
-                self._logger.debug(
-                    "Provider '%s' failed during orchestrator loop (%s): %s",
-                    provider_name,
-                    cat.value,
-                    exc,
-                    exc_info=True,
-                )
+                self._logger.error(f"LLM Generation CRASH: {exc}", exc_info=True)
                 continue
 
         # If all providers fail:
@@ -265,11 +257,12 @@ class LLMProviderOrchestrator:
                 return
             except ProviderInvalidRequestError as exc:
                 tracker.record_failure(str(exc), "INVALID_REQUEST")
+                self._logger.error(f"LLM Generation CRASH: {exc}", exc_info=True)
                 raise exc
             except Exception as exc:
                 cat, _ = classify_provider_error(exc)
                 tracker.record_failure(str(exc), cat.value)
-                self._logger.debug("Streaming provider '%s' failed: %s", provider_name, exc, exc_info=True)
+                self._logger.error(f"LLM Generation CRASH: {exc}", exc_info=True)
                 continue
 
         yield "I'm currently unable to reach AI services. Please try again in a moment."
@@ -356,8 +349,8 @@ class LLMProviderOrchestrator:
         - Logs detailed diagnostics only in debug logs.
         - Returns a friendly response via InteractionManager.
         """
-        # Log detailed diagnostics only in debug/warning logs
-        self._logger.debug("TOTAL PROVIDER OUTAGE DIAGNOSTICS: %s | details=%s", user_reason, diagnostics)
+        # Log detailed diagnostics as error with traceback
+        self._logger.error(f"LLM Generation CRASH: {user_reason} | details={diagnostics}")
 
         friendly_text = "I'm having trouble connecting to AI services right now. Please try again in a moment."
 
@@ -369,7 +362,7 @@ class LLMProviderOrchestrator:
                     p_mode = mode()
                     friendly_text = f"I'm currently offline or unable to reach AI services ({p_mode.value}). Please try again shortly."
             except Exception as exc:
-                self._logger.debug("Failed getting friendly response from InteractionManager: %s", exc)
+                self._logger.error(f"LLM Generation CRASH: {exc}", exc_info=True)
 
         return LLMResponse(
             text=friendly_text,

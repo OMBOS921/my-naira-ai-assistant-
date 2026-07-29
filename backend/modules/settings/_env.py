@@ -8,7 +8,6 @@ Environment variable loading and validation.
 from __future__ import annotations
 
 import os
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
@@ -21,7 +20,7 @@ _REQUIRED_ENV_VARS: Final[set[str]] = {"GEMINI_API_KEY"}
 
 @dataclass(frozen=True)
 class EnvironmentSnapshot:
-    """Validated environment variables.
+    """Environment variables available to the application.
 
     Created during boot Step 1.  Modules receive this via constructor
     injection and must never access ``os.environ`` directly.
@@ -43,7 +42,9 @@ class EnvironmentSnapshot:
     def load(cls, env_file: Path | None = None) -> EnvironmentSnapshot:
         """Load and validate environment variables.
 
-        Reads ``.env`` then overlays OS environment.
+        Reads ``.env`` then overlays OS environment.  An empty snapshot is a
+        supported first-run state: the local API vault supplies the LLM key
+        after the backend starts.
         """
         env: dict[str, str] = {}
 
@@ -60,21 +61,12 @@ class EnvironmentSnapshot:
             if key.startswith("NAIRA_") or key.startswith("GEMINI_"):
                 env[key] = value
 
-        is_explicit_env = env_file is not None and env_file != _ENV_FILE
-        if is_explicit_env and "NAIRA_API_KEY" not in os.environ and "NAIRA_API_KEY" not in env:
-            print("[FATAL] Missing required environment variable: NAIRA_API_KEY", file=sys.stderr)
-            sys.exit(1)
-
         api_key = (
             env.get("NAIRA_API_KEY")
             or env.get("GEMINI_API_KEY")
             or env.get("NAIRA_GEMINI_API_KEY")
             or ""
         )
-
-        if not api_key:
-            print("[FATAL] Missing required environment variable: NAIRA_API_KEY / GEMINI_API_KEY", file=sys.stderr)
-            sys.exit(1)
 
         return cls(
             naira_api_key=api_key,

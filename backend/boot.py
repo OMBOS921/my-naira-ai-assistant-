@@ -450,9 +450,27 @@ async def boot_core_modules(
                     _LOG.warning("[BOOT]   Failed to create Faster-Whisper STT provider: %s", exc)
 
         # Build TTS providers
-        tts_chain = config.voice.tts_fallback_chain
+        tts_chain = list(config.voice.tts_fallback_chain)
+        if "rvc" not in tts_chain:
+            tts_chain.insert(0, "rvc")
+
         for provider_name in tts_chain:
-            if provider_name == "piper":
+            if provider_name == "rvc":
+                try:
+                    from backend.modules.voice.providers.rvc_provider import RVCProvider
+                    voice_tts_providers["rvc"] = RVCProvider(
+                        base_voice="en-IN-NeerjaNeural",
+                        model_path=getattr(config.voice, "rvc_model_path", "backend/modules/voice/rvc_model/naira.pth"),
+                        index_path=getattr(config.voice, "rvc_index_path", "backend/modules/voice/rvc_model/naira.index"),
+                        pitch_shift=getattr(config.voice, "rvc_pitch_shift", 0),
+                        f0_method=getattr(config.voice, "rvc_f0_method", "rmvpe"),
+                        timeout=config.voice.default_timeout,
+                    )
+                    _LOG.info("[BOOT]   RVC TTS provider created")
+                except Exception as exc:
+                    _LOG.warning("[BOOT]   Failed to create RVC TTS provider: %s", exc)
+
+            elif provider_name == "piper":
                 try:
                     from backend.modules.voice.providers.piper_provider import (
                         _HAS_PIPER,
@@ -557,6 +575,8 @@ async def boot_core_modules(
             except Exception as exc:
                 _LOG.warning("[BOOT]   Failed to create Porcupine Wake Word provider: %s", exc)
 
+        active_tts = "rvc" if "rvc" in voice_tts_providers else (config.voice.active_tts_provider if voice_tts_providers else None)
+
         voice_mgr = VoiceManager(
             config=config,
             capability_manager=capability_mgr,
@@ -568,14 +588,12 @@ async def boot_core_modules(
             active_stt_provider_name=(
                 config.voice.active_stt_provider if voice_stt_providers else None
             ),
-            active_tts_provider_name=(
-                config.voice.active_tts_provider if voice_tts_providers else None
-            ),
+            active_tts_provider_name=active_tts,
             active_wake_word_provider_name=(
                 config.voice.active_wake_word_provider if voice_wake_word_providers else None
             ),
             stt_fallback_chain=config.voice.stt_fallback_chain,
-            tts_fallback_chain=config.voice.tts_fallback_chain,
+            tts_fallback_chain=tuple(tts_chain),
             default_timeout=config.voice.default_timeout,
         )
         await voice_mgr.async_init()
@@ -687,12 +705,15 @@ async def boot_core_modules(
         # 7k – LLMManager (Layer 3 — AI Core)
         _LOG.info("[BOOT]   Initialising LLMManager ...")
         llm_providers: dict[str, object] = {}
+        from backend.modules.llm.llm_config_store import LLMConfigStore
+        vault_config = LLMConfigStore(root_dir / "memory" / "user_vault.json").get_active_config()
         env_snap = getattr(settings_mgr, "_env", None)
         if env_snap is None and container.has("env"):
             candidate = container.get("env")
             if hasattr(candidate, "gemini_api_key") or hasattr(candidate, "naira_api_key"):
                 env_snap = candidate
 
+        gemini_key = ""
         if env_snap is not None:
             gemini_key = getattr(env_snap, "gemini_api_key", "") or getattr(env_snap, "naira_api_key", "")
         else:
@@ -700,21 +721,35 @@ async def boot_core_modules(
             load_dotenv()
             gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("NAIRA_API_KEY") or ""
 
-        from backend.modules.llm.providers.gemini_provider import GeminiProvider
+        try:
+            # 1. Try Loading DeepSeek (OpenCodeZen)
+            if vault_config is not None and vault_config.provider == "deepseek":
+                from backend.modules.llm.providers.deepseek_provider import DeepSeekProvider
+                llm_providers["deepseek"] = DeepSeekProvider(api_key=vault_config.api_key, model=vault_config.model, timeout=config.llm.timeout)
+                _LOG.info(f"[BOOT]   DeepSeek/OpenCodeZen LLM provider created (model={vault_config.model})")
 
-        _effective_gemini_key = gemini_key or ""
-        if _effective_gemini_key:
-            llm_providers["gemini"] = GeminiProvider(
-                api_key=_effective_gemini_key,
-                model="gemini-3.5-flash",
-                timeout=config.llm.timeout,
-            )
-            _LOG.info("[BOOT]   Gemini LLM provider created (model=gemini-3.5-flash)")
+            # 2. Try Loading Gemini
+            _effective_gemini_key = vault_config.api_key if (vault_config and vault_config.provider == "gemini") else gemini_key
+            if _effective_gemini_key:
+                from backend.modules.llm.providers.gemini_provider import GeminiProvider
+                _effective_model = vault_config.model if (vault_config and vault_config.provider == "gemini") else "gemini-1.5-flash"
+                llm_providers["gemini"] = GeminiProvider(api_key=_effective_gemini_key, model=_effective_model, timeout=config.llm.timeout)
+                _LOG.info(f"[BOOT]   Gemini LLM provider created (model={_effective_model})")
+            else:
+                _LOG.warning("[BOOT]   Gemini API key not found — skipping Gemini LLM provider")
+
+        except ImportError as e:
+            _LOG.warning(f"[BOOT]   Provider import failed: {e}")
+
+        # 3. Dynamic Active Provider Selection
+        if vault_config and vault_config.provider in llm_providers:
+            active_llm = vault_config.provider
+        elif llm_providers:
+            active_llm = next(iter(llm_providers))
         else:
-            _LOG.warning("[BOOT]   Gemini API key not found — skipping Gemini LLM provider")
+            active_llm = config.llm.active_provider
 
-        active_llm = config.llm.active_provider if (llm_providers and config.llm.active_provider in llm_providers) else (next(iter(llm_providers)) if llm_providers else config.llm.active_provider)
-        fallback_llm = config.llm.fallback_chain if any(p in llm_providers for p in config.llm.fallback_chain) else (tuple(llm_providers.keys()) if llm_providers else config.llm.fallback_chain)
+        fallback_llm = tuple(llm_providers.keys()) if llm_providers else config.llm.fallback_chain
 
         llm_mgr = LLMManager(
             config=config,

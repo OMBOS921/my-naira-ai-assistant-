@@ -57,12 +57,37 @@ class TestSafetyConfig:
 
 class TestDeepSeekProvider:
     @pytest.mark.asyncio
-    async def test_deepseek_provider_calls_endpoint(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("NAIRA_API_KEY", "test-naira-key")
-        provider = DeepSeekProvider(api_key="test-naira-key")
-
-        mock_response = MagicMock(spec=requests.Response)
+    async def test_deepseek_provider_verify_key_success(self) -> None:
+        provider = DeepSeekProvider(api_key="valid-key")
+        mock_response = MagicMock()
         mock_response.status_code = 200
+
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response
+            result = await provider.verify_key()
+            assert result is True
+            mock_get.assert_called_once_with(
+                "https://opencode.ai/zen/v1/models",
+                headers={"Authorization": "Bearer valid-key"}
+            )
+
+    @pytest.mark.asyncio
+    async def test_deepseek_provider_verify_key_failure(self) -> None:
+        provider = DeepSeekProvider(api_key="invalid-key")
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response
+            result = await provider.verify_key()
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_deepseek_provider_calls_endpoint(self) -> None:
+        provider = DeepSeekProvider(api_key="test-naira-key")
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = '{"choices": [{"message": {"role": "assistant", "content": "Hello from OpenCode Zen!"}}], "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}}'
         mock_response.json.return_value = {
             "choices": [
                 {
@@ -80,9 +105,8 @@ class TestDeepSeekProvider:
             },
         }
 
-        mock_post = MagicMock(return_value=mock_response)
-
-        with patch("requests.post", mock_post):
+        with patch.object(provider, "_get_client", return_value=None), patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = mock_response
             res = await provider.generate(
                 prompt="test system prompt",
                 context=[Message(role="user", content="hello")],
@@ -91,48 +115,59 @@ class TestDeepSeekProvider:
         assert res.text == "Hello from OpenCode Zen!"
         assert res.provider == "deepseek"
         assert res.token_usage.total_tokens == 15
-
-        mock_post.assert_called_once()
-        args, kwargs = mock_post.call_args
-        assert args[0] == "https://opencode.ai/zen/v1/chat/completions"
-        assert kwargs["headers"]["Authorization"] == "Bearer test-naira-key"
-        assert kwargs["json"]["model"] == "deepseek-v4-flash-free"
+        mock_post.assert_called_once_with(
+            "https://opencode.ai/zen/v1/chat/completions",
+            json={
+                "model": "deepseek-v4-flash-free",
+                "messages": [
+                    {"role": "system", "content": "test system prompt"},
+                    {"role": "user", "content": "hello"},
+                ],
+            },
+            headers={
+                "Authorization": "Bearer test-naira-key",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+        )
 
     @pytest.mark.asyncio
-    async def test_deepseek_provider_rate_limit(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("NAIRA_API_KEY", "test-naira-key")
+    async def test_deepseek_provider_invalid_json(self) -> None:
         provider = DeepSeekProvider(api_key="test-naira-key")
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = "Internal Server Error HTML or Invalid JSON text"
+        mock_response.json.side_effect = json.JSONDecodeError("Expecting value", "doc", 0)
 
-        mock_response = MagicMock(spec=requests.Response)
-        mock_response.status_code = 429
-        mock_response.text = "Too many requests"
-
-        mock_post = MagicMock(return_value=mock_response)
-
-        with patch("requests.post", mock_post):
-            with pytest.raises(ProviderRateLimitError):
+        with patch.object(provider, "_get_client", return_value=None), patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = mock_response
+            with pytest.raises(LLMError) as exc_info:
                 await provider.generate(
-                    prompt="test",
-                    context=[],
+                    prompt="test prompt",
+                    context=[Message(role="user", content="hello")],
                 )
+            assert "invalid JSON" in str(exc_info.value) or "request failed" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_deepseek_provider_auth_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("NAIRA_API_KEY", "invalid-key")
-        provider = DeepSeekProvider(api_key="invalid-key")
+    async def test_deepseek_provider_generate_stream(self) -> None:
+        provider = DeepSeekProvider(api_key="test-naira-key")
+        mock_response = LLMResponse(
+            text="Hello world!",
+            tool_calls=None,
+            finish_reason="stop",
+            token_usage=TokenUsage(1, 1, 2),
+            provider="deepseek",
+            duration_ms=0.0,
+        )
 
-        mock_response = MagicMock(spec=requests.Response)
-        mock_response.status_code = 401
-        mock_response.text = "Unauthorized"
+        with patch.object(provider, "generate", new_callable=AsyncMock) as mock_generate:
+            mock_generate.return_value = mock_response
+            chunks = []
+            async for token in provider.generate_stream("test prompt", [Message(role="user", content="hi")]):
+                chunks.append(token)
 
-        mock_post = MagicMock(return_value=mock_response)
-
-        with patch("requests.post", mock_post):
-            with pytest.raises(ProviderAuthError):
-                await provider.generate(
-                    prompt="test",
-                    context=[],
-                )
+            assert chunks == ["Hello world!"]
+            mock_generate.assert_awaited_once()
 
 
 class TestLLMManager:

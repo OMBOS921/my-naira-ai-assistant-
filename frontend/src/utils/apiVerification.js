@@ -1,160 +1,56 @@
-/**
- * Naira-OS API Verification & Key Management Utility
- * Handles persistent storage checks across import.meta.env & localStorage,
- * live provider endpoint verifications, and instant auto-save logic.
- */
-
 export const OPENCODE_ZEN_GET_LINK = 'https://opencode.ai/zen';
+export const API_BASE = (import.meta.env.VITE_API_BASE || 'http://localhost:8000').replace(/\/$/, '');
 
-/**
- * Synchronous / Fast retrieval of stored keys from import.meta.env & localStorage
- */
-export function getStoredKey() {
-  const envGemini =
-    import.meta.env.VITE_GEMINI_API_KEY ||
-    import.meta.env.VITE_API_KEY ||
-    '';
-  const envZen =
-    import.meta.env.VITE_OPENCODE_ZEN_API_KEY ||
-    import.meta.env.VITE_OPENCODE_API_KEY ||
-    '';
-
-  const localGemini =
-    localStorage.getItem('naira_gemini_key') ||
-    localStorage.getItem('gemini_api_key') ||
-    '';
-  const localZen =
-    localStorage.getItem('naira_opencode_zen_key') ||
-    localStorage.getItem('naira_opencode_key') ||
-    '';
-
-  const activeGemini = (localGemini || envGemini || '').trim();
-  const activeZen = (localZen || envZen || '').trim();
-
-  const hasKey = Boolean(activeGemini || activeZen);
-
-  return {
-    hasKey,
-    geminiKey: activeGemini,
-    opencodeZenKey: activeZen,
-  };
+async function readErrorMessage(response) {
+  try {
+    const body = await response.json();
+    if (typeof body?.detail === 'string') return body.detail;
+    if (typeof body?.message === 'string') return body.message;
+  } catch (_) {
+    // A proxy or server failure can return HTML instead of JSON.
+  }
+  return `Backend error: ${response.status} ${response.statusText}`;
 }
 
-/**
- * Verify Gemini API Key via Google AI Studio API endpoint
- */
-export async function verifyGeminiKey(key) {
-  if (!key || !key.trim()) return false;
-  const cleanKey = key.trim();
+export async function saveVaultConfiguration({ provider, apiKey }) {
+  const cleanKey = typeof apiKey === 'string' ? apiKey.trim() : '';
+  if (!cleanKey) throw new Error('An API key is required before it can be verified.');
 
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`, {
-      method: 'GET',
-    });
-    if (res.ok) {
-      return true;
-    }
-  } catch (err) {
-    console.warn('Gemini endpoint fetch warning:', err);
-  }
-
-  // Fallback pattern check for offline / CORS restrictions
-  return cleanKey.startsWith('AIzaSy') && cleanKey.length >= 25;
-}
-
-/**
- * Verify OpenCode Zen API Key via OpenCode Zen API endpoint
- */
-export async function verifyOpenCodeZenKey(key) {
-  if (!key || !key.trim()) return false;
-  const cleanKey = key.trim();
-
-  try {
-    const res = await fetch('https://api.opencode.ai/zen/v1/models', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${cleanKey}`,
-      },
-    });
-    if (res.ok) {
-      return true;
-    }
-  } catch (err) {
-    console.warn('OpenCode Zen endpoint fetch warning:', err);
-  }
-
-  // Fallback pattern check for offline / CORS restrictions
-  return cleanKey.startsWith('zen-') || cleanKey.length >= 10;
-}
-
-/**
- * Check if valid keys exist on app startup (localStorage + import.meta.env + backend .env)
- */
-export async function checkStartupKeys() {
-  const stored = getStoredKey();
-
-  if (stored.hasKey) {
-    return {
-      hasValidKey: true,
-      geminiKey: stored.geminiKey,
-      opencodeZenKey: stored.opencodeZenKey,
-    };
-  }
-
-  // Try backend endpoint check for server .env
-  try {
-    const res = await fetch('/api/check_key');
-    if (res.ok) {
-      const data = await res.json();
-      if (data.has_key) {
-        const bgGemini = data.gemini_key || '';
-        const bgZen = data.opencode_zen_key || '';
-        if (bgGemini || bgZen) {
-          if (bgGemini) localStorage.setItem('naira_gemini_key', bgGemini);
-          if (bgZen) localStorage.setItem('naira_opencode_zen_key', bgZen);
-          return {
-            hasValidKey: true,
-            geminiKey: bgGemini,
-            opencodeZenKey: bgZen,
-          };
-        }
-      }
-    }
-  } catch (err) {
-    console.debug('Backend check_key notice:', err);
-  }
-
-  return { hasValidKey: false };
-}
-
-/**
- * Instant Auto-Save of verified keys into localStorage & backend .env file
- */
-export async function autoSaveVerifiedKeys({ geminiKey, opencodeZenKey }) {
-  if (geminiKey && geminiKey.trim()) {
-    const cleanGemini = geminiKey.trim();
-    localStorage.setItem('naira_gemini_key', cleanGemini);
-    localStorage.setItem('gemini_api_key', cleanGemini);
-  }
-  if (opencodeZenKey && opencodeZenKey.trim()) {
-    const cleanZen = opencodeZenKey.trim();
-    localStorage.setItem('naira_opencode_zen_key', cleanZen);
-    localStorage.setItem('naira_opencode_key', cleanZen);
-  }
-
-  // Non-blocking sync to backend server .env file
-  try {
-    await fetch('/api/save_key', {
+    const response = await fetch(`${API_BASE}/api/settings/vault`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        gemini_key: geminiKey ? geminiKey.trim() : '',
-        opencode_zen_key: opencodeZenKey ? opencodeZenKey.trim() : '',
-      }),
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ provider, api_key: cleanKey }),
     });
-  } catch (err) {
-    console.warn('Auto-save to backend .env warning:', err);
+    if (!response.ok) throw new Error(await readErrorMessage(response));
+    return await response.json();
+  } catch (error) {
+    if (error?.name === 'TypeError' || error?.message?.includes('Failed to fetch')) {
+      throw new Error(`Cannot connect to Backend (${API_BASE}). Ensure FastAPI is running.`);
+    }
+    throw error;
   }
 }
+
+export async function getVaultStatus() {
+  try {
+    const response = await fetch(`${API_BASE}/api/settings/status`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!response.ok) return { configured: false };
+    return await response.json();
+  } catch (_) {
+    return { configured: false };
+  }
+}
+
+// Legacy compatibility stubs for any older callers.
+export async function checkStartupKeys() {
+  const status = await getVaultStatus();
+  return { hasValidKey: status.configured, geminiKey: '', opencodeZenKey: '' };
+}
+
+export const getStoredKey = () => ({ hasKey: false, geminiKey: '', opencodeZenKey: '' });
+export const verifyGeminiKey = async () => false;
+export const verifyOpenCodeZenKey = async () => false;
+export const autoSaveVerifiedKeys = async () => {};

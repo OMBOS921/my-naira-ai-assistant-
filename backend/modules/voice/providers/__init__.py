@@ -12,6 +12,7 @@ from backend.modules.voice.providers.coqui_provider import CoquiTTSProvider
 from backend.modules.voice.providers.elevenlabs_provider import ElevenLabsTTSProvider
 from backend.modules.voice.providers.porcupine_provider import PorcupineWakeWordProvider
 from backend.modules.voice.providers.edge_tts_provider import EdgeTTSProvider, _HAS_EDGE_TTS
+from backend.modules.voice.providers.rvc_provider import RVCProvider, RvcTTSProvider, _HAS_RVC_PYTHON
 
 __all__ = [
     "WhisperSTTProvider",
@@ -22,4 +23,7 @@ __all__ = [
     "PorcupineWakeWordProvider",
     "EdgeTTSProvider",
     "_HAS_EDGE_TTS",
+    "RVCProvider",
+    "RvcTTSProvider",
+    "_HAS_RVC_PYTHON",
 ]

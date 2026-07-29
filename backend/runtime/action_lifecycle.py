@@ -203,15 +203,16 @@ class NaturalResponseFormatter:
         return f"'{display}' locally installed nahi hai. Web search open kar diya hai."
 
     @classmethod
-    def format_file_op_success(cls, op_type: str, item_name: str, extra: str | None = None) -> str:
+    def format_file_op_success(cls, op_type: str, item_name: str, extra: str | None = None, location: str | None = None) -> str:
+        loc_prefix = f"{location} pe " if location else ""
         if op_type == "create_folder":
-            return f"Folder '{item_name}' create ho gaya."
+            return f"{loc_prefix}Folder '{item_name}' create ho gaya."
         if op_type == "delete_folder":
             return f"Folder '{item_name}' delete ho gaya."
         if op_type == "rename_folder":
             return f"Folder '{item_name}' rename ho gaya to '{extra}'."
         if op_type == "create_file":
-            return f"File '{item_name}' create ho gayi."
+            return f"{loc_prefix}File '{item_name}' create ho gayi."
         if op_type == "delete_file":
             return f"File '{item_name}' delete ho gayi."
         if op_type == "open_file":
@@ -222,7 +223,11 @@ class NaturalResponseFormatter:
 
     @classmethod
     def format_file_op_failed(cls, op_type: str, item_name: str, reason: str | None = None) -> str:
-        r_str = f" ({reason})" if reason else ""
+        r_str = f": {reason}" if reason else ""
+        if op_type == "create_folder":
+            return f"Folder '{item_name}' nahi ban saka{r_str}."
+        if op_type == "create_file":
+            return f"File '{item_name}' nahi ban saki{r_str}."
         return f"Could not perform {op_type} on '{item_name}'{r_str}."
 
     @classmethod

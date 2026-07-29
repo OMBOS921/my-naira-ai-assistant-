@@ -45,6 +45,10 @@ async def test_fast_command_detection():
     assert router.is_fast_command("Write a python script to scrape news") is False
     assert router.is_fast_command("Explain quantum computing in detail") is False
     assert router.is_fast_command("Analyze this complex financial database query") is False
+    assert router.is_fast_command("Write a script with a NameError, run it via execute_local_python, read the error, fix it, and run again") is False
+    assert router.is_fast_command("script likho and run karo") is False
+    assert router.is_fast_command("run via execute_local_python") is False
+    assert router.is_fast_command("debug this error") is False
 
 
 @pytest.mark.asyncio

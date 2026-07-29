@@ -15,6 +15,7 @@ from backend.modules.pc_control._types import (
     ClipboardContent,
     DisplayInfo,
     FileEntry,
+    FileOpResult,
     Point,
     ProcessInfo,
     ScreenshotResult,
@@ -260,7 +261,7 @@ class PCControlPort(ABC):
         """
 
     @abstractmethod
-    async def filesystem_write_file(self, path: str, content: str, encoding: str = "utf-8") -> None:
+    async def filesystem_write_file(self, path: str, content: str, encoding: str = "utf-8") -> FileOpResult:
         """Write text to a file.
 
         Parameters
@@ -284,7 +285,7 @@ class PCControlPort(ABC):
         """
 
     @abstractmethod
-    async def filesystem_create_directory(self, path: str) -> None:
+    async def filesystem_create_directory(self, path: str) -> FileOpResult:
         """Create a directory (including parents).
 
         Parameters

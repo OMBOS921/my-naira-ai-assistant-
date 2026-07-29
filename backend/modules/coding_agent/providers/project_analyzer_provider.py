@@ -48,6 +48,7 @@ class DefaultProjectAnalyzerProvider(ProjectAnalyzerPort):
                 ext = f.suffix.lower()
                 ext_lang_map = {
                     ".py": "python", ".js": "javascript", ".ts": "typescript",
+                    ".jsx": "javascript", ".tsx": "typescript",
                     ".go": "go", ".rs": "rust", ".java": "java",
                     ".cpp": "cpp", ".c": "c", ".cs": "csharp",
                 }

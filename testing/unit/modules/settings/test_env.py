@@ -45,11 +45,12 @@ class TestEnvironmentSnapshot:
         # os.environ values overlay .env values in the current implementation
         assert snap.naira_api_key == "env-key"
 
-    def test_missing_required_var_exits(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_missing_required_var_returns_empty_snapshot(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("NAIRA_API_KEY", raising=False)
         fake_env = Path("nonexistent/.env")
-        with pytest.raises(SystemExit):
-            EnvironmentSnapshot.load(env_file=fake_env)
+        snap = EnvironmentSnapshot.load(env_file=fake_env)
+        assert snap.naira_api_key == ""
+        assert snap.gemini_api_key == ""
 
     def test_ignores_non_naira_env_vars(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("MY_CUSTOM_VAR", "should-be-ignored")

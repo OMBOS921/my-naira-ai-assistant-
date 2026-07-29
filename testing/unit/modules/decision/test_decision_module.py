@@ -58,6 +58,15 @@ async def test_decision_happy_path() -> None:
     dec = await decision_mgr.decide("what is the capital of France?")
     assert dec.target == RouteTarget.LLM_CONVERSATION
 
+    # Complex prompt containing script execution, error debugging, and execute_local_python tool call
+    complex_prompt = (
+        "Write a script with a NameError, run it via execute_local_python, "
+        "read the error, fix it, and run again"
+    )
+    dec = await decision_mgr.decide(complex_prompt)
+    assert dec.target == RouteTarget.CODING_AGENT
+    assert dec.target != RouteTarget.FAST_COMMAND_ROUTER
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio

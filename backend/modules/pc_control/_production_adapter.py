@@ -41,6 +41,7 @@ from backend.modules.pc_control._types import (
     ClipboardContent,
     DisplayInfo,
     FileEntry,
+    FileOpResult,
     Point,
     ProcessInfo,
     ScreenshotResult,
@@ -172,7 +173,27 @@ def _resolve_path(path: str) -> Path:
         return user_home / "Pictures" / p_str[9:]
 
     expanded = os.path.expandvars(os.path.expanduser(p_str))
-    return Path(expanded)
+    p = Path(expanded)
+    if not p.is_absolute():
+        cwd_candidate = Path.cwd() / p
+        if cwd_candidate.exists():
+            return cwd_candidate
+        return user_home / "Desktop" / p
+    return p
+
+
+_INVALID_PATH_CHARS = set('<>:"|?*')
+
+
+def _validate_path_chars(path: Path) -> str | None:
+    for part in path.parts:
+        clean_part = part.rstrip("\\/")
+        if clean_part.endswith(":") and len(clean_part) == 2 and clean_part[0].isalpha():
+            continue
+        if any(c in _INVALID_PATH_CHARS for c in part):
+            return f"Invalid characters in path component: '{part}'"
+    return None
+
 
 
 # ── Adapter ─────────────────────────────────────────────────────────────
@@ -487,13 +508,33 @@ class ProductionPCControlAdapter(PCControlPort):
         assert isinstance(result, str)
         return result
 
-    async def filesystem_write_file(self, path: str, content: str, encoding: str = "utf-8") -> None:
-        def _write() -> None:
+    async def filesystem_write_file(self, path: str, content: str, encoding: str = "utf-8") -> FileOpResult:
+        def _write() -> FileOpResult:
             p = _resolve_path(path)
-            p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_text(content, encoding=encoding)
+            invalid_char = _validate_path_chars(p)
+            if invalid_char:
+                return FileOpResult(success=False, path=str(p), error=invalid_char)
+            if p.exists():
+                return FileOpResult(success=False, path=str(p), error=f"Path already exists: '{p}'")
+            if not p.parent.exists():
+                try:
+                    p.parent.mkdir(parents=True, exist_ok=True)
+                except Exception as exc:
+                    return FileOpResult(success=False, path=str(p), error=f"Parent directory missing and creation failed: {exc}")
+            try:
+                p.write_text(content, encoding=encoding)
+            except PermissionError as exc:
+                return FileOpResult(success=False, path=str(p), error=f"Permission denied: {exc}")
+            except OSError as exc:
+                return FileOpResult(success=False, path=str(p), error=f"Filesystem error: {exc}")
 
-        await self._run("filesystem_write_file", _write)
+            if p.exists() and p.is_file():
+                return FileOpResult(success=True, path=str(p))
+            return FileOpResult(success=False, path=str(p), error="File creation check failed post-operation")
+
+        result = await self._run("filesystem_write_file", _write)
+        assert isinstance(result, FileOpResult)
+        return result
 
     async def filesystem_delete_file(self, path: str) -> None:
         def _delete() -> None:
@@ -512,12 +553,35 @@ class ProductionPCControlAdapter(PCControlPort):
 
         await self._run("filesystem_delete_file", _delete)
 
-    async def filesystem_create_directory(self, path: str) -> None:
-        def _mkdir() -> None:
+    async def filesystem_create_directory(self, path: str) -> FileOpResult:
+        def _mkdir() -> FileOpResult:
             p = _resolve_path(path)
-            p.mkdir(parents=True, exist_ok=True)
+            invalid_char = _validate_path_chars(p)
+            if invalid_char:
+                return FileOpResult(success=False, path=str(p), error=invalid_char)
+            if p.exists():
+                return FileOpResult(success=False, path=str(p), error=f"Path already exists: '{p}'")
+            if not p.parent.exists():
+                try:
+                    p.parent.mkdir(parents=True, exist_ok=True)
+                except Exception as exc:
+                    return FileOpResult(success=False, path=str(p), error=f"Parent directory missing and creation failed: {exc}")
+            try:
+                os.makedirs(str(p), exist_ok=False)
+            except FileExistsError:
+                return FileOpResult(success=False, path=str(p), error=f"Path already exists: '{p}'")
+            except PermissionError as exc:
+                return FileOpResult(success=False, path=str(p), error=f"Permission denied: {exc}")
+            except OSError as exc:
+                return FileOpResult(success=False, path=str(p), error=f"Filesystem error: {exc}")
 
-        await self._run("filesystem_create_directory", _mkdir)
+            if p.exists() and p.is_dir():
+                return FileOpResult(success=True, path=str(p))
+            return FileOpResult(success=False, path=str(p), error="Directory creation check failed post-operation")
+
+        result = await self._run("filesystem_create_directory", _mkdir)
+        assert isinstance(result, FileOpResult)
+        return result
 
     async def filesystem_delete_directory(self, path: str, recursive: bool = False) -> None:
         def _rmdir() -> None:

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useNairaStore } from '../../../state/useNairaStore';
 import FloatingPanel from '../../../ui3d/FloatingPanel';
 import { useNairaSocket } from '../../../hooks/useNairaSocket';
@@ -130,25 +132,81 @@ export const CommandDock = ({ className = '' }) => {
     }
   }, []);
 
-  // Handle incoming WebSocket messages from backend & speak using Web Speech API
+  // Handle incoming WebSocket messages from backend & play synthesized audio payload
   useEffect(() => {
     if (!lastMessage) return;
 
-    const senderName = lastMessage.sender === 'naira' ? 'Naira' : lastMessage.sender || 'Naira';
-    const messageText = lastMessage.text || lastMessage.content || '';
+    const msgType = lastMessage.type || 'message';
+    const isToolStart = msgType === 'tool_execution_start';
+    const isToolResult = msgType === 'tool_execution_result';
+    const isToolEvent = isToolStart || isToolResult;
+
+    let senderName = lastMessage.sender === 'naira' ? 'Naira' : lastMessage.sender || 'Naira';
+    let messageText = lastMessage.text || lastMessage.content || '';
+    let msgCategory = 'naira';
+
+    if (isToolStart) {
+      senderName = 'Naira (Tool Execution)';
+      msgCategory = 'tool_start';
+      if (!messageText) {
+        const toolName = lastMessage.tool || 'execute_local_python';
+        const scriptCode = lastMessage.script_code || '';
+        messageText = `### 🛠️ Executing Tool: \`${toolName}\`\n\`\`\`python\n${scriptCode}\n\`\`\``;
+      }
+    } else if (isToolResult) {
+      senderName = 'Naira (Tool Result)';
+      msgCategory = 'tool_result';
+      if (!messageText) {
+        const output = lastMessage.output || lastMessage.stdout || lastMessage.stderr || '';
+        messageText = `### 📤 Execution Output:\n\`\`\`text\n${output}\n\`\`\``;
+      }
+    }
 
     if (messageText) {
       setMessages((prev) => [
         ...prev,
-        { sender: senderName, text: messageText, type: 'naira' },
+        { sender: senderName, text: messageText, type: msgCategory },
       ]);
 
-      // Trigger Web Speech audio output and synchronize avatarMode (speaking -> idle)
-      speakNairaText(
-        messageText,
-        () => setAvatarMode('speaking'),
-        () => setAvatarMode('idle')
-      );
+      // Only synthesize speech for standard conversational messages, not code/log tool events
+      if (!isToolEvent) {
+        if (lastMessage.audio) {
+          try {
+            const audio = new Audio(`data:audio/wav;base64,${lastMessage.audio}`);
+            setAvatarMode('speaking');
+            audio.onended = () => setAvatarMode('idle');
+            audio.onerror = () => {
+              speakNairaText(
+                messageText,
+                () => setAvatarMode('speaking'),
+                () => setAvatarMode('idle')
+              );
+            };
+            audio.play().catch((err) => {
+              console.warn('[Audio] Auto-play failed, falling back to WebSpeech:', err);
+              speakNairaText(
+                messageText,
+                () => setAvatarMode('speaking'),
+                () => setAvatarMode('idle')
+              );
+            });
+          } catch (e) {
+            speakNairaText(
+              messageText,
+              () => setAvatarMode('speaking'),
+              () => setAvatarMode('idle')
+            );
+          }
+        } else {
+          speakNairaText(
+            messageText,
+            () => setAvatarMode('speaking'),
+            () => setAvatarMode('idle')
+          );
+        }
+      } else {
+        if (isToolStart) setAvatarMode('thinking');
+      }
     }
   }, [lastMessage, setAvatarMode]);
 
@@ -223,18 +281,56 @@ export const CommandDock = ({ className = '' }) => {
         {messages.map((msg, idx) => (
           <div
             key={idx}
-            className={`p-2 rounded-lg leading-relaxed ${
+            className={`p-2.5 rounded-lg leading-relaxed ${
               msg.sender === 'Operator'
                 ? 'bg-cyan-950/60 border border-cyan-500/30 text-cyan-100 self-end max-w-[85%]'
+                : msg.type === 'tool_start'
+                ? 'bg-slate-900/90 border border-amber-500/40 text-amber-200 self-start max-w-[95%]'
+                : msg.type === 'tool_result'
+                ? 'bg-slate-950/90 border border-emerald-500/40 text-emerald-200 self-start max-w-[95%]'
                 : msg.sender === 'Naira'
-                ? 'bg-slate-900/80 border border-emerald-500/30 text-white self-start max-w-[90%]'
+                ? 'bg-slate-900/80 border border-cyan-500/30 text-white self-start max-w-[92%]'
                 : 'bg-slate-900/40 text-slate-300 text-[11px]'
             }`}
           >
-            <div className="text-[9px] text-cyan-400 font-bold uppercase tracking-wider mb-0.5">
+            <div className="text-[9px] text-cyan-400 font-bold uppercase tracking-wider mb-1">
               {msg.sender}
             </div>
-            <p className="text-[11px] leading-relaxed">{msg.text}</p>
+            <div className="text-[11px] leading-relaxed select-text space-y-1">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  table: ({ node, ...props }) => (
+                    <div className="overflow-x-auto my-2 rounded border border-cyan-500/30">
+                      <table className="min-w-full divide-y divide-cyan-500/30 text-[11px]" {...props} />
+                    </div>
+                  ),
+                  thead: ({ node, ...props }) => <thead className="bg-cyan-950/80 font-bold text-cyan-300" {...props} />,
+                  tbody: ({ node, ...props }) => <tbody className="divide-y divide-cyan-500/20 bg-slate-900/60" {...props} />,
+                  tr: ({ node, ...props }) => <tr className="hover:bg-cyan-500/10 transition-colors" {...props} />,
+                  th: ({ node, ...props }) => <th className="px-2 py-1 text-left text-cyan-300 font-semibold border-b border-cyan-500/30" {...props} />,
+                  td: ({ node, ...props }) => <td className="px-2 py-1 border-b border-cyan-500/10" {...props} />,
+                  code: ({ node, inline, className, children, ...props }) => (
+                    <code className="bg-slate-950 border border-cyan-500/30 rounded px-1 py-0.5 font-mono text-[10px] text-cyan-300 inline-block" {...props}>
+                      {children}
+                    </code>
+                  ),
+                  pre: ({ node, ...props }) => (
+                    <pre className="bg-slate-950 p-2 rounded-lg border border-cyan-500/30 overflow-x-auto my-2 font-mono text-[10px] text-cyan-200" {...props} />
+                  ),
+                  p: ({ node, ...props }) => <p className="leading-relaxed my-0.5" {...props} />,
+                  ul: ({ node, ...props }) => <ul className="list-disc list-inside my-1 space-y-0.5 pl-1" {...props} />,
+                  ol: ({ node, ...props }) => <ol className="list-decimal list-inside my-1 space-y-0.5 pl-1" {...props} />,
+                  h1: ({ node, ...props }) => <h1 className="text-xs font-bold text-cyan-300 my-1" {...props} />,
+                  h2: ({ node, ...props }) => <h2 className="text-xs font-bold text-cyan-300 my-1" {...props} />,
+                  h3: ({ node, ...props }) => <h3 className="text-[11px] font-bold text-cyan-300 my-0.5" {...props} />,
+                  strong: ({ node, ...props }) => <strong className="font-bold text-cyan-300" {...props} />,
+                  em: ({ node, ...props }) => <em className="italic text-cyan-200" {...props} />,
+                }}
+              >
+                {msg.text}
+              </ReactMarkdown>
+            </div>
           </div>
         ))}
         <div ref={chatBottomRef} />

@@ -2034,3 +2034,45 @@ class TestNewExceptions:
         assert issubclass(CICDError, Exception)
         assert issubclass(CostTrackingError, Exception)
         assert issubclass(PackageInstallError, Exception)
+
+
+# =========================================================================
+# Local Python Execution Tool
+# =========================================================================
+
+
+class TestExecuteLocalPythonTool:
+    @pytest.mark.asyncio
+    async def test_tool_registration(self) -> None:
+        mock_tool_mgr = MagicMock()
+        mgr = CodingAgentManager(tool_manager=mock_tool_mgr)
+        await mgr.async_init()
+        registered_names = [
+            call[0][0].name for call in mock_tool_mgr.register_tool.call_args_list
+        ]
+        assert "execute_local_python" in registered_names
+
+    @pytest.mark.asyncio
+    async def test_execute_local_python_success(self) -> None:
+        mgr = CodingAgentManager()
+        await mgr.async_init()
+        result = await mgr.execute_local_python('print("Hello from local python!")')
+        assert result.status == "success"
+        assert "Hello from local python!" in (result.output or "")
+
+    @pytest.mark.asyncio
+    async def test_execute_local_python_error_captured(self) -> None:
+        mgr = CodingAgentManager()
+        await mgr.async_init()
+        result = await mgr.execute_local_python('raise ValueError("Custom python error")')
+        assert result.status == "error"
+        assert "ValueError" in (result.output or "") or "ValueError" in (result.error or "")
+
+    @pytest.mark.asyncio
+    async def test_handle_execute_python_handler(self) -> None:
+        mgr = CodingAgentManager()
+        await mgr.async_init()
+        result = await mgr._handle_execute_python('print(2 + 2)')
+        assert result.status == "success"
+        assert "4" in (result.output or "")
+

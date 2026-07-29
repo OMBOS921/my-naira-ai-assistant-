@@ -12,7 +12,10 @@ import logging
 import time
 from typing import Any
 
-from fastapi import WebSocket
+try:
+    from fastapi import WebSocket
+except ImportError:
+    WebSocket = Any  # type: ignore[assignment,misc]
 
 _LOG = logging.getLogger("naira.proactive_watchdog")
 
@@ -53,12 +56,23 @@ class ProactiveWatchdog:
         self._task: asyncio.Task[None] | None = None
         self._last_alert_time: float = 0.0
         self._alert_cooldown_seconds: float = 300.0  # 5 min cooldown between alerts
+        # Warm up psutil.cpu_percent so initial measurement is not 0.0
+        try:
+            import psutil
+            psutil.cpu_percent(interval=None)
+        except Exception:
+            pass
 
     async def start(self) -> None:
         """Start the background proactive loop."""
         if self._running:
             return
         self._running = True
+        try:
+            import psutil
+            psutil.cpu_percent(interval=None)
+        except Exception:
+            pass
         self._task = asyncio.create_task(self._watchdog_loop())
         self._logger.info("[WATCHDOG] ProactiveWatchdog started (interval=%.0fs).", self._check_interval)
 

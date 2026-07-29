@@ -18,6 +18,7 @@ from backend.modules.pc_control._types import (
     ClipboardContent,
     DisplayInfo,
     FileEntry,
+    FileOpResult,
     Point,
     ProcessInfo,
     ScreenshotResult,
@@ -114,7 +115,7 @@ class LocalPCControlAdapter(PCControlPort):
             context={"operation": "filesystem_read_file", "path": path}
         )
 
-    async def filesystem_write_file(self, path: str, content: str, encoding: str = "utf-8") -> None:
+    async def filesystem_write_file(self, path: str, content: str, encoding: str = "utf-8") -> FileOpResult:
         raise PCControlNotImplementedError(
             context={"operation": "filesystem_write_file", "path": path}
         )
@@ -124,7 +125,7 @@ class LocalPCControlAdapter(PCControlPort):
             context={"operation": "filesystem_delete_file", "path": path}
         )
 
-    async def filesystem_create_directory(self, path: str) -> None:
+    async def filesystem_create_directory(self, path: str) -> FileOpResult:
         raise PCControlNotImplementedError(
             context={"operation": "filesystem_create_directory", "path": path}
         )

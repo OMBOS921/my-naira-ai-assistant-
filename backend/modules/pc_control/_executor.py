@@ -76,7 +76,10 @@ class PCControlExecutor:
             )
             if result is None:
                 return ToolResult(status="success", output=f"Action '{action}' completed")
-            return ToolResult(status="success", output=str(result))
+            if hasattr(result, "success") and not getattr(result, "success"):
+                err_msg = getattr(result, "error", None) or f"Action '{action}' failed"
+                return ToolResult(status="error", error=str(err_msg), data={"result": result})
+            return ToolResult(status="success", output=str(result), data={"result": result})
         except PCControlNotImplementedError:
             return ToolResult(
                 status="error",

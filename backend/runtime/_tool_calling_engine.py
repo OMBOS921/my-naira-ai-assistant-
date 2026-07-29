@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from backend.orchestrator import EventBus
+from backend.runtime._tool_loop import _extract_fallback_tool_calls
 from backend.runtime.tool_router import ToolRouter
 from backend.types import LLMResponse, Message, TokenUsage, ToolCall, ToolDef
 
@@ -494,8 +495,10 @@ class ToolCallingEngine:
                 "token_usage": response.token_usage.total_tokens,
             })
 
+            active_tool_calls = response.tool_calls or _extract_fallback_tool_calls(response.text or "", tool_defs)
+
             # No tool calls — final answer
-            if not response.tool_calls:
+            if not active_tool_calls:
                 return ToolCallingResult(
                     response=response,
                     iterations=iteration,
@@ -503,7 +506,7 @@ class ToolCallingEngine:
                 )
 
             # Recursion protection: detect repeated identical tool call sets
-            current_sig = self._tool_call_signature(response.tool_calls)
+            current_sig = self._tool_call_signature(active_tool_calls)
             if current_sig in previous_tool_signatures:
                 consecutive_identical += 1
             else:
@@ -530,19 +533,19 @@ class ToolCallingEngine:
             await self._emit_event("tool_calling.tool_calls_detected", {
                 "session_id": session_id,
                 "iteration": iteration,
-                "tool_call_count": len(response.tool_calls),
-                "tool_names": [tc.name for tc in response.tool_calls],
+                "tool_call_count": len(active_tool_calls),
+                "tool_names": [tc.name for tc in active_tool_calls],
             })
 
             assistant_msg = Message(
                 role="assistant",
                 content=response.text,
-                tool_calls=response.tool_calls,
+                tool_calls=active_tool_calls,
             )
             messages.append(assistant_msg)
 
             tool_result_messages = await self._execute_batch(
-                tool_calls=response.tool_calls,
+                tool_calls=active_tool_calls,
                 session_id=session_id,
                 stats=stats,
             )

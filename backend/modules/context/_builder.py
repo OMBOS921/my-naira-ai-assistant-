@@ -29,12 +29,25 @@ class ContextBuilder:
         return (system_prompt.strip() + block).strip()
 
     @staticmethod
+    def inject_relevant_memories(system_prompt: str, relevant_memories: str) -> str:
+        """Append retrieved relevant long-term memories block to system_prompt."""
+        if not relevant_memories or not relevant_memories.strip():
+            return system_prompt
+
+        if "<relevant_memories>" in system_prompt:
+            return system_prompt
+
+        block = f"\n\n<relevant_memories>\n{relevant_memories.strip()}\n</relevant_memories>\n"
+        return (system_prompt.strip() + block).strip()
+
+    @staticmethod
     def build(
         *,
         system_prompt: str,
         messages: list[Message],
         max_tokens: int = 4096,
         dynamic_context: str = "",
+        relevant_memories: str = "",
     ) -> Context:
         """Assemble a ``Context`` from the given parts.
 
@@ -48,14 +61,19 @@ class ContextBuilder:
             Maximum allowed token budget.
         dynamic_context : str
             Optional dynamic memory context (user profile + top recent timeline events).
+        relevant_memories : str
+            Optional relevant memories retrieved specifically for the user prompt.
 
         Returns
         -------
         Context
             Immutable context payload ready for prompt compilation.
         """
-        effective_prompt = ContextBuilder.inject_dynamic_context(
+        prompt_with_dyn = ContextBuilder.inject_dynamic_context(
             system_prompt, dynamic_context
+        )
+        effective_prompt = ContextBuilder.inject_relevant_memories(
+            prompt_with_dyn, relevant_memories
         )
         token_count = ContextBuilder._count_tokens(effective_prompt, messages)
 

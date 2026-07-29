@@ -131,6 +131,7 @@ class ToolResult:
     status: Literal["success", "error", "timeout"]
     output: str | None = None
     error: str | None = None
+    audio_bytes: bytes | None = None
 
 
 @dataclass(frozen=True)

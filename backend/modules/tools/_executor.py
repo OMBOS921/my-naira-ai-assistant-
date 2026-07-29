@@ -258,14 +258,12 @@ class ToolExecutor:
                     if isinstance(res, dict) and "status" in res:
                         return ToolResult(
                             status=res.get("status", "success"),
-                            output=res.get("output") or str(res.get("result", "")),
-                            result=res.get("result", res),
+                            output=res.get("output") or str(res.get("result", "") or ""),
                             error=res.get("error"),
                         )
                     return ToolResult(
                         status="success",
                         output=str(res) if res is not None else "",
-                        result=res,
                     )
 
                 if self._semaphore is not None:

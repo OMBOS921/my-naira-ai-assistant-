@@ -51,12 +51,18 @@ _CLARIFICATION_PATTERNS = re.compile(
 )
 
 _CODING_PATTERNS = re.compile(
-    r"\b(?:def |class |import |function|write code|fix bug|python script|git commit|pytest|refactor|syntax error|type error|stack trace|async def|return )\b",
+    r"\b(?:"
+    r"def |class |import |function|write code|fix bug|python script|git commit|pytest|refactor|"
+    r"syntax error|type error|nameerror|valueerror|stack trace|traceback|async def|return |"
+    r"script likho|run karo|chalao|banao script|code likho|script banao|script|code|python|"
+    r"execute_local_python|local_python|execute_script|run script|write script|write a script|"
+    r"create script|debug|error|read the error|read error|fix it|fix error|solve error|self-correct|run again"
+    r")\b",
     re.IGNORECASE,
 )
 
 _PLANNING_PATTERNS = re.compile(
-    r"\b(?:build an app|create a project|multi-step|roadmap|step 1|first do|workflow|architect|project plan)\b",
+    r"\b(?:build an app|create a project|multi-step|roadmap|step 1|first do|workflow|architect|project plan|and then|uske baad|phir|self-correct|run again)\b",
     re.IGNORECASE,
 )
 

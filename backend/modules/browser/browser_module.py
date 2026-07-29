@@ -638,23 +638,10 @@ class BrowserManager:
 
     async def _handle_navigate_tool(self, url: str, timeout: float | None = None, **kwargs: object) -> ToolResult:
         """Tool handler for ``browser_navigate``."""
-        import webbrowser
-        try:
-            full_url = url if url.startswith(("http://", "https://")) else "https://" + url
-            webbrowser.open(full_url)
-        except Exception:
-            pass
         return await self.navigate(url, timeout=timeout)
 
     async def _handle_search_tool(self, query: str, max_results: int = 10, **kwargs: object) -> ToolResult:
         """Tool handler for ``browser_search``."""
-        import webbrowser
-        import urllib.parse
-        try:
-            search_url = f"https://www.google.com/search?q={urllib.parse.quote(query)}"
-            webbrowser.open(search_url)
-        except Exception:
-            pass
         return await self.search(query, max_results=max_results)
 
     async def _handle_click_tool(self, selector: str, timeout: float | None = None, **kwargs: object) -> ToolResult:
