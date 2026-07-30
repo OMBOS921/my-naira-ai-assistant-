@@ -12,8 +12,10 @@ tree, environment snapshot, and feature flags.
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from pathlib import Path
+from typing import Any
 
 from backend.modules.settings._config import AppConfig, build_app_config
 from backend.modules.settings._env import EnvironmentSnapshot
@@ -50,6 +52,7 @@ class SettingsManager:
         self._event_bus = event_bus
 
         self._config: AppConfig | None = None
+        self._raw_config: dict[str, Any] = {}
         self._env: EnvironmentSnapshot | None = None
         self._features: FeatureFlagManager | None = None
         self._degraded: bool = False
@@ -71,6 +74,7 @@ class SettingsManager:
     async def async_shutdown(self) -> None:
         """Release held configuration references."""
         self._config = None
+        self._raw_config = {}
         self._env = None
         self._features = None
         self._degraded = False
@@ -104,6 +108,73 @@ class SettingsManager:
         self._require_initialised()
         return self._features  # type: ignore[return-value]
 
+    def get(self, key_path: str, default: Any = None) -> Any:
+        """Retrieve nested configuration setting using dot-notation (e.g. 'api_keys.groq')."""
+        if not key_path:
+            return default
+
+        parts = key_path.split(".")
+
+        # 1. Check raw merged config tree
+        if self._raw_config:
+            val: Any = self._raw_config
+            found = True
+            for part in parts:
+                if isinstance(val, dict) and part in val:
+                    val = val[part]
+                else:
+                    found = False
+                    break
+            if found and val is not None and val != "":
+                return val
+
+        # 2. Check env snapshot for matching property or env var
+        if self._env:
+            last_part = parts[-1]
+            if hasattr(self._env, last_part):
+                val = getattr(self._env, last_part)
+                if val:
+                    return val
+            if hasattr(self._env, f"{last_part.lower()}_api_key"):
+                val = getattr(self._env, f"{last_part.lower()}_api_key")
+                if val:
+                    return val
+
+        # 3. Check AppConfig dataclass
+        if self._config:
+            section = parts[0]
+            if hasattr(self._config, section):
+                val = getattr(self._config, section)
+                for part in parts[1:]:
+                    if hasattr(val, part):
+                        val = getattr(val, part)
+                    else:
+                        val = None
+                        break
+                if val is not None and val != "":
+                    return val
+
+        return default
+
+    def get_api_key(self, provider: str) -> str:
+        """Retrieve API key for provider (e.g. 'groq', 'gemini') from vault/config/env."""
+        provider_lower = provider.lower()
+        val = (
+            self.get(f"api_keys.{provider_lower}")
+            or self.get(f"{provider_lower}_api_key")
+            or self.get(f"api_keys.{provider_lower}.key")
+        )
+        if val and isinstance(val, str) and val.strip():
+            return val.strip()
+
+        env_var = f"{provider_lower.upper()}_API_KEY"
+        if self._env and hasattr(self._env, f"{provider_lower}_api_key"):
+            env_val = getattr(self._env, f"{provider_lower}_api_key")
+            if env_val:
+                return str(env_val).strip()
+
+        return os.environ.get(env_var, "").strip()
+
     # ------------------------------------------------------------------
     # Internal loaders
     # ------------------------------------------------------------------
@@ -119,6 +190,7 @@ class SettingsManager:
                 _LOG.error("Config schema violation: %s", err)
             _LOG.critical("Configuration validation failed — cannot continue")
             sys.exit(1)
+        self._raw_config = raw
         self._config = build_app_config(raw)
         _LOG.info("Configuration loaded from %s", self._config_dir)
 
@@ -130,3 +202,4 @@ class SettingsManager:
             raise RuntimeError(
                 "SettingsManager not initialised — call async_init() before access"
             )
+

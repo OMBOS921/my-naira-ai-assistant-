@@ -7,9 +7,14 @@ from backend.modules.security._types import RiskLevel, SecurityCheck, SecuritySt
 _COMMAND_DENYLIST: tuple[str, ...] = (
     "rm -rf /",
     "rm -rf ~",
+    "rm -rf c:",
     "format",
+    "format c:",
+    "format d:",
     "del /f /s /q",
+    "del /f /s /q c:",
     "rd /s /q",
+    "rd /s /q c:",
     "shutdown -s",
     "shutdown -r",
     "shutdown -l",
@@ -18,6 +23,7 @@ _COMMAND_DENYLIST: tuple[str, ...] = (
     "reg add",
     "diskpart",
     "bcdedit",
+    "mkfs",
 )
 
 _COMMAND_ALLOWLIST: tuple[str, ...] = ()

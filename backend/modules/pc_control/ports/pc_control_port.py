@@ -20,6 +20,7 @@ from backend.modules.pc_control._types import (
     ProcessInfo,
     ScreenshotResult,
     ScreenSize,
+    SystemMetrics,
     VolumeInfo,
     WindowInfo,
 )
@@ -578,6 +579,34 @@ class PCControlPort(ABC):
         list[DisplayInfo]
             Display information for each monitor.
         """
+
+    # ------------------------------------------------------------------
+    # Pro-Level Utilities (Archives, Deep File Ops, System Metrics)
+    # ------------------------------------------------------------------
+
+    @abstractmethod
+    async def filesystem_zip_directory(self, source_dir: str, output_zip_path: str) -> FileOpResult:
+        """Compress a directory into a .zip archive."""
+
+    @abstractmethod
+    async def filesystem_extract_archive(self, zip_path: str, extract_to_dir: str) -> FileOpResult:
+        """Extract a .zip archive into a target directory."""
+
+    @abstractmethod
+    async def filesystem_copy_item(self, source_path: str, dest_path: str) -> FileOpResult:
+        """Copy a file or directory tree."""
+
+    @abstractmethod
+    async def filesystem_move_item(self, source_path: str, dest_path: str) -> FileOpResult:
+        """Move a file or directory."""
+
+    @abstractmethod
+    async def get_system_metrics(self) -> SystemMetrics:
+        """Retrieve active CPU, RAM, Disk, and Network Port metrics."""
+
+    @abstractmethod
+    async def get_open_ports(self) -> list[int]:
+        """Retrieve list of active listening network ports."""
 
     # ------------------------------------------------------------------
     # Lifecycle

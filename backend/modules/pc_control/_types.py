@@ -227,6 +227,40 @@ class FileOpResult:
     error: str | None = None
 
 
+@dataclass(frozen=True)
+class SystemMetrics:
+    """Snapshot of active system hardware metrics and network status.
+
+    Parameters
+    ----------
+    cpu_percent : float
+        Overall CPU utilization percentage.
+    ram_percent : float
+        RAM utilization percentage.
+    ram_used_gb : float
+        Used RAM in Gigabytes.
+    ram_total_gb : float
+        Total RAM in Gigabytes.
+    disk_percent : float
+        Primary disk utilization percentage.
+    disk_free_gb : float
+        Free disk space in Gigabytes.
+    disk_total_gb : float
+        Total disk space in Gigabytes.
+    open_ports : tuple[int, ...]
+        List of active listening network ports.
+    """
+
+    cpu_percent: float = 0.0
+    ram_percent: float = 0.0
+    ram_used_gb: float = 0.0
+    ram_total_gb: float = 0.0
+    disk_percent: float = 0.0
+    disk_free_gb: float = 0.0
+    disk_total_gb: float = 0.0
+    open_ports: tuple[int, ...] = ()
+
+
 type PCControlAction = Literal[
     "mouse_move",
     "mouse_click",

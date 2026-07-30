@@ -14,7 +14,7 @@ from backend.types import LLMResponse, Message, TokenUsage, ToolDef
 class GeminiProvider(ProviderBase):
     """LLMPort implementation for Gemini models."""
 
-    def __init__(self, *, api_key: str, model: str = "gemini-1.5-flash", timeout: int = 30) -> None:
+    def __init__(self, *, api_key: str, model: str = "gemini-1.5-flash", timeout: int = 60) -> None:
         super().__init__(provider_name="gemini", timeout=timeout)
         self._api_key = api_key.strip()
         self._model = model

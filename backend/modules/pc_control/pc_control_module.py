@@ -311,6 +311,42 @@ class PCControlManager:
         await self._emit_event_async("pc_control.process_kill", {"pid": pid})
         return await self._executor.process_kill(pid, force=force)
 
+    async def safe_kill_process(self, pid: int | None = None, name: str | None = None, force: bool = False) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.safe_kill_process", {"pid": pid, "name": name})
+        res = await self._process_manager.safe_kill_process(pid=pid, name=name, force=force)
+        return ToolResult(status="success", output=res)
+
+    async def filesystem_zip_directory(self, source_dir: str, output_zip_path: str) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.zip_directory", {"source": source_dir, "output": output_zip_path})
+        return await self._executor.filesystem_zip_directory(source_dir, output_zip_path)
+
+    async def filesystem_extract_archive(self, zip_path: str, extract_to_dir: str) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.extract_archive", {"zip_path": zip_path, "target": extract_to_dir})
+        return await self._executor.filesystem_extract_archive(zip_path, extract_to_dir)
+
+    async def filesystem_copy_item(self, source_path: str, dest_path: str) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.copy_item", {"source": source_path, "dest": dest_path})
+        return await self._executor.filesystem_copy_item(source_path, dest_path)
+
+    async def filesystem_move_item(self, source_path: str, dest_path: str) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.move_item", {"source": source_path, "dest": dest_path})
+        return await self._executor.filesystem_move_item(source_path, dest_path)
+
+    async def get_system_metrics(self) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.get_system_metrics", {})
+        return await self._executor.get_system_metrics()
+
+    async def get_open_ports(self) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.get_open_ports", {})
+        return await self._executor.get_open_ports()
+
     # ------------------------------------------------------------------
     # Public API — application launcher
     # ------------------------------------------------------------------

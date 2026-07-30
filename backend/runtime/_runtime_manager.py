@@ -73,6 +73,7 @@ class RuntimeManager:
         planning_manager: object | None = None,
         security_manager: object | None = None,
         reasoning_gateway: object | None = None,
+        settings_manager: object | None = None,
         event_bus: object | None = None,
         max_tool_iterations: int = MAX_TOOL_ITERATIONS,
     ) -> None:
@@ -92,6 +93,7 @@ class RuntimeManager:
         self._analytics_manager = analytics_manager
         self._planning_manager = planning_manager
         self._security_manager = security_manager
+        self._settings_manager = settings_manager
         self._reasoning_gateway = reasoning_gateway or ReasoningGateway(
             config=config,
             logger=self._logger,
@@ -108,6 +110,7 @@ class RuntimeManager:
             pc_control_manager=pc_control_manager,
             vision_manager=vision_manager,
             logger=self._logger,
+            settings_manager=settings_manager,
         )
 
         self._autonomous_task_engine = AutonomousTaskEngine(

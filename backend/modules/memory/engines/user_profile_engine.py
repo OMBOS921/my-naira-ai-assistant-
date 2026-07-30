@@ -262,13 +262,18 @@ class UserProfileEngine:
         Returns
         -------
         str
-            Formatted summary or empty string.
+            Formatted summary text.
         """
         profile = self.get_all()
-        if not profile:
-            return ""
-
         lines = ["User profile:"]
+        if not profile:
+            lines.append("• assistant_persona: Naira-OS (Personal AI Desktop Assistant)")
+            lines.append("• user_profile_state: Sparse (Adapting dynamically to user preferences)")
+            return "\n".join(lines)
+
+        if "assistant_persona" not in profile:
+            lines.append("• assistant_persona: Naira-OS (Personal AI Desktop Assistant)")
+
         for key, val in profile.items():
             lines.append(f"• {key}: {val}")
 

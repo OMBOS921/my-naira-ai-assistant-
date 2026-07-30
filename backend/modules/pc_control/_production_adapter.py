@@ -46,6 +46,7 @@ from backend.modules.pc_control._types import (
     ProcessInfo,
     ScreenshotResult,
     ScreenSize,
+    SystemMetrics,
     VolumeInfo,
     WindowInfo,
 )
@@ -224,7 +225,7 @@ class ProductionPCControlAdapter(PCControlPort):
 
     def __init__(
         self,
-        config: object,
+        config: object | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
         self._config = config
@@ -1155,3 +1156,148 @@ class ProductionPCControlAdapter(PCControlPort):
         result = await self._run("screen_list_displays", _list)
         assert isinstance(result, list)
         return result
+
+    # ------------------------------------------------------------------
+    # Pro-Level Utilities (Archives, Deep File Ops, System Metrics)
+    # ------------------------------------------------------------------
+
+    async def filesystem_zip_directory(self, source_dir: str, output_zip_path: str) -> FileOpResult:
+        """Compress a directory into a .zip archive using native Python zipfile."""
+        def _zip() -> FileOpResult:
+            import zipfile
+            src = Path(source_dir).resolve()
+            out = Path(output_zip_path).resolve()
+            if not src.is_dir():
+                return FileOpResult(success=False, path=source_dir, error=f"Source directory '{source_dir}' does not exist.")
+            out.parent.mkdir(parents=True, exist_ok=True)
+            with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
+                for root, _, files in os.walk(src):
+                    for file in files:
+                        full_p = Path(root) / file
+                        arc_name = full_p.relative_to(src)
+                        zf.write(full_p, arc_name)
+            return FileOpResult(success=True, path=str(out))
+
+        return await self._run("filesystem_zip_directory", _zip)
+
+    async def filesystem_extract_archive(self, zip_path: str, extract_to_dir: str) -> FileOpResult:
+        """Extract a .zip archive into a target directory using native Python zipfile."""
+        def _extract() -> FileOpResult:
+            import zipfile
+            z_p = Path(zip_path).resolve()
+            target = Path(extract_to_dir).resolve()
+            if not z_p.is_file():
+                return FileOpResult(success=False, path=zip_path, error=f"Zip archive '{zip_path}' not found.")
+            target.mkdir(parents=True, exist_ok=True)
+            with zipfile.ZipFile(z_p, "r") as zf:
+                zf.extractall(target)
+            return FileOpResult(success=True, path=str(target))
+
+        return await self._run("filesystem_extract_archive", _extract)
+
+    async def filesystem_copy_item(self, source_path: str, dest_path: str) -> FileOpResult:
+        """Copy a file or directory tree."""
+        def _copy() -> FileOpResult:
+            src = Path(source_path).resolve()
+            dst = Path(dest_path).resolve()
+            if not src.exists():
+                return FileOpResult(success=False, path=source_path, error=f"Source '{source_path}' does not exist.")
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            if src.is_dir():
+                shutil.copytree(src, dst, dirs_exist_ok=True)
+            else:
+                shutil.copy2(src, dst)
+            return FileOpResult(success=True, path=str(dst))
+
+        return await self._run("filesystem_copy_item", _copy)
+
+    async def filesystem_move_item(self, source_path: str, dest_path: str) -> FileOpResult:
+        """Move a file or directory."""
+        def _move() -> FileOpResult:
+            src = Path(source_path).resolve()
+            dst = Path(dest_path).resolve()
+            if not src.exists():
+                return FileOpResult(success=False, path=source_path, error=f"Source '{source_path}' does not exist.")
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(src, dst)
+            return FileOpResult(success=True, path=str(dst))
+
+        return await self._run("filesystem_move_item", _move)
+
+    async def get_system_metrics(self) -> SystemMetrics:
+        """Retrieve active CPU, RAM, Disk, and Network Port metrics."""
+        def _metrics() -> SystemMetrics:
+            cpu = 0.0
+            ram_pct = 0.0
+            ram_used = 0.0
+            ram_total = 0.0
+            disk_pct = 0.0
+            disk_free = 0.0
+            disk_total = 0.0
+
+            if _HAS_PSUTIL:
+                try:
+                    cpu = _psutil_mod.cpu_percent(interval=0.1)  # type: ignore[union-attr]
+                    mem = _psutil_mod.virtual_memory()  # type: ignore[union-attr]
+                    ram_pct = mem.percent
+                    ram_used = round(mem.used / (1024**3), 2)
+                    ram_total = round(mem.total / (1024**3), 2)
+                except Exception:
+                    pass
+
+            try:
+                du = shutil.disk_usage(os.getcwd())
+                disk_total = round(du.total / (1024**3), 2)
+                disk_free = round(du.free / (1024**3), 2)
+                disk_used = du.total - du.free
+                disk_pct = round((disk_used / du.total) * 100.0, 1)
+            except Exception:
+                pass
+
+            ports = self._scan_open_ports_sync()
+            return SystemMetrics(
+                cpu_percent=cpu,
+                ram_percent=ram_pct,
+                ram_used_gb=ram_used,
+                ram_total_gb=ram_total,
+                disk_percent=disk_pct,
+                disk_free_gb=disk_free,
+                disk_total_gb=disk_total,
+                open_ports=tuple(ports),
+            )
+
+        return await self._run("get_system_metrics", _metrics)
+
+    async def get_open_ports(self) -> list[int]:
+        """Retrieve list of active listening network ports."""
+        return await asyncio.to_thread(self._scan_open_ports_sync)
+
+    def _scan_open_ports_sync(self) -> list[int]:
+        """Scan active listening ports using psutil or socket connection tests."""
+        open_ports: list[int] = []
+        if _HAS_PSUTIL:
+            try:
+                conns = _psutil_mod.net_connections(kind="inet")  # type: ignore[union-attr]
+                for conn in conns:
+                    if getattr(conn, "status", "") == "LISTEN" and conn.laddr:
+                        port = conn.laddr.port
+                        if port not in open_ports:
+                            open_ports.append(port)
+                if open_ports:
+                    return sorted(open_ports)
+            except Exception:
+                pass
+
+        # Socket fallback for common dev/system ports
+        import socket
+        common_ports = [21, 22, 80, 443, 3000, 3306, 5000, 5432, 6379, 8000, 8080, 8443, 27017]
+        for port in common_ports:
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(0.05)
+                    res = s.connect_ex(("127.0.0.1", port))
+                    if res == 0:
+                        open_ports.append(port)
+            except Exception:
+                pass
+        return sorted(open_ports)

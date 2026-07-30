@@ -78,8 +78,8 @@ class PCControlExecutor:
                 return ToolResult(status="success", output=f"Action '{action}' completed")
             if hasattr(result, "success") and not getattr(result, "success"):
                 err_msg = getattr(result, "error", None) or f"Action '{action}' failed"
-                return ToolResult(status="error", error=str(err_msg), data={"result": result})
-            return ToolResult(status="success", output=str(result), data={"result": result})
+                return ToolResult(status="error", error=str(err_msg))
+            return ToolResult(status="success", output=str(result))
         except PCControlNotImplementedError:
             return ToolResult(
                 status="error",
@@ -284,6 +284,24 @@ class PCControlExecutor:
 
     async def screen_list_displays(self) -> ToolResult:
         return await self.execute("screen_list_displays")
+
+    async def filesystem_zip_directory(self, source_dir: str, output_zip_path: str) -> ToolResult:
+        return await self.execute("filesystem_zip_directory", source_dir=source_dir, output_zip_path=output_zip_path)
+
+    async def filesystem_extract_archive(self, zip_path: str, extract_to_dir: str) -> ToolResult:
+        return await self.execute("filesystem_extract_archive", zip_path=zip_path, extract_to_dir=extract_to_dir)
+
+    async def filesystem_copy_item(self, source_path: str, dest_path: str) -> ToolResult:
+        return await self.execute("filesystem_copy_item", source_path=source_path, dest_path=dest_path)
+
+    async def filesystem_move_item(self, source_path: str, dest_path: str) -> ToolResult:
+        return await self.execute("filesystem_move_item", source_path=source_path, dest_path=dest_path)
+
+    async def get_system_metrics(self) -> ToolResult:
+        return await self.execute("get_system_metrics")
+
+    async def get_open_ports(self) -> ToolResult:
+        return await self.execute("get_open_ports")
 
     @property
     def is_available(self) -> bool:

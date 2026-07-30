@@ -1,0 +1,702 @@
+[
+  {
+    "id": 1,
+    "prompt": "Good morning Naira. Sabse pehle mujhe current project directory ka structure dikhao, top 2 levels tak.",
+    "expected_engine": "FCR",
+    "module": "OS Control / File Management",
+    "memory_event": null
+  },
+  {
+    "id": 2,
+    "prompt": "Theek hai, ab isi repo ka git status bhi check kar do — dekhte hain kal se kya pending reh gaya tha.",
+    "expected_engine": "FCR",
+    "module": "FCR Git Handler",
+    "memory_event": null
+  },
+  {
+    "id": 3,
+    "prompt": "Chalo phir aaj se ek naya kaam shuru karte hain isi repo mein — FastAPI + PostgreSQL wale is project mein hum strictly raw asyncpg queries use karte hain, koi ORM nahi. Ab ek migration script likho jo `users` table create kare with UUID primary key.",
+    "expected_engine": "HEAVY",
+    "module": "Memory Harvester (Plant) / Code Generation",
+    "memory_event": "plant"
+  },
+  {
+    "id": 4,
+    "prompt": "Migration wala kaam shuru karne se pehle ek baar environment confirm kar lo — current Python version aur top 10 installed pip packages list kar do.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 5,
+    "prompt": "Environment theek hai, ab usi project ke andar ek CSV parser script likho jo dictionary of lists return kare — but pehle ek buggy version likho jisme ek row skip ho jaaye (off-by-one), aur `execute_local_python` se run karke dikhao kya galat output aa raha hai.",
+    "expected_engine": "HEAVY",
+    "module": "Python Executor / Self-Correction Loop",
+    "memory_event": null
+  },
+  {
+    "id": 6,
+    "prompt": "CSV wala kaam side mein rakho, ek minute — ek personal note pehle: mera coding style hamesha 4-space indentation, Black formatter compliant, aur har function mein type hints mandatory. Isko yaad rakhna aage ke sabhi code mein.",
+    "expected_engine": "HEAVY",
+    "module": "Memory Harvester (Plant)",
+    "memory_event": "plant"
+  },
+  {
+    "id": 7,
+    "prompt": "Ok, ab isi project ke andar ek naya folder bana do `services/ledger` naam se — ledger wala kaam bhi aaj hi start karna hai.",
+    "expected_engine": "FCR",
+    "module": "OS Control / File Management",
+    "memory_event": null
+  },
+  {
+    "id": 8,
+    "prompt": "Us naye `services/ledger` folder ke liye ek alag `.venv` bhi bana do isi ke andar.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 9,
+    "prompt": "Venv ban gaya, ab ledger module likhne se pehle ek team convention yaad rakho — humlog kabhi `print()` use nahi karte, hamesha `logging` module use hota hai, default INFO level dev mein.",
+    "expected_engine": "HEAVY",
+    "module": "Memory Harvester (Plant)",
+    "memory_event": "plant"
+  },
+  {
+    "id": 10,
+    "prompt": "Chalo ab wapas main repo mein aate hain — last 5 commits ka git log summary do, one line each, taaki pata chale kal tak kya kya hua tha.",
+    "expected_engine": "FCR",
+    "module": "FCR Git Handler",
+    "memory_event": null
+  },
+  {
+    "id": 11,
+    "prompt": "Us log ke hisaab se lagta hai kal ek threading wala kaam adhoora chhoda tha. Ek script likho jo background thread mein counter increment kare bina lock ke — main jaanbujhkar wahi race condition reproduce karna chahta hoon jo kal issue ban gayi thi. Execute karo.",
+    "expected_engine": "HEAVY",
+    "module": "Python Executor / Debugging (Concurrency)",
+    "memory_event": null
+  },
+  {
+    "id": 12,
+    "prompt": "Jaisa socha tha wahi bug reproduce ho gaya — ab isi script ko fix karo threading.Lock use karke, aur dobara run karke verify karo ki race condition ab nahi aa rahi.",
+    "expected_engine": "HEAVY",
+    "module": "Self-Correction Loop",
+    "memory_event": null
+  },
+  {
+    "id": 13,
+    "prompt": "Race condition fix ho gaya, badhiya. Ab isi ke aage ek infra constraint yaad rakho — hamare internal API ka rate limit hai 100 requests/min per API key, aur enforce karne ke liye token bucket algorithm use karna hai — yeh aage kaam aayega.",
+    "expected_engine": "HEAVY",
+    "module": "Memory Harvester (Plant)",
+    "memory_event": "plant"
+  },
+  {
+    "id": 14,
+    "prompt": "Thoda break lete hain code se — check karo disk space kitna bacha hai current drive par, saara CPU busy tha abhi.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 15,
+    "prompt": "Aur ek baar CPU/RAM usage bhi dikha do live, dekhna hai wo Fibonacci wala benchmark chalane laayak hai ya nahi abhi.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 16,
+    "prompt": "Machine free hai, chalo ab ek Fibonacci function likho bina memoization ke, jaanbujhkar inefficient — execute karo n=35 ke liye aur bata do kitna time laga.",
+    "expected_engine": "HEAVY",
+    "module": "Python Executor / Performance Profiling",
+    "memory_event": null
+  },
+  {
+    "id": 17,
+    "prompt": "Itna slow chala isliye pooch raha hoon — meri primary dev machine Windows 11 hai, PowerShell default shell. WSL2 hai but main native venv hi prefer karta hoon path handling ke liye — yeh baad ke scripts mein consider karna.",
+    "expected_engine": "HEAVY",
+    "module": "Memory Harvester (Plant)",
+    "memory_event": "plant"
+  },
+  {
+    "id": 18,
+    "prompt": "Chalo ab wahi Fibonacci function ko optimize karo — memoization ya iterative, jo bhi behtar lage khud decide karo, aur re-run karke prove karo speed improvement hui.",
+    "expected_engine": "HEAVY",
+    "module": "Self-Correction Loop / Performance",
+    "memory_event": null
+  },
+  {
+    "id": 19,
+    "prompt": "Fibonacci fix ho gaya, commit karne se pehle check karo last 24 hours mein is project folder mein kaunsi files modify hui hain.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 20,
+    "prompt": "Un modified files ko commit karne se pehle bata do abhi current git branch kaunsa active hai.",
+    "expected_engine": "FCR",
+    "module": "FCR Git Handler",
+    "memory_event": null
+  },
+  {
+    "id": 21,
+    "prompt": "Sahi branch pe hain, good. Commit se pehle ek deployment convention bhi note kar lo — hum hamesha Docker multi-stage build use karte hain, final image `python:3.11-slim` base par, container kabhi root se run nahi hota, hamesha `appuser` non-root — yeh Dockerfile banate waqt yaad rakhna.",
+    "expected_engine": "HEAVY",
+    "module": "Memory Harvester (Plant)",
+    "memory_event": "plant"
+  },
+  {
+    "id": 22,
+    "prompt": "Ab wapas ledger module par focus karte hain — ek script likho jo directory tree recursively traverse kare aur sabhi `.log` files ka total size calculate kare, but pehle ek version likho jo symlinks par infinite loop mein fas jaaye, phir uska fix karo.",
+    "expected_engine": "HEAVY",
+    "module": "Python Executor / Self-Correction Loop",
+    "memory_event": null
+  },
+  {
+    "id": 23,
+    "prompt": "Us script ke fix ke baad, ek purani `old_config.json` bhi mil gayi thi usi folder mein — usko rename kar do `config.legacy.json` mein.",
+    "expected_engine": "FCR",
+    "module": "OS Control / File Management",
+    "memory_event": null
+  },
+  {
+    "id": 24,
+    "prompt": "Rename ke baad system thoda slow lag raha hai — top processes dikhao aur jo CPU hog kar raha hai uska PID batao.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 25,
+    "prompt": "CPU clear ho gaya. Ab jo bhi ledger functions likhenge unke liye ek testing convention yaad rakho — hum pytest with pytest-asyncio use karte hain, minimum coverage threshold 85% hai, isse kam CI mein pass nahi hota.",
+    "expected_engine": "HEAVY",
+    "module": "Memory Harvester (Plant)",
+    "memory_event": "plant"
+  },
+  {
+    "id": 26,
+    "prompt": "Ab isi ledger service ke liye ek connection pool manager class likho database connections manage karne ke liye — but jaanbujhkar ek memory leak daal do jahan connections kabhi close nahi hote, aur execute karke dikhao ki open handles badhte ja rahe hain.",
+    "expected_engine": "HEAVY",
+    "module": "Python Executor / Memory Leak Debug",
+    "memory_event": null
+  },
+  {
+    "id": 27,
+    "prompt": "Jaisa expect tha leak reproduce ho gaya — ab isi class ko fix karo context manager pattern use karke, aur verify karo memory ab stable rehti hai.",
+    "expected_engine": "HEAVY",
+    "module": "Self-Correction Loop",
+    "memory_event": null
+  },
+  {
+    "id": 28,
+    "prompt": "Connection pool theek ho gaya. Ek baar check kar do kitne open network ports hain is machine par abhi, database wala port free hona chahiye.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 29,
+    "prompt": "Ports theek hain. Code likhte waqt ek aur personal peeve yaad rakho — mujhe nested ternary expressions bilkul pasand nahi, one-liners jo readability kharab karein bhi avoid karo, explicit if/else hamesha prefer karta hoon.",
+    "expected_engine": "HEAVY",
+    "module": "Memory Harvester (Plant)",
+    "memory_event": "plant"
+  },
+  {
+    "id": 30,
+    "prompt": "Ledger service ka DB connect ho raha hai ya nahi confirm karne se pehle, ek baar general connectivity check karo — 8.8.8.8 ping karo.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 31,
+    "prompt": "Network theek hai, ab ledger ke liye ek notification system bhi chahiye — event-driven architecture ka ek text/ASCII diagram design karo jo email, SMS, aur push mein fan-out kare, aur pub-sub vs direct calls ke trade-offs explain karo.",
+    "expected_engine": "HEAVY",
+    "module": "Architecture Reasoning",
+    "memory_event": null
+  },
+  {
+    "id": 32,
+    "prompt": "Diagram sahi laga, is architecture mein ek microservice naming convention bhi yaad rakho — hamara ledger microservice ka naam `ledger-service` hai, jo `auth-service` ko gRPC ke through call karta hai port `50051` par — yeh future integration mein use hoga.",
+    "expected_engine": "HEAVY",
+    "module": "Memory Harvester (Plant)",
+    "memory_event": "plant"
+  },
+  {
+    "id": 33,
+    "prompt": "Architecture decide ho gaya, ab implementation ka size estimate karna hai — count kar do total lines of code sab `.py` files ka `backend/` folder ke andar.",
+    "expected_engine": "FCR",
+    "module": "OS Control / File Search",
+    "memory_event": null
+  },
+  {
+    "id": 34,
+    "prompt": "Itna bada codebase hai isliye pehle concurrency issues test kar lete hain — ek deadlock-prone script likho jahan do threads do alag locks opposite order mein acquire karte hain, run karke deadlock reproduce karo (timeout ke saath), phir lock ordering fix karke resolve karo.",
+    "expected_engine": "HEAVY",
+    "module": "Python Executor / Concurrency Debugging",
+    "memory_event": null
+  },
+  {
+    "id": 35,
+    "prompt": "Deadlock fix ke baad application log mein kuch errors dikhe honge — last 20 lines dikha do application log file ki.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 36,
+    "prompt": "Log files bade ho gaye lag rahe hain — 50MB se badi files dhoondo is project directory mein, cleanup karna hoga.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 37,
+    "prompt": "Cleanup se pehle ek security convention bhi note kar lo — secrets kabhi hardcode nahi hote, hum HashiCorp Vault use karte hain, runtime par env vars ke through inject hote hain — yeh config code likhte waqt yaad rakhna.",
+    "expected_engine": "HEAVY",
+    "module": "Memory Harvester (Plant)",
+    "memory_event": "plant"
+  },
+  {
+    "id": 38,
+    "prompt": "Ab jo bhi bade log files mile the unko delete karne se pehle backup le lete hain — pura `logs/` folder zip kar do `logs_backup.zip` mein.",
+    "expected_engine": "FCR",
+    "module": "OS Control / File Management",
+    "memory_event": null
+  },
+  {
+    "id": 39,
+    "prompt": "Backup ho gaya, ab ledger service mein ek external payment API call bhi add karni hai — pehle ek version likho bina try/except ke jisse API down hone par pura script crash ho jaaye, reproduce karo, phir proper exception handling + retry-with-backoff add karo.",
+    "expected_engine": "HEAVY",
+    "module": "Python Executor / Self-Correction Loop",
+    "memory_event": null
+  },
+  {
+    "id": 40,
+    "prompt": "Retry logic add karne ke baad thoda confuse ho gaya kis folder mein hoon — current working directory path confirm kar do.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 41,
+    "prompt": "Sahi jagah hain, chalo ab isi ledger module mein ek naya function likho jo `users` table se data fetch kare by email — jaisa hamara project setup hai waise hi likhna, no shortcuts.",
+    "expected_engine": "HEAVY",
+    "module": "Auto-Context Injection (recalls #3: raw asyncpg, no ORM)",
+    "memory_event": "recall"
+  },
+  {
+    "id": 42,
+    "prompt": "Yeh function likhne se pehle ek env variable check karni thi — list kar do saare environment variables jinke naam mein \"PATH\" aata hai.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 43,
+    "prompt": "Ab jo function abhi likha, usi ko run karke test karte hain — dekho isme ek package (`ujson`) missing nikal raha hai, execute karo, error padho, aur self-correct karke missing dependency install karo, phir re-run karo.",
+    "expected_engine": "HEAVY",
+    "module": "Python Executor / Dependency Self-Correction",
+    "memory_event": null
+  },
+  {
+    "id": 44,
+    "prompt": "Dependency fix ho gayi, commit push karne se pehle current git remote URL confirm kar do.",
+    "expected_engine": "FCR",
+    "module": "FCR Git Handler",
+    "memory_event": null
+  },
+  {
+    "id": 45,
+    "prompt": "Remote sahi hai. Push karne se pehle ek cheez clean karni hai — yeh snippet formatting ke hisaab se theek karo jaisa hum yahan likhte hain: `def calc(a,b):\\n return a+b if a>0 else a-b if b>0 else 0`",
+    "expected_engine": "HEAVY",
+    "module": "Auto-Context Injection (recalls #6 + #29: 4-space/Black/type hints, no nested ternary)",
+    "memory_event": "recall"
+  },
+  {
+    "id": 46,
+    "prompt": "Ab formatting clean ho gayi, saare changes stage karke commit kar do message ke saath \"wip: ledger module scaffolding\".",
+    "expected_engine": "FCR",
+    "module": "FCR Git Handler",
+    "memory_event": null
+  },
+  {
+    "id": 47,
+    "prompt": "Commit ho gaya, ab agla feature — ledger ke frequently-read user profiles ke liye ek caching layer design karo TTL expiry ke saath. LRU vs simple dict-with-timestamp trade-offs explain karo, phir implement karke execute se test karo.",
+    "expected_engine": "HEAVY",
+    "module": "Architecture Reasoning + Python Executor",
+    "memory_event": null
+  },
+  {
+    "id": 48,
+    "prompt": "Caching layer implement ho gaya, ab cleanup — us purani `temp_debug.py` file ko delete kar do root se, ab zarurat nahi.",
+    "expected_engine": "FCR",
+    "module": "OS Control / File Management",
+    "memory_event": null
+  },
+  {
+    "id": 49,
+    "prompt": "Cleanup ke baad ek security check bhi karna tha ledger ke query layer ka — ek intentionally SQL-injection-vulnerable query builder likho (string concatenation se), ek malicious input se vulnerability demonstrate karo, phir parameterized queries se fix karo.",
+    "expected_engine": "HEAVY",
+    "module": "Security Review / Self-Correction Loop",
+    "memory_event": null
+  },
+  {
+    "id": 50,
+    "prompt": "Query layer secure ho gaya, ab branch cleanup karte hain — count kar do kitni local git branches hain abhi.",
+    "expected_engine": "FCR",
+    "module": "FCR Git Handler",
+    "memory_event": null
+  },
+  {
+    "id": 51,
+    "prompt": "Itni branches dekh kar lag raha hai concurrent transfers ka kaam bhi pending hai — bina code likhe pehle explain karo optimistic vs pessimistic locking ke trade-offs hamare ledger transactions ke liye, main decision lena chahta hoon.",
+    "expected_engine": "HEAVY",
+    "module": "Architecture Reasoning",
+    "memory_event": null
+  },
+  {
+    "id": 52,
+    "prompt": "Decision lene se pehle ek documentation file bhi bana lo — `CHANGELOG.md` naam ki empty file touch kar do root mein, aaj ka kaam note karna hai baad mein.",
+    "expected_engine": "FCR",
+    "module": "OS Control / File Management",
+    "memory_event": null
+  },
+  {
+    "id": 53,
+    "prompt": "Ab jo pessimistic locking approach decide hui, uska implementation likho `transfer_funds` function ke liye — jaanbujhkar ek edge case bug chhodo (double-spend under concurrent calls), execute/simulate karke dikhao, phir fix karo.",
+    "expected_engine": "HEAVY",
+    "module": "Python Executor / Self-Correction Loop",
+    "memory_event": null
+  },
+  {
+    "id": 54,
+    "prompt": "Yeh fix karte karte machine kaafi der se chal rahi hai — check karo current system uptime kitna hai.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 55,
+    "prompt": "Uptime dekh liya, ab config files check karte hain — `config.yaml` file ki read permissions check kar do, kal koi permission issue tha.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 56,
+    "prompt": "Permissions theek hain. Ab ek decorator likho jo function execution time measure kare, but jaanbujhkar isse async functions ke liye break kar do (doesn't await properly), execute karke bug expose karo against an async function, phir fix karo taaki sync aur async dono support ho.",
+    "expected_engine": "HEAVY",
+    "module": "Python Executor / Self-Correction Loop",
+    "memory_event": null
+  },
+  {
+    "id": 57,
+    "prompt": "Decorator fix ho gaya. Ab codebase mein pending kaam dhoondte hain — search karo \"TODO\" string sab files mein `backend/modules/` ke andar.",
+    "expected_engine": "FCR",
+    "module": "OS Control / File Search",
+    "memory_event": null
+  },
+  {
+    "id": 58,
+    "prompt": "In TODOs mein ek payment API integration bhi pending nikli — ek error-handling wrapper likho hamare external payment API calls ke liye, jaisa hum log karte hain waise hi.",
+    "expected_engine": "HEAVY",
+    "module": "Auto-Context Injection (recalls #9: logging module, no print)",
+    "memory_event": "recall"
+  },
+  {
+    "id": 59,
+    "prompt": "Wrapper likh diya, commit se pehle ek baar dekh lete hain — git diff dikhao unstaged changes ka summary.",
+    "expected_engine": "FCR",
+    "module": "FCR Git Handler",
+    "memory_event": null
+  },
+  {
+    "id": 60,
+    "prompt": "Diff mein woh purana `process_order()` function bhi dikha jo 200 lines ka hai — usko chhoti composable functions mein refactor karo, single responsibility follow karke, pehle apni decomposition strategy explain karo phir implement karo.",
+    "expected_engine": "HEAVY",
+    "module": "Refactoring / Architecture Reasoning",
+    "memory_event": null
+  },
+  {
+    "id": 61,
+    "prompt": "Refactor ke baad ek path issue aa raha hai imports mein — current PATH environment variable ki value dikha do.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 62,
+    "prompt": "Path theek hai, issue kahi aur hai — refactored `process_order` mein ek large CSV streaming step bhi hai, ek generator-based pipeline likho jo poori file memory mein load na kare, pehle jaanbujhkar list comprehension use karo (high memory), execute karke memory usage observe karo, phir fix karo.",
+    "expected_engine": "HEAVY",
+    "module": "Python Executor / Memory Optimization",
+    "memory_event": null
+  },
+  {
+    "id": 63,
+    "prompt": "Memory fix ho gaya, backup lete hain settings ka — `config.yaml` ko `config.backup.yaml` mein copy kar do.",
+    "expected_engine": "FCR",
+    "module": "OS Control / File Management",
+    "memory_event": null
+  },
+  {
+    "id": 64,
+    "prompt": "Backup ho gaya. Ab ek partner integration bhi start karte hain — us external partner API ke liye ek client wrapper likho jo hamare apne rate constraints ko bhi properly respect kare.",
+    "expected_engine": "HEAVY",
+    "module": "Auto-Context Injection (recalls #13: 100 req/min token bucket)",
+    "memory_event": "recall"
+  },
+  {
+    "id": 65,
+    "prompt": "Client wrapper ready hai, ab overall size dekhते हैं — count kar do lines of `main.py` file mein, dekhna hai kitna bloat ho gaya hai.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 66,
+    "prompt": "`main.py` kaafi bada ho gaya hai billing logic ke wajah se — ek multi-tenant SaaS billing system ke liye database schema design karo, 3NF tak normalize karo, aur `invoices` table ke liye indexing strategy explain karo given 10M+ rows aur frequent date-range queries.",
+    "expected_engine": "HEAVY",
+    "module": "Architecture Reasoning",
+    "memory_event": null
+  },
+  {
+    "id": 67,
+    "prompt": "Schema design ke baad secrets/config files check karte hain — list kar do sab `.env` style files project mein (searching for `.env*` pattern).",
+    "expected_engine": "FCR",
+    "module": "OS Control / File Search",
+    "memory_event": null
+  },
+  {
+    "id": 68,
+    "prompt": "Ek `.env` file ke paas hi ek data file bhi mili jisme encoding issue hai — ek script likho jo woh JSON file read kare jiska encoding UTF-8 nahi hai (Latin-1), pehle bina encoding specify kiye run karo taaki UnicodeDecodeError aaye, phir terminal output padh kar self-correct karo correct encoding ke saath.",
+    "expected_engine": "HEAVY",
+    "module": "Python Executor / Self-Correction Loop",
+    "memory_event": null
+  },
+  {
+    "id": 69,
+    "prompt": "Encoding fix ho gaya, ab repo size check karte hain — `.git` folder ka size batao, kaafi commits ho gaye hain aaj.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 70,
+    "prompt": "Size dekh li, ab deploy karne se pehle ek helper script chahiye — ek deployment helper script likho jo local paths handle kare cross-platform, mera dev machine ke hisaab se sahi assume karo.",
+    "expected_engine": "HEAVY",
+    "module": "Auto-Context Injection (recalls #17: Windows 11, PowerShell, native venv)",
+    "memory_event": "recall"
+  },
+  {
+    "id": 71,
+    "prompt": "Deployment helper ready hai, ek baar commits review karte hain — git log dikhao author names ke saath last 10 commits ka.",
+    "expected_engine": "FCR",
+    "module": "FCR Git Handler",
+    "memory_event": null
+  },
+  {
+    "id": 72,
+    "prompt": "Commits mein ek purani tree traversal utility bhi dikhi jo problematic hai — woh stack-based recursive tree traversal deeply nested structure (depth 5000+) par Python recursion limit blow kar deta hai, reproduce karo RecursionError execute karke, phir iterative approach mein convert karo explicit stack ke saath aur re-verify karo.",
+    "expected_engine": "HEAVY",
+    "module": "Python Executor / Self-Correction Loop",
+    "memory_event": null
+  },
+  {
+    "id": 73,
+    "prompt": "Yeh fix karte karte disk bhar gaya lag raha hai — check karo available disk space sab mounted drives par.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 74,
+    "prompt": "Disk theek hai. Ab scaling discuss karte hain — explain karo CAP theorem trade-offs specifically hamare `ledger-service` ke liye agar hum isse geographically shard karein — no code, sirf reasoning.",
+    "expected_engine": "HEAVY",
+    "module": "Architecture Reasoning",
+    "memory_event": null
+  },
+  {
+    "id": 75,
+    "prompt": "Yeh discussion notes kahi save karne hain — `notes.txt` desktop folder se project ke `docs/` folder mein move kar do.",
+    "expected_engine": "FCR",
+    "module": "OS Control / File Management",
+    "memory_event": null
+  },
+  {
+    "id": 76,
+    "prompt": "Notes move ho gaye, ab deploy-ready banate hain — likho ek Dockerfile is service ke liye production-ready.",
+    "expected_engine": "HEAVY",
+    "module": "Auto-Context Injection (recalls #21: multi-stage, python:3.11-slim, non-root appuser)",
+    "memory_event": "recall"
+  },
+  {
+    "id": 77,
+    "prompt": "Dockerfile ban gaya, isme kuch Node tooling bhi use hoga frontend build ke liye — check kar do installed Node.js version is system par.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 78,
+    "prompt": "Node version confirm ho gaya, ab automate karte hain — ek GitHub Actions CI workflow yaml likho jo lint, type-check (mypy), aur tests har PR par run kare, saath mein pip dependencies caching bhi add karo speed ke liye.",
+    "expected_engine": "HEAVY",
+    "module": "DevOps / Architecture Reasoning",
+    "memory_event": null
+  },
+  {
+    "id": 79,
+    "prompt": "CI workflow ban gaya commit karne se pehle — dikhao last 3 modified files `backend/` directory mein, dekhna hai kya kya touch hua abhi.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 80,
+    "prompt": "Woh files check karte waqt ek async batch processor bhi dikha jisme issue hai — usme jaanbujhkar bug hai: `asyncio.gather` se saare tasks ek saath await hote hain bina semaphore ke, jisse 10,000 concurrent connections spawn ho jaate hain aur crash ho jaata hai. Execute karo, failure/warning observe karo, phir semaphore-bound approach se fix karo.",
+    "expected_engine": "HEAVY",
+    "module": "Python Executor / Self-Correction Loop",
+    "memory_event": null
+  },
+  {
+    "id": 81,
+    "prompt": "Fix ho gaya, commit karne se pehle confirm kar do current logged-in username kya hai is OS session ka.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 82,
+    "prompt": "Username confirm ho gaya. Ab jo `transfer_funds` function humne pehle discuss/fix kiya tha, uske liye unit tests likho — full coverage ke saath jaisa hamara convention hai.",
+    "expected_engine": "HEAVY",
+    "module": "Auto-Context Injection (recalls #25: pytest-asyncio, 85% coverage)",
+    "memory_event": "recall"
+  },
+  {
+    "id": 83,
+    "prompt": "Tests likhne ke beech kaam chhoda tha ek jagah — dikhao current git stash list, agar kuch stashed pada hai.",
+    "expected_engine": "FCR",
+    "module": "FCR Git Handler",
+    "memory_event": null
+  },
+  {
+    "id": 84,
+    "prompt": "Stash clear karne se pehle ek aur security review karna hai — is hypothetical login endpoint ka review karo: yeh passwords plain SHA-256 (no salt) se store karta hai, aur \"user not found\" vs \"wrong password\" ke liye alag error messages deta hai (username enumeration). Har vulnerability explain karo aur endpoint correctly rewrite karo.",
+    "expected_engine": "HEAVY",
+    "module": "Security Review",
+    "memory_event": null
+  },
+  {
+    "id": 85,
+    "prompt": "Login endpoint fix ho gaya, ab migrations organize karte hain — ek naya empty folder `scripts/migrations` bana do.",
+    "expected_engine": "FCR",
+    "module": "OS Control / File Management",
+    "memory_event": null
+  },
+  {
+    "id": 86,
+    "prompt": "Migrations folder ban gaya, notification system par wapas aate hain — explain karo eventual consistency vs strong consistency ka difference hamare notification fan-out system ke liye, phir recommend karo kaunsa fit baithta hai at-least-once delivery requirement dekh kar.",
+    "expected_engine": "HEAVY",
+    "module": "Architecture Reasoning",
+    "memory_event": null
+  },
+  {
+    "id": 87,
+    "prompt": "Consistency model decide ho gaya, ab database port check karte hain — dekho port 5432 currently use ho raha hai ya nahi.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 88,
+    "prompt": "Port free hai, chalo. Isi ke pass ek condition bhi dikhi jo clean karni hai — is bad readability wala style avoid karo jaisa maine pehle mention kiya tha: `status = \"ok\" if code==200 else \"warn\" if code<500 else \"error\"`",
+    "expected_engine": "HEAVY",
+    "module": "Auto-Context Injection (recalls #29: no nested ternary, explicit if/else)",
+    "memory_event": "recall"
+  },
+  {
+    "id": 89,
+    "prompt": "Condition clean ho gayi, ek baar system ka overall load dekh lete hain — count kar do total kitne Python processes currently running hain.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 90,
+    "prompt": "Processes theek hain. Ab payment webhook security check karte hain — ek HMAC-SHA256 signature verification function likho incoming payment callbacks ke liye, pehle jaanbujhkar `==` use karo comparison ke liye (timing attack vulnerable), timing demonstration conceptually karo, phir `hmac.compare_digest` se fix karo.",
+    "expected_engine": "HEAVY",
+    "module": "Security Review / Self-Correction Loop",
+    "memory_event": null
+  },
+  {
+    "id": 91,
+    "prompt": "Webhook fix ho gaya, ab purana backup restore karke verify karte hain — `logs_backup.zip` ko `logs_restore/` temporary folder mein unzip kar do.",
+    "expected_engine": "FCR",
+    "module": "OS Control / File Management",
+    "memory_event": null
+  },
+  {
+    "id": 92,
+    "prompt": "Restore ho gaya. Ab payment endpoints ke liye ek aur cheez chahiye — idempotency-key strategy design karo taaki retried client requests double-charge na karein, storage TTL aur key derivation approach explain karo.",
+    "expected_engine": "HEAVY",
+    "module": "Architecture Reasoning",
+    "memory_event": null
+  },
+  {
+    "id": 93,
+    "prompt": "Idempotency design ho gaya, environment ek aakhri baar confirm karte hain — count kar do kitne entries hain current shell ke PATH mein.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 94,
+    "prompt": "PATH theek hai. Ab din ka aakhri bada feature — ek function likho jo ledger balance ko doosri service se verify kare cross-service call ke through, jaisa hamara setup hai.",
+    "expected_engine": "HEAVY",
+    "module": "Auto-Context Injection (recalls #32: ledger-service → auth-service gRPC port 50051)",
+    "memory_event": "recall"
+  },
+  {
+    "id": 95,
+    "prompt": "Cross-service verification implement ho gaya, commit se pehle dekh lete hain — kitne uncommitted changes hain abhi (`git status --short` count).",
+    "expected_engine": "FCR",
+    "module": "FCR Git Handler",
+    "memory_event": null
+  },
+  {
+    "id": 96,
+    "prompt": "In changes mein ek sorting utility bhi hai jo slow lag rahi thi — profile karo isse teen approaches se (built-in `sorted`, bubble sort, quicksort implementation) 1 million random integers par, teenon execute karo, timings compare karo, aur production ke liye recommend karo justification ke saath.",
+    "expected_engine": "HEAVY",
+    "module": "Python Executor / Performance Profiling",
+    "memory_event": null
+  },
+  {
+    "id": 97,
+    "prompt": "Best approach mil gaya, ek baar memory check kar lete hain final commit se pehle — free memory kitna hai MB mein abhi.",
+    "expected_engine": "FCR",
+    "module": "OS Control",
+    "memory_event": null
+  },
+  {
+    "id": 98,
+    "prompt": "Memory theek hai. Aaj ka aakhri kaam — ek background worker likho jo EventBus par subscribe kare `transaction.completed` events ke liye aur memory harvester ko conversation context summarize karne trigger kare, proper error isolation ke saath taaki ek bad event poore subscriber loop ko crash na kare. Pehle yeh bug daal do (no isolation), execute karke crash reproduce karo, phir fix karo.",
+    "expected_engine": "HEAVY",
+    "module": "Python Executor / EventBus Integration / Self-Correction Loop",
+    "memory_event": null
+  },
+  {
+    "id": 99,
+    "prompt": "Worker fix ho gaya. Ab sab kuch deploy karne se pehle ek config loader likho jo hamare secrets ko sahi tarike se load kare — no shortcuts, jaisa security convention hai.",
+    "expected_engine": "HEAVY",
+    "module": "Auto-Context Injection (recalls #37: Vault, env var injection, no hardcoded secrets)",
+    "memory_event": "recall"
+  },
+  {
+    "id": 100,
+    "prompt": "Config loader ready hai, ab din khatam karte hain — git log dikhao aaj ke sabhi commits ka one-line summary, aur bata do overall kitni files touch hui aaj poore din mein.",
+    "expected_engine": "CHAINED",
+    "module": "FCR Git Handler → Heavy LLM Summary (full-day context recall via ContextBuilder)",
+    "memory_event": null
+  }
+]

@@ -841,6 +841,7 @@ async def boot_core_modules(
         _LOG.info("[BOOT]   Initialising RuntimeManager ...")
         runtime_mgr = RuntimeManager(
             config=config,
+            settings_manager=settings_mgr,
             context_manager=context_mgr,
             prompt_manager=prompt_mgr,
             llm_manager=llm_mgr,

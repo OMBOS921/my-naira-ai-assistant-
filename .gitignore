@@ -51,3 +51,4 @@ data/credentials/
 memory/user_vault.json
 config/google_client_secret.json
 *.naira_backup
+firebase_credentials.json

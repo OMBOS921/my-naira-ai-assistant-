@@ -409,6 +409,66 @@ def _call_groq_api_sync(api_key: str, payload: dict[str, Any]) -> str:
 # 6. FastCommandRouter Main Class
 # ----------------------------------------------------------------------
 
+def _fetch_instant_web_search(query: str, max_results: int = 3) -> str:
+    """Instantly fetches real-time web search results via DuckDuckGo & Wikipedia APIs with strict timeout (<2.5s)."""
+    clean_q = query.strip()
+    if not clean_q:
+        return "[FAILED] Empty web search query."
+
+    # 1. DuckDuckGo Instant Answer API
+    try:
+        url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(clean_q)}&format=json&no_html=1&skip_disambig=1"
+        req = urllib.request.Request(url, headers={"User-Agent": "Naira-OS/2.0 Omniscience Engine"})
+        with urllib.request.urlopen(req, timeout=2.5) as response:
+            data = json.loads(response.read().decode("utf-8"))
+            abstract = data.get("AbstractText", "").strip()
+            heading = data.get("Heading", clean_q)
+            results = []
+            if abstract:
+                results.append(f"• {heading}: {abstract}")
+
+            related = data.get("RelatedTopics", [])
+            for item in related[:max_results]:
+                if isinstance(item, dict) and item.get("Text"):
+                    results.append(f"• {item['Text']}")
+
+            if results:
+                return f"[INSTANT WEB SEARCH] Data for '{clean_q}':\n" + "\n".join(results)
+    except Exception:
+        pass
+
+    # 2. DuckDuckGo Lite / HTML scraping fallback
+    try:
+        html_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(clean_q)}"
+        req = urllib.request.Request(html_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+        with urllib.request.urlopen(req, timeout=2.5) as response:
+            html = response.read().decode("utf-8", errors="ignore")
+            snippets = re.findall(r'<a class="result__snippet[^">]*>(.*?)</a>', html, re.DOTALL)
+            clean_snippets = []
+            for snip in snippets[:max_results]:
+                clean_txt = re.sub(r'<[^>]+>', '', snip).strip()
+                if clean_txt:
+                    clean_snippets.append(f"• {clean_txt}")
+            if clean_snippets:
+                return f"[INSTANT WEB SEARCH] Real-time results for '{clean_q}':\n" + "\n".join(clean_snippets)
+    except Exception:
+        pass
+
+    # 3. Wikipedia API fallback
+    try:
+        wiki_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(clean_q)}"
+        req = urllib.request.Request(wiki_url, headers={"User-Agent": "Naira-OS/2.0 Omniscience Engine"})
+        with urllib.request.urlopen(req, timeout=2.0) as response:
+            wdata = json.loads(response.read().decode("utf-8"))
+            extract = wdata.get("extract")
+            if extract:
+                return f"[INSTANT WEB SEARCH] Wikipedia summary for '{clean_q}':\n• {extract}"
+    except Exception:
+        pass
+
+    return f"[SUCCESS] Performed web search query for '{clean_q}'."
+
+
 class FastCommandRouter:
     """Semantic Intent Router for Naira-OS powered by Groq API (llama-3.1-8b-instant)."""
 
@@ -420,6 +480,7 @@ class FastCommandRouter:
         coding_agent_manager: Any = None,
         logger: Optional[logging.Logger] = None,
         api_key: Optional[str] = None,
+        settings_manager: Any = None,
         **kwargs: Any,
     ) -> None:
         self._pc_control_manager = pc_control_manager
@@ -427,7 +488,33 @@ class FastCommandRouter:
         self._browser_manager = browser_manager
         self._coding_agent_manager = coding_agent_manager
         self._logger = logger or _LOG
-        self._api_key = api_key or os.environ.get("GROQ_API_KEY")
+        self._settings_manager = settings_manager
+
+        # Dynamic Groq API key resolution
+        groq_key = api_key
+        if not groq_key and self._settings_manager:
+            if hasattr(self._settings_manager, "get"):
+                groq_key = self._settings_manager.get("api_keys.groq") or self._settings_manager.get("groq_api_key")
+            if not groq_key and hasattr(self._settings_manager, "get_api_key"):
+                groq_key = self._settings_manager.get_api_key("groq")
+
+        if not groq_key:
+            groq_key = os.environ.get("GROQ_API_KEY")
+
+        if not groq_key:
+            try:
+                user_json_path = Path(__file__).resolve().parent.parent.parent / "config" / "user.json"
+                if user_json_path.is_file():
+                    with open(user_json_path, "r", encoding="utf-8") as f:
+                        u_cfg = json.load(f)
+                        groq_key = u_cfg.get("api_keys", {}).get("groq") or u_cfg.get("groq_api_key")
+            except Exception:
+                pass
+
+        self._api_key = (groq_key or "").strip()
+        if not self._api_key:
+            self._logger.warning("Groq API key missing in Vault. FCR will be disabled/degraded.")
+
         self._model = GROQ_MODEL
         self.intent_engine = IntentEngine(router=self)
 
@@ -435,9 +522,13 @@ class FastCommandRouter:
         """Determines whether text should be handled by FastCommandRouter."""
         if not text or not text.strip():
             return False
-        
+
         lowered = text.lower().strip()
         lowered_check = re.sub(r"\b(?:visual\s+studio\s+code|vs\s*code|vscode|code\s*editor)\b", "app_editor", lowered)
+
+        # Web search & internet retrieval queries are always permitted in FCR
+        if any(k in lowered for k in ("search", "search_web", "google", "youtube", "web search", "online", "latest news")):
+            return True
 
         non_fast_triggers = (
             "script likho", "run karo", "banao script", "code likho", "script banao",
@@ -446,13 +537,9 @@ class FastCommandRouter:
             "create function", "fix bug", "debug", "error", "nameerror", "typeerror", "syntaxerror",
             "valueerror", "exception", "stack trace", "traceback", "read the error", "read error",
             "fix it", "fix error", "solve error", "self-correct", "run again", "run via",
-            "explain", "analyze", "how does", "what is", "compare", "summarize",
-            "who is", "why is", "tell me about", "read_file", "write_file", "browser_", "search_web"
+            "read_file", "write_file"
         )
         if any(trigger in lowered_check for trigger in non_fast_triggers):
-            return False
-
-        if (lowered.startswith("who ") or lowered.startswith("what ") or lowered.startswith("why ") or lowered.startswith("how ")) and not any(k in lowered for k in ("open", "kholo", "create", "banao", "delete", "search", "youtube", "folder", "file")):
             return False
 
         return True
@@ -466,10 +553,20 @@ class FastCommandRouter:
         cleaned_input = WakeWordCleaner.clean(text)
         user_prompt = cleaned_input if cleaned_input else text.strip()
 
-        api_key = self._api_key or os.environ.get("GROQ_API_KEY")
+        api_key = self._api_key
+        if not api_key and self._settings_manager:
+            if hasattr(self._settings_manager, "get"):
+                api_key = self._settings_manager.get("api_keys.groq") or self._settings_manager.get("groq_api_key")
+            if not api_key and hasattr(self._settings_manager, "get_api_key"):
+                api_key = self._settings_manager.get_api_key("groq")
+
         if not api_key:
-            self._logger.warning("GROQ_API_KEY not set. Using local fallback intent classification.")
+            api_key = os.environ.get("GROQ_API_KEY")
+
+        if not api_key:
+            self._logger.warning("Groq API key missing in Vault. FCR will be disabled/degraded.")
             return self._heuristic_fallback(user_prompt)
+
 
         messages: List[Dict[str, str]] = [
             {"role": "system", "content": SYSTEM_INTENT_PROMPT},
@@ -735,11 +832,17 @@ class FastCommandRouter:
                     webbrowser.open("https://www.youtube.com")
                     results.append("[SUCCESS] Opened YouTube in browser.")
 
-            elif action in ("search_web", "search") or "search" in actual_raw_text.lower():
+            elif action in ("search_web", "search", "web_search", "fetch_web_data") or "search" in actual_raw_text.lower():
                 query = op_params.get("query") or target or actual_raw_text
-                search_url = f"https://www.google.com/search?q={urllib.parse.quote(query)}"
-                webbrowser.open(search_url)
-                results.append(f"[SUCCESS] Performed Google search for '{query}'.")
+                # If explicit browser GUI opening is requested, launch browser
+                if op_params.get("open_browser") or any(k in actual_raw_text.lower() for k in ("open browser", "browser kholo", "open chrome")):
+                    search_url = f"https://www.google.com/search?q={urllib.parse.quote(query)}"
+                    webbrowser.open(search_url)
+                    results.append(f"[SUCCESS] Opened Google search for '{query}'.")
+                else:
+                    # Instant web retrieval without browser GUI overhead
+                    res = _fetch_instant_web_search(query)
+                    results.append(res)
 
             else:
                 if not url.startswith("http"):

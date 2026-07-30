@@ -1,0 +1,186 @@
+"""Ngrok WebSocket Router & Offline Action Queue for Remote Bridge.
+
+Exposes `/ws/remote` endpoint for Android remote app communication over Ngrok tunnel.
+Supports cryptographic connection authentication, action queuing when device is offline,
+and auto-flushing pending actions upon connection re-establishment.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+from typing import Any, Dict, List, Optional
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
+from backend.modules.remote_bridge.bridge_security import SecurityRegistrar
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(tags=["Remote Bridge"])
+
+
+class OfflineActionQueue:
+    """Async in-memory queue storing signed actions when remote device is disconnected."""
+
+    def __init__(self, security_registrar: Optional[SecurityRegistrar] = None) -> None:
+        self._queue: List[Dict[str, Any]] = []
+        self._lock = asyncio.Lock()
+        self.security_registrar = security_registrar or SecurityRegistrar()
+
+    async def enqueue(self, action: Dict[str, Any], auto_sign: bool = True) -> Dict[str, Any]:
+        """Enqueue an action payload. Automatically signs payload if unsigned."""
+        if auto_sign and "signature" not in action:
+            payload = self.security_registrar.sign_command(action)
+        else:
+            payload = dict(action)
+
+        async with self._lock:
+            self._queue.append(payload)
+        return payload
+
+    async def flush(self) -> List[Dict[str, Any]]:
+        """Drain and return all pending queued actions."""
+        async with self._lock:
+            actions = list(self._queue)
+            self._queue.clear()
+            return actions
+
+    async def size(self) -> int:
+        """Return the count of pending actions in the queue."""
+        async with self._lock:
+            return len(self._queue)
+
+    async def is_empty(self) -> bool:
+        """Check whether the queue is empty."""
+        async with self._lock:
+            return len(self._queue) == 0
+
+    async def clear(self) -> None:
+        """Clear all pending actions from the queue."""
+        async with self._lock:
+            self._queue.clear()
+
+
+class RemoteBridgeManager:
+    """Manages active remote WebSocket connection and offline action queue."""
+
+    def __init__(
+        self,
+        security_registrar: Optional[SecurityRegistrar] = None,
+        queue: Optional[OfflineActionQueue] = None,
+    ) -> None:
+        self.security_registrar = security_registrar or SecurityRegistrar()
+        self.queue = queue or OfflineActionQueue(security_registrar=self.security_registrar)
+        self.active_websocket: Optional[WebSocket] = None
+        self._lock = asyncio.Lock()
+
+    @property
+    def is_connected(self) -> bool:
+        """Return whether an active, authenticated remote device is connected."""
+        return self.active_websocket is not None
+
+    async def set_active_connection(self, websocket: WebSocket) -> None:
+        """Register active WebSocket connection."""
+        async with self._lock:
+            self.active_websocket = websocket
+
+    async def remove_active_connection(self, websocket: Optional[WebSocket] = None) -> None:
+        """Remove active WebSocket connection if matching."""
+        async with self._lock:
+            if websocket is None or self.active_websocket == websocket:
+                self.active_websocket = None
+
+    async def send_action(self, action: Dict[str, Any], auto_sign: bool = True) -> bool:
+        """Send action immediately over active WebSocket, or queue in OfflineActionQueue if offline."""
+        signed_action = (
+            self.security_registrar.sign_command(action)
+            if auto_sign and "signature" not in action
+            else dict(action)
+        )
+
+        async with self._lock:
+            ws = self.active_websocket
+
+        if ws is not None:
+            try:
+                await ws.send_json(signed_action)
+                return True
+            except Exception as exc:
+                logger.warning("[WS-REMOTE] Failed sending action via WebSocket; queueing offline: %s", exc)
+                await self.remove_active_connection(ws)
+
+        await self.queue.enqueue(signed_action, auto_sign=False)
+        return False
+
+    async def flush_queue_to_websocket(self, websocket: WebSocket) -> int:
+        """Flush pending actions to given WebSocket connection."""
+        pending_actions = await self.queue.flush()
+        sent_count = 0
+        for action in pending_actions:
+            await websocket.send_json(action)
+            sent_count += 1
+        return sent_count
+
+
+# Module-level default bridge manager instance
+_default_bridge_manager = RemoteBridgeManager()
+
+
+def get_bridge_manager() -> RemoteBridgeManager:
+    """Return default module-level RemoteBridgeManager instance."""
+    return _default_bridge_manager
+
+
+async def handle_remote_websocket(websocket: WebSocket, manager: RemoteBridgeManager) -> None:
+    """Handle incoming WebSocket connection lifecycle and authentication."""
+    await websocket.accept()
+    logger.info("[WS-REMOTE] WebSocket client connected on /ws/remote")
+
+    # 1. Receive and verify initial cryptographic auth handshake
+    try:
+        auth_payload = await websocket.receive_json()
+    except Exception as exc:
+        logger.warning("[WS-REMOTE] Failed reading initial handshake: %s", exc)
+        await websocket.close(code=4000, reason="Invalid handshake format")
+        return
+
+    if not manager.security_registrar.verify_signature(auth_payload):
+        logger.warning("[WS-REMOTE] Authentication failed for incoming handshake")
+        await websocket.send_json({"status": "error", "message": "Authentication failed"})
+        await websocket.close(code=4001, reason="Authentication failed")
+        return
+
+    # 2. Authentication success notification & connection registration
+    await websocket.send_json({"status": "authenticated", "message": "Handshake successful"})
+    await manager.set_active_connection(websocket)
+    logger.info("[WS-REMOTE] Client authenticated successfully")
+
+    # 3. Flush pending offline action queue
+    flushed_count = await manager.flush_queue_to_websocket(websocket)
+    if flushed_count > 0:
+        logger.info("[WS-REMOTE] Automatically flushed %d offline actions to device", flushed_count)
+
+    # 4. Interactive message loop
+    try:
+        while True:
+            data = await websocket.receive_json()
+            logger.debug("[WS-REMOTE] Message received from client: %s", data)
+            response_payload = {
+                "status": "received",
+                "action": data.get("action") if isinstance(data, dict) else None,
+                "timestamp": data.get("timestamp") if isinstance(data, dict) else None,
+            }
+            await websocket.send_json(response_payload)
+    except WebSocketDisconnect:
+        logger.info("[WS-REMOTE] Remote WebSocket client disconnected")
+    except Exception as exc:
+        logger.warning("[WS-REMOTE] WebSocket error encountered: %s", exc)
+    finally:
+        await manager.remove_active_connection(websocket)
+
+
+@router.websocket("/ws/remote")
+async def remote_websocket_endpoint(websocket: WebSocket) -> None:
+    """FastAPI WebSocket endpoint for Ngrok remote tunnel."""
+    await handle_remote_websocket(websocket, _default_bridge_manager)

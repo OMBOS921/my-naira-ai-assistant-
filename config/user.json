@@ -19,5 +19,9 @@
   },
   "vision": {
     "enabled": true
+  },
+  "api_keys": {
+    "groq": ""
   }
 }
+

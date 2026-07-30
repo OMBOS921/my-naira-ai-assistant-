@@ -112,6 +112,8 @@ from backend.orchestrator import FSMState, Orchestrator
 from backend.runtime.proactive_watchdog import ProactiveWatchdog
 from backend.types import UserRequest, UserResponse
 from backend.api.settings import router as settings_router
+# --- Naya Remote Bridge Router Import Yahan Hai ---
+from backend.modules.remote_bridge.remote_router import router as remote_bridge_router
 
 _SHUTDOWN_GRACE_S: Final[float] = 3.0
 
@@ -227,6 +229,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(settings_router)
+# --- Naya Remote Bridge Router Yahan Mount Hua Hai ---
+app.include_router(remote_bridge_router)
 
 app.add_middleware(
     CORSMiddleware,

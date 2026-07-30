@@ -234,6 +234,35 @@ class ContextEngineV2:
         try:
             # User role extraction patterns
             if role == "user":
+                clean_msg = re.sub(r"^(?:hey\s+)?naira[,\s]*", "", message.strip(), flags=re.IGNORECASE).strip()
+
+                # Voice / Direct Remember directives ("remember this detail", "Naira, remember...", "save this detail")
+                rem_match = re.search(
+                    r"\b(?:remember|save|note\s+down|don'?t\s+forget|keep\s+in\s+mind)\b(?:\s+(?:that|this|details?|fact)?)*\s*[:,-]?\s*(.+)",
+                    clean_msg,
+                    re.IGNORECASE,
+                )
+                if rem_match:
+                    fact_str = rem_match.group(1).strip()
+                    if fact_str:
+                        fact_key = f"remembered_fact_{int(time.time())}"
+                        self._user_profile.set(fact_key, fact_str, source="voice_or_chat")
+                        self._relationship_memory.upsert(
+                            entity_name="user_remember_directive",
+                            entity_type="fact",
+                            relationship_type="user_preference",
+                            description=fact_str,
+                            importance=8,
+                        )
+                        self._knowledge_graph.upsert("User", "requested_remember", fact_str)
+                        self._timeline_engine.record(
+                            event_type="voice_memory_captured",
+                            title="Captured voice/chat memory update",
+                            description=fact_str,
+                            session_id=session_id,
+                            importance=8,
+                        )
+
                 # Name matching pattern
                 name_match = re.search(r"\bmy name is ([a-zA-Z0-9_\- ]+)", message, re.IGNORECASE)
                 if name_match:

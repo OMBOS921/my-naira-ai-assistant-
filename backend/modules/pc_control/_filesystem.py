@@ -51,3 +51,15 @@ class PCFilesystem:
 
     async def delete_directory(self, path: str, recursive: bool = False) -> None:
         await self._port.filesystem_delete_directory(path, recursive=recursive)
+
+    async def zip_directory(self, source_dir: str, output_zip_path: str) -> FileOpResult:
+        return await self._port.filesystem_zip_directory(source_dir, output_zip_path)
+
+    async def extract_archive(self, zip_path: str, extract_to_dir: str) -> FileOpResult:
+        return await self._port.filesystem_extract_archive(zip_path, extract_to_dir)
+
+    async def copy_item(self, source_path: str, dest_path: str) -> FileOpResult:
+        return await self._port.filesystem_copy_item(source_path, dest_path)
+
+    async def move_item(self, source_path: str, dest_path: str) -> FileOpResult:
+        return await self._port.filesystem_move_item(source_path, dest_path)

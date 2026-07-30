@@ -204,6 +204,11 @@ class LLMProviderOrchestrator:
                 self._logger.error(f"LLM Generation CRASH: {exc}", exc_info=True)
                 raise exc
 
+            except ProviderTimeoutError as exc:
+                errors_summary[provider_name] = f"TIMEOUT: {exc}"
+                self._logger.warning("Provider '%s' timed out during generation: %s. Failing over to next provider.", provider_name, exc)
+                continue
+
             except Exception as exc:
                 cat, _ = classify_provider_error(exc)
                 errors_summary[provider_name] = f"{cat.value}: {exc}"

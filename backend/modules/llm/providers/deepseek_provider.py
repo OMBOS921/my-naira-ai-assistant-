@@ -86,7 +86,7 @@ class DeepSeekProvider(ProviderBase):
 
     base_url = "https://opencode.ai/zen/v1"
 
-    def __init__(self, *, api_key: str, model: str = "deepseek-v4-flash-free", timeout: int = 30) -> None:
+    def __init__(self, *, api_key: str, model: str = "deepseek-v4-flash-free", timeout: int = 60) -> None:
         super().__init__(provider_name="deepseek", timeout=timeout)
         self._api_key = api_key.strip()
         self._model = model

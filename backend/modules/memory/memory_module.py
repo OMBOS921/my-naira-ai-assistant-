@@ -744,7 +744,20 @@ class MemoryManager:
     def _extract_facts_heuristically(self, text: str) -> list[tuple[str, str]]:
         """Extract facts, preferences, or system constraints from user message text."""
         facts: list[tuple[str, str]] = []
-        clean = text.strip()
+        raw_clean = text.strip()
+        # Clean leading wake callout (e.g. "Naira,", "Hey Naira,", "Naira remember...")
+        clean = re.sub(r"^(?:hey\s+)?naira[,\s]*", "", raw_clean, flags=re.IGNORECASE).strip()
+
+        # Rule 0: Voice-driven memory directives ("Naira, remember this details...", "remember...", "save this...", "note down...")
+        m_voice = re.search(
+            r"\b(?:remember|save|note\s+down|don'?t\s+forget|keep\s+in\s+mind)\b(?:\s+(?:that|this|details?|fact)?)*\s*[:,-]?\s*(.+)",
+            clean,
+            re.IGNORECASE,
+        )
+        if m_voice:
+            fact_body = m_voice.group(1).strip()
+            if fact_body:
+                facts.append(("voice_fact", fact_body))
 
         # Rule 1: Hardware / System constraints ("I use a...", "I have a...", "my laptop is...")
         m_hw = re.search(
@@ -779,7 +792,7 @@ class MemoryManager:
             clean,
             re.IGNORECASE,
         )
-        if m_rem:
+        if m_rem and not m_voice:
             facts.append(("stated_fact", m_rem.group(2).strip()))
 
         return facts

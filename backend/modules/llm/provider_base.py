@@ -126,7 +126,7 @@ class ProviderBase(LLMPort):
         self,
         *,
         provider_name: str,
-        timeout: int = 30,
+        timeout: int = 60,
         retry_policy: RetryPolicy | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
@@ -172,7 +172,7 @@ class ProviderBase(LLMPort):
         """Send a request with retry logic and timeout.
 
         Delegates to ``_call_provider()`` (implemented by subclasses).
-        Retries on rate-limit and transient errors.  Auth errors and
+        Retries on rate-limit and transient errors. Auth errors and
         timeouts are raised immediately.
         """
         return await self._generate_with_retry(prompt, context, tools)
@@ -210,7 +210,7 @@ class ProviderBase(LLMPort):
     ) -> LLMResponse:
         """Execute the actual provider API call.
 
-        This method is called inside the retry loop.  It should raise
+        This method is called inside the retry loop. It should raise
         ``ProviderRateLimitError``, ``ProviderAuthError``, or
         ``ProviderTimeoutError`` for the retry logic to handle correctly.
         """
@@ -220,7 +220,7 @@ class ProviderBase(LLMPort):
         """Execute the actual token-count API call."""
 
     # ------------------------------------------------------------------
-    # Retry logic
+    # Retry & Dynamic Timeout logic
     # ------------------------------------------------------------------
 
     async def _generate_with_retry(
@@ -233,9 +233,18 @@ class ProviderBase(LLMPort):
         self._statistics.total_requests += 1
         start_time = time.monotonic()
 
+        # Dynamic timeout calculation based on workload length & tool complexity
+        prompt_chars = len(prompt) + sum(len(m.content) for m in context if m.content)
+        extra_timeout = (prompt_chars // 1500) * 10
+        if tools:
+            extra_timeout += 15
+        base_timeout = max(self._timeout, 60) + extra_timeout
+
         for attempt in range(max_attempts):
+            # Stretch timeout dynamically on retry attempts
+            current_timeout = base_timeout * (1.25 ** attempt)
             try:
-                async with asyncio.timeout(self._timeout):
+                async with asyncio.timeout(current_timeout):
                     response = await self._call_provider(prompt, context, tools)
 
                     # Track successful request
@@ -259,18 +268,32 @@ class ProviderBase(LLMPort):
                     return response
 
             except asyncio.TimeoutError:
-                self._statistics.failed_requests += 1
-                self._statistics.last_error = f"Timeout after {self._timeout}s"
+                self._statistics.retry_count += 1
+                self._statistics.last_error = f"Timeout after {current_timeout:.1f}s"
                 self._statistics.last_error_time = time.time()
                 self._statistics.is_healthy = False
                 if self._statistics.degraded_since == 0.0:
                     self._statistics.degraded_since = time.time()
 
+                if attempt < max_attempts - 1:
+                    delay = self._compute_backoff(attempt)
+                    self._logger.warning(
+                        "Provider '%s' request timed out after %.1fs (attempt %d/%d), stretching timeout and retrying in %.1fs...",
+                        self._provider_name,
+                        current_timeout,
+                        attempt + 1,
+                        max_attempts,
+                        delay,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+
+                self._statistics.failed_requests += 1
                 raise ProviderTimeoutError(
-                    f"Provider '{self._provider_name}' timed out after {self._timeout}s",
+                    f"Provider '{self._provider_name}' timed out after {current_timeout:.1f}s across {max_attempts} attempts",
                     context={
                         "provider": self._provider_name,
-                        "timeout": self._timeout,
+                        "timeout": current_timeout,
                     },
                 ) from None
 

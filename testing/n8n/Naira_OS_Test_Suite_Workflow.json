@@ -1,0 +1,263 @@
+{
+  "name": "Naira-OS Mega Integration Test Suite - Strict Execution & Verification",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "n1-manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst staticData = $getWorkflowStaticData('global');\n\nconst promptsPath = $env.NAIRA_PROMPTS_JSON_PATH || '/data/naira_test_prompts.json';\nconst logPath = $env.NAIRA_LOG_PATH || '/var/log/naira/naira.log';\n\n// Load the 100-prompt dataset\nconst prompts = JSON.parse(fs.readFileSync(promptsPath, 'utf-8'));\n\n// Establish a log baseline so we ONLY look at NEW log lines written\n// during this test run, not historical noise from previous sessions.\nlet baselineLineCount = 0;\ntry {\n  const existingLog = fs.readFileSync(logPath, 'utf-8');\n  baselineLineCount = existingLog.split('\\n').length;\n} catch (e) {\n  baselineLineCount = 0; // log file doesn't exist yet, that's fine\n}\n\nstaticData.lastLineCount = baselineLineCount;\nstaticData.allResults = [];\nstaticData.logPath = logPath;\nstaticData.runStartedAt = new Date().toISOString();\n\nreturn prompts.map(p => ({ json: p }));"
+      },
+      "id": "n2-load-dataset",
+      "name": "Load Prompt Dataset & Init State",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1160,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "n3-loop",
+      "name": "Loop Over Prompts",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item.json;\n\nreturn {\n  json: {\n    id: item.id,\n    prompt: item.prompt,\n    expected_engine: item.expected_engine,\n    module: item.module,\n    memory_event: item.memory_event,\n    request_body: {\n      text: item.prompt,\n      session_id: 'n8n_test'\n    }\n  }\n};"
+      },
+      "id": "n4-build-payload",
+      "name": "Build Chat Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/api/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request_body) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "n5-http-call",
+      "name": "Call Naira Chat API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -400,
+        460
+      ],
+      "onError": "continueRegularOutput",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "seconds"
+      },
+      "id": "n6-wait",
+      "name": "Wait For Log Flush",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -160,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst staticData = $getWorkflowStaticData('global');\n\n// ---- 1. Read only the NEW lines written since the last check ----\nlet fullLogText = '';\ntry {\n  fullLogText = fs.readFileSync(staticData.logPath, 'utf-8');\n} catch (e) {\n  fullLogText = '';\n}\nconst allLines = fullLogText.split('\\n');\nconst newLines = allLines.slice(staticData.lastLineCount);\nstaticData.lastLineCount = allLines.length;\nconst logChunk = newLines.join('\\n');\n\n// ---- 2. Regex signatures for what actually happened under the hood ----\nconst patterns = {\n  heavyLLM:     /Routed to Heavy LLM|AutonomousTaskEngine|ReAct loop|DecisionManager.*HEAVY/i,\n  fcr:          /\\[FCR\\]|FastCommandRouter|Routed to FCR|DecisionManager.*FCR/i,\n  pythonExec:   /Executed python script|execute_local_python|Subprocess launched/i,\n  fileOp:       /File created|File deleted|File renamed|file_manager.*success/i,\n  gitOp:        /git_handler|Git command executed/i,\n  memoryEvent:  /Background memory harvest|MemoryHarvester|ContextBuilder.*inject/i,\n  errorTrace:   /Traceback \\(most recent call last\\)|ERROR|Exception raised/i\n};\n\n// ---- 3. Did the previous HTTP call actually error out? ----\nconst originalData = $('Build Chat Payload').item.json;\nconst apiResponse   = $('Call Naira Chat API').item.json;\nconst httpFailed = !!(apiResponse && apiResponse.error);\n\nlet actualEngine = 'UNKNOWN - no routing log found';\nif (patterns.heavyLLM.test(logChunk)) actualEngine = 'Heavy LLM';\nelse if (patterns.fcr.test(logChunk)) actualEngine = 'FCR';\n\nlet executionStatus;\nif (httpFailed) {\n  executionStatus = `Failed: HTTP request error - ${apiResponse.error}`;\n  actualEngine = 'N/A (request failed)';\n} else if (patterns.errorTrace.test(logChunk)) {\n  const match = logChunk.match(patterns.errorTrace);\n  executionStatus = `Failed: Error found in logs (${match[0]})`;\n} else if (patterns.pythonExec.test(logChunk)) {\n  executionStatus = 'Verified: Subprocess launched successfully';\n} else if (patterns.fileOp.test(logChunk)) {\n  executionStatus = 'Verified: File operation confirmed';\n} else if (patterns.gitOp.test(logChunk)) {\n  executionStatus = 'Verified: Git command executed';\n} else if (actualEngine === 'FCR') {\n  executionStatus = 'Verified: FCR handler dispatched (no subprocess expected)';\n} else {\n  executionStatus = 'Failed: No execution log found';\n}\n\n// ---- 4. Pull the reply text out of whatever shape /api/chat returns ----\nconst reply = apiResponse && !httpFailed\n  ? (apiResponse.reply || apiResponse.response || apiResponse.message || JSON.stringify(apiResponse))\n  : 'NO REPLY RECEIVED';\n\n// ---- 5. Build the exact report row and stash it in static data ----\nconst row = {\n  'Prompt': originalData.prompt,\n  'Expected Engine': originalData.expected_engine,\n  'Actual Engine Triggered': actualEngine,\n  \"Naira's Reply\": reply,\n  'Real-World Execution Status': executionStatus,\n  '_test_id': originalData.id,\n  '_module_tested': originalData.module,\n  '_memory_event': originalData.memory_event,\n  '_raw_log_chunk': logChunk\n};\n\nstaticData.allResults.push(row);\n\nreturn [{ json: row }];"
+      },
+      "id": "n7-parse-verify",
+      "name": "Parse And Verify Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst staticData = $getWorkflowStaticData('global');\nconst results = staticData.allResults || [];\n\n// Also persist a raw JSON report alongside the CSV, since the\n// requirement allows CSV, JSON, or Google Sheet output.\nconst jsonReportPath = $env.NAIRA_REPORT_JSON_PATH || '/data/naira_test_report.json';\ntry {\n  fs.writeFileSync(jsonReportPath, JSON.stringify({\n    run_started_at: staticData.runStartedAt,\n    run_finished_at: new Date().toISOString(),\n    total_tests: results.length,\n    results\n  }, null, 2), 'utf-8');\n} catch (e) {\n  // non-fatal - CSV export below still proceeds\n}\n\nreturn results.map(r => ({ json: r }));"
+      },
+      "id": "n8-collect",
+      "name": "Collect All Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "csv",
+        "options": {}
+      },
+      "id": "n9-convert-csv",
+      "name": "Convert To CSV",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        -380,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $env.NAIRA_REPORT_CSV_PATH || '/data/naira_test_report.csv' }}",
+        "options": {}
+      },
+      "id": "n10-write-csv",
+      "name": "Save Report To Disk",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        -140,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Load Prompt Dataset & Init State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Prompt Dataset & Init State": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Prompts": {
+      "main": [
+        [
+          {
+            "node": "Collect All Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Chat Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Chat Payload": {
+      "main": [
+        [
+          {
+            "node": "Call Naira Chat API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Naira Chat API": {
+      "main": [
+        [
+          {
+            "node": "Wait For Log Flush",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait For Log Flush": {
+      "main": [
+        [
+          {
+            "node": "Parse And Verify Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse And Verify Log": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect All Results": {
+      "main": [
+        [
+          {
+            "node": "Convert To CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert To CSV": {
+      "main": [
+        [
+          {
+            "node": "Save Report To Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {},
+  "meta": {
+    "description": "Sequentially runs the 100-prompt Naira-OS test suite against /api/chat, cross-verifies each response against fresh naira.log lines (regex-detected FCR vs Heavy LLM routing + real subprocess/file/git execution), and writes a CSV + JSON verification report."
+  }
+}

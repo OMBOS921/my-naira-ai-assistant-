@@ -23,6 +23,7 @@ from backend.modules.pc_control._types import (
     ProcessInfo,
     ScreenshotResult,
     ScreenSize,
+    SystemMetrics,
     VolumeInfo,
     WindowInfo,
 )
@@ -247,6 +248,28 @@ class LocalPCControlAdapter(PCControlPort):
 
     async def screen_list_displays(self) -> list[DisplayInfo]:
         raise PCControlNotImplementedError(context={"operation": "screen_list_displays"})
+
+    # ------------------------------------------------------------------
+    # Pro-Level Utilities
+    # ------------------------------------------------------------------
+
+    async def filesystem_zip_directory(self, source_dir: str, output_zip_path: str) -> FileOpResult:
+        raise PCControlNotImplementedError(context={"operation": "filesystem_zip_directory"})
+
+    async def filesystem_extract_archive(self, zip_path: str, extract_to_dir: str) -> FileOpResult:
+        raise PCControlNotImplementedError(context={"operation": "filesystem_extract_archive"})
+
+    async def filesystem_copy_item(self, source_path: str, dest_path: str) -> FileOpResult:
+        raise PCControlNotImplementedError(context={"operation": "filesystem_copy_item"})
+
+    async def filesystem_move_item(self, source_path: str, dest_path: str) -> FileOpResult:
+        raise PCControlNotImplementedError(context={"operation": "filesystem_move_item"})
+
+    async def get_system_metrics(self) -> SystemMetrics:
+        raise PCControlNotImplementedError(context={"operation": "get_system_metrics"})
+
+    async def get_open_ports(self) -> list[int]:
+        raise PCControlNotImplementedError(context={"operation": "get_open_ports"})
 
     # ------------------------------------------------------------------
     # Lifecycle
