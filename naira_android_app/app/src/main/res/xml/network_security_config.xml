@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Completely disable clear-text HTTP traffic app-wide -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Certificate Pinning Configuration for Ngrok Remote Tunnel Domains -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">ngrok-free.app</domain>
+        <domain includeSubdomains="true">ngrok.io</domain>
+        <domain includeSubdomains="true">naira-os.internal</domain>
+        <pin-set expiration="2027-12-31">
+            <!-- DigiCert Global Root G2 / Primary Ngrok Leaf Fingerprint Pins -->
+            <pin digest="SHA-256">r/mRqG64zx5ACmbKDQuJ82yVND95OvXC140MmKIA1Ec=</pin>
+            <!-- Backup Pin -->
+            <pin digest="SHA-256">YLh1dEE9y6Kz1W08GVLI6db04299m9ZY1h65281VQlk=</pin>
+        </pin-set>
+    </domain-config>
+</network-security-config>

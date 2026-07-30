@@ -13,18 +13,16 @@ This document structures the milestones, phase-wise deliverables, and lifecycle 
                              ▼
  ┌────────────────────────────────────────────────────────┐
  │ PHASE 1: CORE FOUNDATION & CONFIG SETUP (Completed)    │
- └───────────────────────────┬────────────────────────────┘
-                             ▼
- ┌────────────────────────────────────────────────────────┐
- │ PHASE 2: MASTER FAST COMMAND ROUTER (FCR) (Completed)  │
- └───────────────────────────┬────────────────────────────┘
-                             ▼
- ┌────────────────────────────────────────────────────────┐
- │ PHASE 3: INTERACTIVE CLI & WEBSOCKET GATEWAY(Completed)│
- └───────────────────────────┬────────────────────────────┘
-                             ▼
- ┌────────────────────────────────────────────────────────┐
+ └───────────────────────────┬──────────────────────� ┌────────────────────────────────────────────────────────┐
  │ PHASE 4: PROACTIVE WATCHDOG & LLM CACHING (Completed)  │
+ └───────────────────────────┬────────────────────────────┘
+                             ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ PHASE 4.1: REMOTE BRIDGE BACKEND (Completed)           │
+ └───────────────────────────┬────────────────────────────┘
+                             ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ PHASE 4.2: ANDROID REMOTE APP & SECURITY VAULT (Active)│
  └───────────────────────────┬────────────────────────────┘
                              ▼
  ┌────────────────────────────────────────────────────────┐
@@ -89,6 +87,60 @@ This document structures the milestones, phase-wise deliverables, and lifecycle 
   * `ProactiveWatchdog` engine checking CPU/RAM metrics with initial throwaway warm-up sampling and voice alert synthesis.
   * LLM Response Cache (`LLMResponseCache`) with strict tool-call bypassing to eliminate destructive action replay risks.
   * Dynamic provider fallback chain (Gemini → Ollama → DeepSeek).
+
+---
+
+### Phase 4.1: Remote Bridge Backend (Completed)
+* **Goal:** Implement secure remote connectivity infrastructure via Ngrok WebSocket tunnels, FCM silent wake-up dispatching, and cryptographic zero-trust payload validation.
+* **Deliverables:**
+  * **FCM Dispatcher ([`fcm_manager.py`](file:///c:/Users/user/Desktop/Project-AIF-main/backend/modules/remote_bridge/fcm_manager.py)):** High-priority data-only FCM push notification manager waking target Android devices from Doze mode.
+  * **Ngrok WebSocket Router ([`remote_router.py`](file:///c:/Users/user/Desktop/Project-AIF-main/backend/modules/remote_bridge/remote_router.py)):** Public `@router.websocket("/ws/remote")` endpoint with authentication handshake and connection tracking.
+  * **Offline Action Queue ([`remote_router.py`](file:///c:/Users/user/Desktop/Project-AIF-main/backend/modules/remote_bridge/remote_router.py)):** Thread-safe async queue holding signed commands while mobile device is offline, with auto-flush on re-connection.
+  * **Zero-Trust Security Engine ([`bridge_security.py`](file:///c:/Users/user/Desktop/Project-AIF-main/backend/modules/remote_bridge/bridge_security.py)):** HMAC-SHA256 signature generator/verifier, timestamp freshness validator (5-min max age), nonce replay prevention, and action risk scoring engine (`score > 80` triggers biometric step-up).
+  * **Unit Testing Suite:** 100% test coverage for remote bridge modules across security, FCM dispatch, and router queuing.
+
+---
+
+### Phase 4.2: Android Remote App & Security Vault (Active / Upcoming)
+* **Goal:** Build the native Android remote control mobile client, implementing hardware-backed biometric security, out-of-band QR pairing, and background FCM service integration.
+* **Planned Deliverables:**
+  * **Native Android Application:** Mobile UI for real-time desktop monitoring, command execution, and remote notification stream.
+  * **Hardware-Backed KeyStore Integration (`AndroidKeyStore`):** Safe master private key storage in device Trusted Execution Environment (TEE).
+  * **Android NDK C++ Vault:** Native C++ cryptographic verification library preventing reverse-engineering and Frida hook tampering.
+  * **Biometric Prompt API Integration:** Automatic biometric challenge UI triggered when incoming commands have risk scores > 80.
+  * **Out-of-Band QR Pairing Scanner:** Camera-based QR code scanner for instant key exchange with Naira-OS desktop core.
+
+---
+
+### Phase 5: Coding Agent Subsystem & 24 Skill Packs (Completed)
+* **Goal:** Build an autonomous coding agent capable of multi-language project analysis, execution planning, code generation, refactoring, debugging, and code review.
+* **Deliverables:**
+  * `CodingAgentManager` engine and `ProjectAnalyzerProvider` (detecting Python, JS, TS, JSX, TSX, Go, Rust, Java, C, C++, C#).
+  * 24 specialized Skill Packs covering Python, C, C++, Java, JS, TS, React, Next.js, Node.js, Express, FastAPI, Django, DSA, Competitive Programming, AI/ML, Docker, Kubernetes, DevOps, Linux, PostgreSQL, MongoDB, SQL, Web Security, Git.
+  * 100-Scenario Coding Agent Regression Suite passing with 0 false positives.
+
+---
+
+### Phase 5.1: The Grand Unified Patch & CLI Entrypoint (Completed)
+* **Goal:** Execute surgical logic fixes identified in multi-AI audit and deliver missing CLI runner.
+* **Deliverables:**
+  * **Browser Fix:** Headless operation without physical browser tab popups.
+  * **React/Next.js Fix:** Support for `.jsx` and `.tsx` file analysis in project structure analyzer.
+  * **Tool-Call Replay Fix:** Strict cache exclusion for responses containing `tool_calls`.
+  * **CPU Warm-up Fix:** `psutil.cpu_percent` warm-up sampling in watchdog.
+  * **Session Consistency Fix:** WebSocket `system_init` explicitly syncing `SessionManager`, `ConversationManager`, and `InteractionManager` state.
+  * **CLI Runner:** Production-ready `run_cli.py` terminal entrypoint.
+  * 100-Scenario System E2E Suite passing cleanly.
+
+---
+
+### Phase 6: Production Hardening & Extension Ecosystem (Upcoming)
+* **Goal:** Expand plugin ecosystem, refine 3D Avatar IPC link, and optimize background multi-agent orchestrations.
+* **Deliverables:**
+  * Dynamic Plugin Manager (Load, Enable, Disable, Purge lifecycles).
+  * Unity/Godot 3D Anime Avatar IPC link wrapper.
+  * Advanced Multi-Agent collaboration network.
+k).
 
 ---
 

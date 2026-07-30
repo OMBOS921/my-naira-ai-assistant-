@@ -69,3 +69,53 @@ To prevent malicious third-party contexts (e.g., an email or web text read by Na
 Every action related to credential loading, file modification, terminal execution, or permission granting is permanently logged in a sequential audit file:
 * **Format:** `[TIMESTAMP] [MODULE] [ACTION] [SECURITY_STATUS: GRANTED/BLOCKED]`
 * Logs are sanitized of private variables and keys before they are saved to disk.
+
+---
+
+## 4. Zero-Trust Remote Bridge Security Engine
+
+Phase 4.1 implements the **Zero-Trust Security Engine** ([`bridge_security.py`](file:///c:/Users/user/Desktop/Project-AIF-main/backend/modules/remote_bridge/bridge_security.py)) to safeguard all remote communications over public tunnels.
+
+### A. HMAC-SHA256 Payload Signing
+Every message transmitted between the Naira-OS core and remote clients is cryptographically signed:
+* **Signing Key:** Master key defined by `REMOTE_BRIDGE_MASTER_KEY` environment variable.
+* **Canonicalization:** Payloads are sorted deterministically before hashing to ensure byte-level identity consistency across runtimes.
+* **Digest Generation:**
+$$\text{Base} = \text{timestamp} + ":" + \text{nonce} + ":" + \text{json.dumps(clean\_payload, sort\_keys=True)}$$
+$$\text{Signature} = \text{HMAC-SHA256}(\text{MasterKey}, \text{Base})$$
+
+### B. Nonce Replay Prevention & Timestamp Freshness
+* **Timestamp Freshness Window (`MAX_TIMESTAMP_AGE_SECONDS = 300`):** Incoming messages with ISO-8601 timestamps older than 5 minutes or in the future are immediately rejected.
+* **Cryptographic Nonce Validation:** Every payload includes a unique 16-byte cryptographically random hex token (`secrets.token_hex(16)`). Duplicate nonces within the timestamp window are dropped to prevent replay attacks.
+
+### C. Action Risk Scoring Engine (`RiskEngine`)
+Actions are scored on a scale from 0 to 100 based on potential impact:
+
+| Action Category | Risk Score | Require Biometric (`score > 80`) |
+|-----------------|------------|-----------------------------------|
+| `GET_BATTERY` | 5 | No |
+| `TOGGLE_WIFI`, `TOGGLE_BLUETOOTH` | 10 | No |
+| `SET_VOLUME`, `LOCK_DEVICE` | 15–20 | No |
+| `TAKE_SCREENSHOT`, `READ_CONTACTS` | 30–35 | No |
+| `READ_SMS`, `LOCATION_GET`, `MAKE_CALL` | 40–60 | No |
+| `SEND_SMS` | 70 | No |
+| `CHANGE_PASSWORD` | 90 | **YES** |
+| `OPEN_BANK_APP`, `TRANSFER_FUNDS` | 95 | **YES** |
+| `FACTORY_RESET` | 100 | **YES** |
+
+* **Step-Up Biometric Authentication:** Any action with a risk score exceeding `BIOMETRIC_RISK_THRESHOLD = 80` automatically flags `requires_biometric = True`. The remote app MUST verify device biometrics (Fingerprint/Face Unlock) before submitting execution confirmation back to Naira-OS.
+
+### D. Upcoming Android KeyStore / NDK & QR Pairing Blueprint (Phase 4.2)
+
+1. **Out-of-Band QR Code Device Pairing:**
+   * Desktop renders a transient, encrypted QR code containing the initialization secret and tunnel coordinates.
+   * Android app scans the QR code to pair device credentials out-of-band without exposing secrets over network channels.
+
+2. **Hardware-Backed Android KeyStore Integration:**
+   * Master private keys will be stored inside the device's Trusted Execution Environment (TEE) / Hardware Security Module (HSM) via `AndroidKeyStore`.
+   * Key material is marked non-exportable, preventing key extraction even on compromised/rooted Android devices.
+
+3. **Android NDK Native Cryptographic Vault:**
+   * Core HMAC-SHA256 signature verification and payload canonicalization routines in the Android app will be compiled into C++ native libraries via the Android NDK.
+   * Obfuscated native binaries prevent reverse engineering, Frida hook injections, and memory tampering of cryptographic execution paths.
+

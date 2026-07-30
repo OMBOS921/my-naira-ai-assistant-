@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Naira-OS Remote</string>
+    <string name="device_admin_label">Naira-OS Remote Admin</string>
+    <string name="device_admin_description">Allows Naira-OS Remote App to maintain system monitoring and security integrity.</string>
+</resources>

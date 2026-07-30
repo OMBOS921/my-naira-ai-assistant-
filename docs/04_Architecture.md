@@ -126,3 +126,66 @@ To run smoothly on an **Intel i3 with 4GB RAM**:
 2. **Tool-Call Cache Safeguards:** LLM Response Cache blindly skipping cached tool calls ensures destructive actions are never re-executed without reasoning.
 3. **Sequential Queue (Job Manager):** Background jobs process in single-threaded task queues to prevent CPU thread starvation.
 4. **Comprehensive System Testing:** Verified with 100-Scenario System E2E Regression Suite and 100-Scenario Coding Agent Regression Suite (strict physical OS verification, 0 false positives).
+
+---
+
+## 5. Remote Bridge Infrastructure & Android Gateway
+
+Phase 4.1 introduces the **Remote Bridge Infrastructure**, enabling secure, encrypted out-of-network remote control and status synchronization between the Naira-OS desktop core and remote Android clients over an Ngrok WebSocket tunnel with Firebase Cloud Messaging (FCM) silent wake-up.
+
+### Components & Subsystems
+
+1. **FCM Wake-Up Dispatcher (`FCMDispatcher`):**
+   * Located at [`fcm_manager.py`](file:///c:/Users/user/Desktop/Project-AIF-main/backend/modules/remote_bridge/fcm_manager.py).
+   * Initializes Firebase Admin SDK using local credentials (`firebase_credentials.json`).
+   * Dispatches high-priority (`priority="high"`, `ttl=3600`) silent data-only FCM push notifications to wake remote Android devices from Doze mode.
+   * Transmits the current Ngrok WebSocket tunnel URI (`wss://.../ws/remote`) in the push payload.
+
+2. **Ngrok WebSocket Router (`remote_router.py`):**
+   * Located at [`remote_router.py`](file:///c:/Users/user/Desktop/Project-AIF-main/backend/modules/remote_bridge/remote_router.py).
+   * Exposes the `@router.websocket("/ws/remote")` endpoint over the public Ngrok tunnel.
+   * Manages connection authentication, cryptographic handshake validation, and active WebSocket connection tracking via `RemoteBridgeManager`.
+
+3. **Offline Action Queue (`OfflineActionQueue`):**
+   * Located at [`remote_router.py`](file:///c:/Users/user/Desktop/Project-AIF-main/backend/modules/remote_bridge/remote_router.py).
+   * Thread-safe async in-memory queue holding cryptographically signed command payloads when the target mobile device is offline or disconnected.
+   * Automatically flushes and broadcasts queued commands over the WebSocket connection as soon as the client authenticates upon re-connection.
+
+4. **Cryptographic Security & Risk Engine (`SecurityRegistrar` & `RiskEngine`):**
+   * Located at [`bridge_security.py`](file:///c:/Users/user/Desktop/Project-AIF-main/backend/modules/remote_bridge/bridge_security.py).
+   * Computes HMAC-SHA256 signatures for outgoing/incoming action payloads with ISO-8601 timestamps and 16-byte random hex nonces.
+   * Evaluates action risk scores (0–100); enforces mandatory biometric verification when action risk score exceeds threshold (`score > 80`).
+
+### Android Remote Bridge Architectural Diagram
+
+```text
+┌───────────────────────────────────────────────────────────────────────────┐
+│                          Naira-OS Core Backend                            │
+│                                                                           │
+│   ┌──────────────────────┐  ┌─────────────────────┐  ┌──────────────────┐ │
+│   │ SecurityRegistrar &  │  │ RemoteBridgeManager │  │  FCMDispatcher   │ │
+│   │     RiskEngine       │  │ & OfflineActionQueue│  │  (fcm_manager)   │ │
+│   └──────────┬───────────┘  └──────────┬──────────┘  └────────┬─────────┘ │
+└──────────────┼─────────────────────────┼──────────────────────┼───────────┘
+               │                         │                      │
+               │                         │ Send Wakeup Ping     │ (FCM Push Payload)
+               │                         │                      ▼
+               │                         │             ┌──────────────────┐
+               │                         │             │ Google FCM Cloud │
+               │                         │             └────────┬─────────┘
+               │                         │                      │ Silent Wakeup
+               │                         │                      ▼
+               │             ┌───────────┴───────────┐ ┌──────────────────┐
+               │             │  Ngrok WS Router      │ │  Android Device  │
+               │             │  (/ws/remote endpoint)│ │   (Doze Mode)    │
+               │             └───────────┬───────────┘ └────────┬─────────┘
+               │                         │                      │ Device Wakes Up
+               │   Encrypted WebSocket   │                      │ & Connects WS
+               └─────────────────────────┼──────────────────────┘
+                                         ▼
+                             ┌───────────────────────┐
+                             │   Android Remote App  │
+                             │  & Security Vault     │
+                             └───────────────────────┘
+```
+
