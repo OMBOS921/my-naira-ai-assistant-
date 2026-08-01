@@ -1,0 +1,3992 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+public/
+  assets/
+    idle.mp4
+    laughing.mp4
+    listening.mp4
+    talking.mp4
+    thinking.mp4
+src/
+  api/
+    client.js
+  components/
+    AvatarStage.jsx
+    Background3D.jsx
+    KeyField.jsx
+    ui.jsx
+  screens/
+    ApiVaultScreen.jsx
+    BootScreen.jsx
+    DashboardScreen.jsx
+    HandshakeScreen.jsx
+  sections/
+    ChatSection.jsx
+    CodingSection.jsx
+    HistorySection.jsx
+    HomeSection.jsx
+    MemorySection.jsx
+    PluginsSection.jsx
+    RemoteBridgeSection.jsx
+    SettingsSection.jsx
+    VoiceSection.jsx
+  state/
+    AppContext.jsx
+    store.js
+  App.jsx
+  index.css
+  main.jsx
+index.html
+package.json
+vite.config.js
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="src/api/client.js">
+const API_BASE = import.meta.env.VITE_API_BASE || ''
+
+async function request(path, options = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  })
+  let data = null
+  const text = await res.text()
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = { detail: text }
+  }
+  if (!res.ok) {
+    const detail =
+      (data && (data.detail || data.message)) ||
+      (data && typeof data.detail === 'string' ? data.detail : null) ||
+      `Request failed (${res.status})`
+    const err = new Error(typeof detail === 'string' ? detail : 'Request failed')
+    err.status = res.status
+    throw err
+  }
+  return data
+}
+
+export async function getVaultStatus() {
+  try {
+    return await request('/api/settings/status')
+  } catch {
+    return { configured: false, reachable: false }
+  }
+}
+
+export async function saveVaultConfiguration({ provider, apiKey, model }) {
+  return request('/api/settings/vault', {
+    method: 'POST',
+    body: JSON.stringify({ provider, api_key: apiKey, model: model || undefined }),
+  })
+}
+
+export async function getRemoteBridgeStatus() {
+  try {
+    return await request('/api/remote/status')
+  } catch {
+    return { reachable: false, connected: false, queue_size: 0, fcm_ready: false }
+  }
+}
+
+export async function chatText(text, sessionId = 'default') {
+  return request('/api/chat', {
+    method: 'POST',
+    body: JSON.stringify({ text, session_id: sessionId, modality: 'text' }),
+  })
+}
+
+export const WS_URL = () => {
+  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
+  return `${proto}://${window.location.host}/ws/naira`
+}
+</file>
+
+<file path="src/components/AvatarStage.jsx">
+import { useEffect, useMemo, useRef } from 'react'
+import { motion } from 'framer-motion'
+import { useApp } from '../state/AppContext.jsx'
+
+export default function AvatarStage({ size = 'lg', state = 'idle', children }) {
+  const { avatarState: globalState } = useApp()
+  const videoRef = useRef(null)
+  const active = state === 'custom' ? globalState : state
+  const stateKey = active === 'custom' ? globalState : active
+
+  const videoFile = useMemo(() => {
+    switch (stateKey) {
+      case 'listening':
+        return 'listening.mp4'
+      case 'thinking':
+        return 'thinking.mp4'
+      case 'talking':
+        return 'talking.mp4'
+      case 'laughing':
+        return 'laughing.mp4'
+      default:
+        return 'idle.mp4'
+    }
+  }, [stateKey])
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+    const src = `/assets/${videoFile}`
+    if (video.getAttribute('src') !== src) {
+      video.setAttribute('src', src)
+      video.load()
+      video.play().catch(() => {})
+    } else if (video.paused) {
+      video.play().catch(() => {})
+    }
+  }, [videoFile])
+
+  const halo = {
+    idle: { '--halo-1': '#a78bfa', '--halo-2': '#22d3ee', '--halo-3': '#f472b6' },
+    listening: { '--halo-1': '#22d3ee', '--halo-2': '#38bdf8', '--halo-3': '#a78bfa' },
+    thinking: { '--halo-1': '#60a5fa', '--halo-2': '#818cf8', '--halo-3': '#22d3ee' },
+    talking: { '--halo-1': '#f472b6', '--halo-2': '#c084fc', '--halo-3': '#fb7185' },
+    laughing: { '--halo-1': '#34d399', '--halo-2': '#a3e635', '--halo-3': '#22d3ee' },
+  }[stateKey]
+
+  return (
+    <motion.div
+      className="avatar-stage"
+      initial={{ opacity: 0, scale: 0.86 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <div className="avatar-orb-wrap" style={halo}>
+        <div className="avatar-glow" />
+        <div className="avatar-halo" />
+        <video
+          ref={videoRef}
+          className={`avatar-video ${size}`}
+          autoPlay
+          loop
+          muted
+          playsInline
+          src="/assets/idle.mp4"
+        />
+      </div>
+      {children}
+    </motion.div>
+  )
+}
+</file>
+
+<file path="src/components/Background3D.jsx">
+import { Canvas, useFrame } from '@react-three/fiber'
+import { Float, Sparkles } from '@react-three/drei'
+import { useMemo, useRef } from 'react'
+import * as THREE from 'three'
+
+function ParticleField({ count = 1400 }) {
+  const ref = useRef()
+  const { positions, colors } = useMemo(() => {
+    const pos = new Float32Array(count * 3)
+    const col = new Float32Array(count * 3)
+    const palette = [new THREE.Color('#22d3ee'), new THREE.Color('#a78bfa'), new THREE.Color('#f472b6'), new THREE.Color('#60a5fa')]
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 34
+      pos[i * 3 + 1] = (Math.random() - 0.5) * 22
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 20
+      const c = palette[Math.floor(Math.random() * palette.length)]
+      const a = 0.35 + Math.random() * 0.6
+      col[i * 3] = c.r * a
+      col[i * 3 + 1] = c.g * a
+      col[i * 3 + 2] = c.b * a
+    }
+    return { positions: pos, colors: col }
+  }, [count])
+
+  useFrame((_, delta) => {
+    if (!ref.current) return
+    ref.current.rotation.y += delta * 0.02
+  })
+
+  return (
+    <points ref={ref}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
+      </bufferGeometry>
+      <pointsMaterial size={0.05} vertexColors transparent opacity={0.85} depthWrite={false} sizeAttenuation />
+    </points>
+  )
+}
+
+function AuroraOrb() {
+  const ref = useRef()
+  useFrame((state) => {
+    if (!ref.current) return
+    ref.current.rotation.z = state.clock.elapsedTime * 0.05
+  })
+  return (
+    <group ref={ref}>
+      <mesh position={[6, 3, -6]}>
+        <sphereGeometry args={[2.4, 48, 48]} />
+        <meshBasicMaterial color="#a78bfa" transparent opacity={0.07} />
+      </mesh>
+      <mesh position={[-7, -2, -8]}>
+        <sphereGeometry args={[3.2, 48, 48]} />
+        <meshBasicMaterial color="#22d3ee" transparent opacity={0.05} />
+      </mesh>
+      <mesh position={[0, 7, -12]}>
+        <sphereGeometry args={[4.5, 48, 48]} />
+        <meshBasicMaterial color="#f472b6" transparent opacity={0.035} />
+      </mesh>
+    </group>
+  )
+}
+
+function RingTorus() {
+  return (
+    <Float speed={1.6} rotationIntensity={0.7} floatIntensity={1.2}>
+      <mesh position={[0, 0, -9]} rotation={[Math.PI / 2.4, 0.4, 0]}>
+        <torusGeometry args={[4.2, 0.02, 16, 120]} />
+        <meshBasicMaterial color="#22d3ee" transparent opacity={0.25} />
+      </mesh>
+      <mesh position={[0, 0, -9]} rotation={[Math.PI / 2.4, 2.2, 0.4]}>
+        <torusGeometry args={[5.2, 0.014, 16, 120]} />
+        <meshBasicMaterial color="#a78bfa" transparent opacity={0.18} />
+      </mesh>
+    </Float>
+  )
+}
+
+export default function Background3D({ interactive = false }) {
+  return (
+    <div className="scene-3d" style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: interactive ? 'auto' : 'none' }}>
+      <Canvas camera={{ position: [0, 0, 10], fov: 55 }} dpr={[1, 1.6]} gl={{ antialias: true, alpha: true }}>
+        <AuroraOrb />
+        <ParticleField />
+        <RingTorus />
+        <Sparkles count={70} scale={[18, 12, 10]} size={2.4} speed={0.35} color="#7dd3fc" opacity={0.5} />
+      </Canvas>
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'radial-gradient(1000px 600px at 50% 42%, transparent 30%, rgba(7,11,30,0.55) 100%)',
+          pointerEvents: 'none',
+        }}
+      />
+    </div>
+  )
+}
+</file>
+
+<file path="src/components/KeyField.jsx">
+import { useState } from 'react'
+import { Eye, EyeOff, ArrowUpRight, KeyRound, ShieldCheck, ShieldAlert, CircleDot } from 'lucide-react'
+
+const BADGES = {
+  set: { label: 'Set', cls: 'badge-mint', icon: ShieldCheck },
+  required: { label: 'Required', cls: 'badge-amber', icon: ShieldAlert },
+  optional: { label: 'Optional', cls: 'badge-gray', icon: CircleDot },
+}
+
+export default function KeyField({ label, dot, placeholder, value, onChange, status = 'optional', helper, getKeyLink, onGetKey }) {
+  const [visible, setVisible] = useState(false)
+  const badge = BADGES[status] || BADGES.optional
+  const BadgeIcon = badge.icon
+
+  return (
+    <div className="field-group fade-up">
+      <div className="between" style={{ marginBottom: 8 }}>
+        <label className="field-label" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ width: 7, height: 7, borderRadius: 99, background: 'var(--accent-1)', boxShadow: '0 0 8px var(--accent-glow)' }} />
+          {label}
+        </label>
+        <span className={`badge ${badge.cls}`} style={{ textTransform: 'none', letterSpacing: 0 }}>
+          <BadgeIcon size={11} />
+          {badge.label}
+        </span>
+      </div>
+
+      <div style={{ position: 'relative' }}>
+        <KeyRound size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', zIndex: 1 }} />
+        <input
+          className="field"
+          type={visible ? 'text' : 'password'}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          autoComplete="off"
+          spellCheck={false}
+          style={{ paddingLeft: 38, paddingRight: 88 }}
+        />
+        <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 4 }}>
+          <button
+            type="button"
+            className="btn btn-ghost btn-tiny"
+            style={{ padding: '5px 7px' }}
+            onClick={() => setVisible((v) => !v)}
+            title={visible ? 'Hide key' : 'Show key'}
+          >
+            {visible ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+          {getKeyLink && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-tiny"
+              style={{ padding: '5px 8px' }}
+              onClick={() => (onGetKey ? onGetKey() : window.open(getKeyLink, '_blank'))}
+              title="Get key"
+            >
+              <ArrowUpRight size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+      {helper && <div className="tiny" style={{ marginTop: 7, textTransform: 'none', letterSpacing: 0 }}>{helper}</div>}
+    </div>
+  )
+}
+</file>
+
+<file path="src/components/ui.jsx">
+import { motion } from 'framer-motion'
+
+export function GlassCard({ className = '', style, children, hover = true, ...rest }) {
+  return (
+    <div className={`${hover ? 'glass glass-hover' : 'glass'} ${className}`} style={style} {...rest}>
+      {children}
+    </div>
+  )
+}
+
+export function Toggle({ checked, onChange, disabled }) {
+  return (
+    <button
+      type="button"
+      className={`toggle ${checked ? 'on' : ''}`}
+      aria-pressed={checked}
+      onClick={() => !disabled && onChange?.(!checked)}
+    />
+  )
+}
+
+export function Slider({ min = 0, max = 100, value, onChange, disabled }) {
+  const fill = ((value - min) / (max - min)) * 100
+  return (
+    <input
+      type="range"
+      min={min}
+      max={max}
+      value={value}
+      disabled={disabled}
+      onChange={(e) => onChange?.(Number(e.target.value))}
+      style={{ '--fill': `${fill}%` }}
+    />
+  )
+}
+
+export function SectionShell({ icon, title, subtitle, onClose, children, accent }) {
+  return (
+    <motion.div
+      className="section-panel"
+      initial={{ x: 520, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: 560, opacity: 0 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 32 }}
+    >
+      <div className="section-head">
+        <div className="section-head-icon" style={accent ? { background: accent.background, boxShadow: accent.shadow } : undefined}>
+          {icon}
+        </div>
+        <div className="grow">
+          <div className="section-title">{title}</div>
+          {subtitle && <div className="tiny" style={{ marginTop: 2 }}>{subtitle}</div>}
+        </div>
+        <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose} title="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div className="section-body">{children}</div>
+    </motion.div>
+  )
+}
+
+export function Modal({ open, onClose, title, children, danger }) {
+  if (!open) return null
+  return (
+    <motion.div
+      className="modal-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={(e) => e.target === e.currentTarget && onClose?.()}
+    >
+      <motion.div
+        className="modal-card glass"
+        initial={{ scale: 0.9, y: 16 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.92, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 340, damping: 28 }}
+      >
+        <div className="between">
+          <div className="font-display" style={{ fontSize: 17, fontWeight: 700 }}>
+            {title}
+          </div>
+          <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        {children}
+      </motion.div>
+    </motion.div>
+  )
+}
+
+export function EmptyState({ icon, title, note }) {
+  return (
+    <div className="glass-soft" style={{ padding: 30, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+      <div style={{ color: 'var(--text-3)', opacity: 0.6 }}>{icon}</div>
+      <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-2)' }}>{title}</div>
+      {note && <div className="tiny" style={{ maxWidth: 260 }}>{note}</div>}
+    </div>
+  )
+}
+
+export function StatusPill({ label, value, tone = 'gray' }) {
+  return (
+    <div className="row">
+      <span className="tiny" style={{ flex: 1 }}>{label}</span>
+      <span className={`badge badge-${tone}`}>
+        <span className="dot" />
+        {value}
+      </span>
+    </div>
+  )
+}
+</file>
+
+<file path="src/screens/ApiVaultScreen.jsx">
+import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { Lock, ShieldCheck, Loader2 } from 'lucide-react'
+import { useApp } from '../state/AppContext.jsx'
+import { saveVaultConfiguration, getVaultStatus } from '../api/client.js'
+import AvatarStage from '../components/AvatarStage.jsx'
+import KeyField from '../components/KeyField.jsx'
+import Background3D from '../components/Background3D.jsx'
+
+export default function ApiVaultScreen() {
+  const { setScreen, toast, setAvatarState } = useApp()
+  const [geminiKey, setGeminiKey] = useState('')
+  const [zenKey, setZenKey] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [skipped, setSkipped] = useState(false)
+
+  useEffect(() => {
+    getVaultStatus().then((s) => {
+      if (s.configured) {
+        setSkipped(true)
+        toast('Vault already configured — proceeding automatically', 'info')
+        setTimeout(() => setScreen('handshake'), 900)
+      }
+    })
+  }, [setScreen, toast])
+
+  const handleVerify = async () => {
+    const gem = geminiKey.trim()
+    const zen = zenKey.trim()
+    if (!gem && !zen) {
+      toast('At least one API key is required', 'error')
+      return
+    }
+    setBusy(true)
+    setAvatarState('thinking')
+    try {
+      const provider = gem ? 'gemini' : 'deepseek'
+      await saveVaultConfiguration({
+        provider,
+        apiKey: gem || zen,
+        model: undefined,
+      })
+      setAvatarState('laughing')
+      toast('Key verified & sealed in vault — no restart needed', 'success')
+      setTimeout(() => setScreen('handshake'), 800)
+    } catch (err) {
+      setAvatarState('idle')
+      toast(err.message || 'Key verification failed', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'grid', placeItems: 'center', padding: 24 }}>
+      <Background3D />
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.15fr)', gap: 56, maxWidth: 980, width: '100%', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
+          <AvatarStage size="md" state="custom" />
+          <span className="badge badge-violet" style={{ textTransform: 'none', letterSpacing: '0.06em' }}>
+            <Lock size={11} />
+            Vault Status: Unlocked
+          </span>
+          <div style={{ textAlign: 'center' }}>
+            <div className="font-display" style={{ fontSize: 22, fontWeight: 700 }}>
+              API <span className="grad-text">Vault</span>
+            </div>
+            <div className="muted" style={{ fontSize: 13.5, marginTop: 8, lineHeight: 1.6, maxWidth: 300 }}>
+              Naira ko chalaane ke liye ek API key chahiye. Key verify hote hi <b style={{ color: 'var(--text-1)' }}>backend vault mein auto-save</b> ho jaati hai — dobara kabhi nahi deni padegi.
+            </div>
+          </div>
+        </div>
+
+        <motion.div
+          className="glass"
+          style={{ padding: 34 }}
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="row" style={{ marginBottom: 24, gap: 12 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 13, display: 'grid', placeItems: 'center', background: 'linear-gradient(120deg, var(--accent-1), var(--accent-2))', color: '#071021', boxShadow: '0 6px 24px var(--accent-glow)' }}>
+              <ShieldCheck size={19} />
+            </div>
+            <div>
+              <div className="font-display" style={{ fontSize: 17, fontWeight: 700 }}>Secure Key Sealing</div>
+              <div className="tiny" style={{ marginTop: 2 }}>Verified by live LLM handshake</div>
+            </div>
+          </div>
+
+          <KeyField
+            label="Gemini API Key"
+            dot
+            placeholder="AIzaSy..."
+            value={geminiKey}
+            onChange={setGeminiKey}
+            status={zenKey ? 'optional' : 'required'}
+            helper="Powers Gemini models — ek hi key kaafi hai"
+            getKeyLink="https://aistudio.google.com/apikey"
+          />
+          <KeyField
+            label="OpenCode Zen API Key"
+            placeholder="zen-..."
+            value={zenKey}
+            onChange={setZenKey}
+            status={geminiKey ? 'optional' : 'required'}
+            helper="Free deepseek-v4-flash endpoint via OpenCode Zen"
+            getKeyLink="https://opencode.ai/zen"
+          />
+
+          <button className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} disabled={busy} onClick={handleVerify}>
+            {busy ? <Loader2 size={17} className="spin" /> : <ShieldCheck size={17} />}
+            {busy ? 'Verifying & Sealing...' : 'Verify & Proceed'}
+          </button>
+
+          <div className="tiny" style={{ marginTop: 16, textAlign: 'center', textTransform: 'none', letterSpacing: 0, lineHeight: 1.7 }}>
+            Backend key ko <b style={{ color: 'var(--text-2)' }}>real LLM call</b> se verify karta hai, phir <b style={{ color: 'var(--text-2)' }}>memory/user_vault.json</b> mein atomic-save — hot reload, server restart nahi.
+          </div>
+        </motion.div>
+      </div>
+      {skipped && (
+        <motion.div className="glass-soft" style={{ position: 'absolute', bottom: 30, padding: '12px 20px' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <span className="badge badge-mint"><span className="dot" />Vault active — redirecting</span>
+        </motion.div>
+      )}
+    </div>
+  )
+}
+</file>
+
+<file path="src/screens/BootScreen.jsx">
+import { useEffect, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
+import { useApp } from '../state/AppContext.jsx'
+import { getVaultStatus } from '../api/client.js'
+import AvatarStage from '../components/AvatarStage.jsx'
+import Background3D from '../components/Background3D.jsx'
+
+const BOOT_STEPS = [
+  'Booting neural kernel',
+  'Mounting memory core',
+  'Syncing vault bridge',
+  'Calibrating voice matrix',
+  'Naira online',
+]
+
+export default function BootScreen() {
+  const { setScreen, profile } = useApp()
+  const [progress, setProgress] = useState(0)
+  const [stepIdx, setStepIdx] = useState(0)
+  const started = useRef(false)
+
+  useEffect(() => {
+    const total = 3000
+    const interval = setInterval(() => {
+      setProgress((p) => Math.min(100, p + (100 / (total / 40))))
+      setStepIdx(Math.min(BOOT_STEPS.length - 1, Math.floor((progress / 100) * BOOT_STEPS.length)))
+    }, 40)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    if (progress < 100 || started.current) return
+    started.current = true
+    const go = async () => {
+      const status = await getVaultStatus()
+      if (status.configured && profile) setScreen('dashboard')
+      else if (status.configured) setScreen('handshake')
+      else setScreen('vault')
+    }
+    const t = setTimeout(go, 600)
+    return () => clearTimeout(t)
+  }, [progress, setScreen, profile])
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', zIndex: 2 }}>
+      <Background3D />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 26, maxWidth: 420, width: '92%' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+          style={{ textAlign: 'center' }}
+        >
+          <div className="font-display" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '0.28em' }}>
+            <span className="grad-text">NAIRA</span> <span style={{ color: 'var(--text-1)' }}>OS</span>
+          </div>
+          <div className="tiny" style={{ marginTop: 6 }}>Personal AI Operating System</div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.7 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+        >
+          <AvatarStage size="md" state="idle" />
+        </motion.div>
+
+        <div style={{ width: '100%' }}>
+          <div className="progress-track">
+            <div className="progress-bar" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="row" style={{ marginTop: 10, justifyContent: 'space-between' }}>
+            <span className="tiny">{BOOT_STEPS[Math.min(stepIdx, BOOT_STEPS.length - 1)]}...</span>
+            <span className="tiny" style={{ color: 'var(--cyan)' }}>{Math.round(progress)}%</span>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, width: '100%' }}>
+          {BOOT_STEPS.map((s, i) => (
+            <div key={s} className={`boot-line ${i < stepIdx || progress >= 100 ? 'done' : ''}`}>
+              {i < stepIdx || progress >= 100 ? (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              ) : (
+                <span style={{ width: 13, height: 13, borderRadius: 99, border: '1px solid var(--text-3)', opacity: 0.4 }} />
+              )}
+              <span>{s}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+</file>
+
+<file path="src/screens/DashboardScreen.jsx">
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
+import { Home, Code2, Brain, History, MessageSquare, Smartphone, Puzzle, AudioLines, Settings, Mic, Square } from 'lucide-react'
+import { useApp } from '../state/AppContext.jsx'
+import AvatarStage from '../components/AvatarStage.jsx'
+import Background3D from '../components/Background3D.jsx'
+import HomeSection from '../sections/HomeSection.jsx'
+import CodingSection from '../sections/CodingSection.jsx'
+import MemorySection from '../sections/MemorySection.jsx'
+import HistorySection from '../sections/HistorySection.jsx'
+import ChatSection from '../sections/ChatSection.jsx'
+import RemoteBridgeSection from '../sections/RemoteBridgeSection.jsx'
+import PluginsSection from '../sections/PluginsSection.jsx'
+import VoiceSection from '../sections/VoiceSection.jsx'
+import SettingsSection from '../sections/SettingsSection.jsx'
+
+const NAV = [
+  { id: 'home', icon: Home, label: 'Home', Comp: HomeSection },
+  { id: 'coding', icon: Code2, label: 'Coding Agent', Comp: CodingSection },
+  { id: 'memory', icon: Brain, label: 'Memory', Comp: MemorySection },
+  { id: 'history', icon: History, label: 'History', Comp: HistorySection },
+  { id: 'chat', icon: MessageSquare, label: 'Chat', Comp: ChatSection },
+  { id: 'bridge', icon: Smartphone, label: 'Remote Bridge', Comp: RemoteBridgeSection },
+  { id: 'plugins', icon: Puzzle, label: 'Plugins', Comp: PluginsSection },
+  { id: 'voice', icon: AudioLines, label: 'Voice', Comp: VoiceSection },
+]
+
+const EMPTY_CHAT = []
+const EMPTY_HISTORY = []
+const EMPTY_TOOLS = []
+
+export default function DashboardScreen() {
+  const { profile, avatarState, setAvatarState, connect, send, setOnMessage, toast, wsStatus, accent } = useApp()
+
+  const [activeSection, setActiveSection] = useState(null)
+  const [showSettings, setShowSettings] = useState(false)
+
+  const [chatMessages, setChatMessages] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('naira.chat')) || EMPTY_CHAT } catch { return EMPTY_CHAT }
+  })
+  const [historyItems, setHistoryItems] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('naira.history')) || EMPTY_HISTORY } catch { return EMPTY_HISTORY }
+  })
+  const [toolLogs, setToolLogs] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('naira.tools')) || EMPTY_TOOLS } catch { return EMPTY_TOOLS }
+  })
+
+  const speakRef = useRef(false)
+  const sourceRef = useRef('chat')
+  const pendingHistoryRef = useRef(null)
+  const audioRef = useRef(null)
+  const [wakeActive, setWakeActive] = useState(false)
+
+  useEffect(() => {
+    localStorage.setItem('naira.chat', JSON.stringify(chatMessages.slice(-200)))
+  }, [chatMessages])
+  useEffect(() => {
+    localStorage.setItem('naira.history', JSON.stringify(historyItems.slice(-100)))
+  }, [historyItems])
+  useEffect(() => {
+    localStorage.setItem('naira.tools', JSON.stringify(toolLogs.slice(-200)))
+  }, [toolLogs])
+
+  const playAudio = useCallback(
+    (b64, format = 'mp3') => {
+      try {
+        const audio = new Audio(`data:audio/${format};base64,${b64}`)
+        audioRef.current?.pause()
+        audioRef.current = audio
+        audio.onplay = () => setAvatarState('talking')
+        audio.onended = () => setAvatarState('idle')
+        audio.onerror = () => setAvatarState('idle')
+        audio.play().catch(() => setAvatarState('idle'))
+      } catch {
+        setAvatarState('idle')
+      }
+    },
+    [setAvatarState]
+  )
+
+  useEffect(() => {
+    connect()
+    setOnMessage((data) => {
+      if (data.type === 'tool_execution_start' || data.type === 'tool_execution_result') {
+        setToolLogs((logs) => [
+          ...logs.slice(-199),
+          {
+            id: Math.random().toString(36).slice(2),
+            ts: Date.now(),
+            type: data.type,
+            tool: data.tool,
+            text: data.type.includes('start')
+              ? `Executing tool: ${data.tool}`
+              : `Result: ${(data.output || data.stdout || data.text || '').slice(0, 300)}`,
+          },
+        ])
+        return
+      }
+      if (data.type === 'wake_word_activated') {
+        setWakeActive(true)
+        setAvatarState('listening')
+        return
+      }
+      if (data.type === 'barge_in_acknowledged') {
+        setAvatarState('listening')
+        return
+      }
+      if (!data.text) return
+
+      if (sourceRef.current === 'voice') {
+        const pending = pendingHistoryRef.current
+        setHistoryItems((h) => {
+          if (pending && pending.user) {
+            return [
+              ...h,
+              { id: `h_${Date.now()}`, ts: Date.now(), user: pending.user, naira: data.text },
+            ]
+          }
+          return h
+        })
+        pendingHistoryRef.current = null
+        playAudio(data.audio)
+      } else if (sourceRef.current === 'coding') {
+        sourceRef.current = 'chat'
+        setToolLogs((logs) => [
+          ...logs.slice(-199),
+          {
+            id: Math.random().toString(36).slice(2),
+            ts: Date.now(),
+            type: 'agent_output',
+            tool: 'Naira Agent',
+            text: data.text,
+          },
+        ])
+        setAvatarState('idle')
+      } else {
+        setChatMessages((m) => [...m.slice(-199), { id: `c_${Date.now()}`, ts: Date.now(), sender: 'naira', text: data.text }])
+        if (speakRef.current && data.audio) playAudio(data.audio)
+        else setAvatarState('idle')
+      }
+    })
+    return () => setOnMessage(null)
+  }, [connect, setOnMessage, playAudio, setAvatarState])
+
+  // ---------- Voice (mic) ----------
+  const recognitionRef = useRef(null)
+  const [micOn, setMicOn] = useState(false)
+
+  useEffect(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SR) return
+    const rec = new SR()
+    recognitionRef.current = rec
+    rec.continuous = true
+    rec.interimResults = true
+    rec.lang = 'hi-IN'
+    let accumulated = ''
+    let silenceTimer = null
+
+    const sendTranscript = () => {
+      const text = accumulated.trim()
+      accumulated = ''
+      if (silenceTimer) clearTimeout(silenceTimer)
+      if (!text) return
+      sourceRef.current = 'voice'
+      pendingHistoryRef.current = { user: text }
+      setAvatarState('thinking')
+      if (!send(text)) {
+        pendingHistoryRef.current = null
+        toast('Connection offline — command send nahi hui', 'error')
+        setAvatarState('idle')
+      }
+    }
+
+    rec.onstart = () => {
+      setMicOn(true)
+      setAvatarState('listening')
+    }
+    rec.onresult = (e) => {
+      let current = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) current += e.results[i][0].transcript
+      if (current.trim()) accumulated = current.trim()
+      if (silenceTimer) clearTimeout(silenceTimer)
+      silenceTimer = setTimeout(sendTranscript, 1800)
+    }
+    rec.onerror = (e) => {
+      if (e.error === 'no-speech' || e.error === 'aborted') return
+      setMicOn(false)
+      setAvatarState('idle')
+    }
+    rec.onend = () => {
+      setMicOn(false)
+      if (accumulated.trim()) sendTranscript()
+      else if (avatarState === 'listening') setAvatarState('idle')
+    }
+    return () => {
+      try { rec.stop() } catch { /* */ }
+      if (silenceTimer) clearTimeout(silenceTimer)
+    }
+  }, [send, toast, setAvatarState])
+
+  const toggleMic = () => {
+    const rec = recognitionRef.current
+    if (avatarState === 'talking') {
+      send({ type: 'barge_in' })
+      setAvatarState('listening')
+      return
+    }
+    if (!rec) {
+      toast('Voice input is not supported in this browser', 'error')
+      return
+    }
+    if (micOn) {
+      try { rec.stop() } catch { /* */ }
+    } else {
+      try { rec.start() } catch { /* */ }
+    }
+  }
+
+  const ActiveComp = NAV.find((n) => n.id === activeSection)?.Comp
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
+      <Background3D />
+
+      {/* ---------- Left Sidebar ---------- */}
+      <aside className="sidebar">
+        <div style={{ marginBottom: 10, display: 'grid', placeItems: 'center' }}>
+          <div
+            className="font-display"
+            style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.18em' }}
+          >
+            <span className="grad-text">N</span>
+          </div>
+        </div>
+        {NAV.map(({ id, icon: Icon, label }) => (
+          <button
+            key={id}
+            className={`sidebar-btn ${activeSection === id ? 'active' : ''}`}
+            onClick={() => setActiveSection((cur) => (cur === id ? null : id))}
+          >
+            <Icon size={20} />
+            <span className="sidebar-tooltip">{label}</span>
+          </button>
+        ))}
+        <div className="sidebar-spacer" />
+        <button
+          className={`sidebar-btn ${showSettings ? 'active' : ''}`}
+          onClick={() => setShowSettings((s) => !s)}
+          title="Settings"
+        >
+          <Settings size={20} />
+          <span className="sidebar-tooltip">Settings</span>
+        </button>
+      </aside>
+
+      {/* ---------- Center Stage ---------- */}
+      <main style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 22 }}>
+          <div style={{ textAlign: 'center', marginBottom: 4 }}>
+            <div className="font-display" style={{ fontSize: 15, letterSpacing: '0.2em', fontWeight: 600 }}>
+              <span className="grad-text">NAIRA</span> <span className="muted">OS</span>
+            </div>
+            <div className="tiny" style={{ marginTop: 4, textTransform: 'none', letterSpacing: 0 }}>
+              {profile?.name ? `Welcome back, ${profile.name}` : 'Welcome back'}
+              <span className={`badge badge-${wsStatus === 'online' ? 'mint' : wsStatus === 'connecting' ? 'amber' : 'rose'}`} style={{ marginLeft: 10, textTransform: 'none', letterSpacing: 0 }}>
+                <span className="dot" />{wsStatus === 'online' ? 'Neural link active' : wsStatus === 'connecting' ? 'Connecting...' : 'Offline'}
+              </span>
+            </div>
+          </div>
+
+          <AvatarStage size="lg" state="custom" />
+
+          {/* Mic below avatar */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <button className={`mic-btn ${micOn ? 'on' : ''}`} onClick={toggleMic} title={avatarState === 'talking' ? 'Interrupt — Naira ko rok do' : 'Toggle listening'}>
+              {avatarState === 'talking' ? <Square size={20} /> : <Mic size={22} />}
+              <span className="mic-pulse" />
+            </button>
+            <span className={`mic-label ${micOn ? 'on' : ''}`}>
+              {micOn ? 'Naira Listening' : avatarState === 'talking' ? 'Naira Speaking' : avatarState === 'thinking' ? 'Naira Thinking' : 'Naira Idle'}
+            </span>
+            {wakeActive && (
+              <span className="badge badge-cyan" style={{ marginTop: 8, textTransform: 'none', letterSpacing: 0 }}>
+                <span className="dot" /> Wake word heard — {profile?.wakeWord || 'Hey Naira'}
+              </span>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* ---------- Slide-in Section Panel ---------- */}
+      <AnimatePresence>
+        {ActiveComp && (
+          <ActiveComp
+            key={activeSection}
+            onClose={() => setActiveSection(null)}
+            profile={profile}
+            wsStatus={wsStatus}
+            chatMessages={chatMessages}
+            setChatMessages={setChatMessages}
+            historyItems={historyItems}
+            setHistoryItems={setHistoryItems}
+            toolLogs={toolLogs}
+            setToolLogs={setToolLogs}
+            speakRef={speakRef}
+            sourceRef={sourceRef}
+            send={send}
+            onNavigate={setActiveSection}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSettings && (
+          <SettingsSection
+            key="settings"
+            onClose={() => setShowSettings(false)}
+            accent={accent}
+            onNavigate={setActiveSection}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+</file>
+
+<file path="src/screens/HandshakeScreen.jsx">
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ChevronLeft, ChevronRight, Sparkles, User, Heart, Cpu } from 'lucide-react'
+import { useApp } from '../state/AppContext.jsx'
+import AvatarStage from '../components/AvatarStage.jsx'
+import Background3D from '../components/Background3D.jsx'
+
+const STEPS = [
+  { key: 'basic', icon: User, title: 'About You', note: 'Naira ko batao aap kaun ho' },
+  { key: 'prefs', icon: Heart, title: 'Preferences', note: 'Naira kaise behave kare' },
+  { key: 'system', icon: Cpu, title: 'System Context', note: 'Aapke PC ki baatein' },
+]
+
+const LANGUAGES = [
+  { value: 'hinglish', label: 'Hinglish (हिंग्लिश)', hint: 'Hindi + English mix' },
+  { value: 'hindi', label: 'Hindi (हिंदी)' },
+  { value: 'english', label: 'English' },
+]
+
+const TONES = [
+  { value: 'friendly', label: 'Friendly', emoji: '🌸', hint: 'Warm aur pyara' },
+  { value: 'professional', label: 'Professional', emoji: '💼', hint: 'Short aur precise' },
+  { value: 'playful', label: 'Playful', emoji: '✨', hint: 'Fun + jokes' },
+]
+
+export default function HandshakeScreen() {
+  const { setScreen, setProfile, toast, send } = useApp()
+  const [step, setStep] = useState(0)
+  const [form, setForm] = useState({
+    name: '',
+    language: 'hinglish',
+    tone: 'friendly',
+    wakeWord: 'Hey Naira',
+    pcName: '',
+    timezone: '',
+    role: '',
+  })
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target ? e.target.value : e }))
+  const valid = step === 0 ? form.name.trim().length >= 2 : true
+
+  const finish = () => {
+    const profile = {
+      ...form,
+      name: form.name.trim(),
+      createdAt: Date.now(),
+      complete: true,
+    }
+    setProfile(profile)
+    toast('Identity sealed — aap dobara kabhi yeh screen nahi dekhenge', 'success')
+    send({ type: 'system_init', name: profile.name, session_id: 'default' })
+    setTimeout(() => setScreen('dashboard'), 700)
+  }
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'grid', placeItems: 'center', padding: 24 }}>
+      <Background3D />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: 900 }}>
+        <motion.div
+          className="glass"
+          style={{ width: '100%', padding: '30px 34px', display: 'flex', flexDirection: 'column', gap: 22 }}
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="between">
+            <div className="row" style={{ gap: 14 }}>
+              <AvatarStage size="sm" state="custom" />
+              <div>
+                <div className="font-display" style={{ fontSize: 18, fontWeight: 700 }}>
+                  Operator <span className="grad-text">Handshake</span>
+                </div>
+                <div className="muted" style={{ fontSize: 12.5, marginTop: 3 }}>
+                  Ek baar complete — hamesha ke liye sealed
+                </div>
+              </div>
+            </div>
+            <div className="row" style={{ gap: 8 }}>
+              {STEPS.map((s, i) => (
+                <div
+                  key={s.key}
+                  style={{
+                    width: 42, height: 42, borderRadius: 13, display: 'grid', placeItems: 'center',
+                    background: i <= step ? 'linear-gradient(120deg, var(--accent-1), var(--accent-2))' : 'var(--surface-2)',
+                    color: i <= step ? '#071021' : 'var(--text-3)',
+                    border: i > step ? '1px solid var(--stroke)' : 'none',
+                    boxShadow: i <= step ? '0 6px 20px var(--accent-glow)' : 'none',
+                    transition: 'all 0.35s',
+                  }}
+                  title={s.title}
+                >
+                  <s.icon size={17} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="progress-track">
+            <div className="progress-bar" style={{ width: `${((step + 1) / 3) * 100}%` }} />
+          </div>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              initial={{ opacity: 0, x: 34 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -34 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              style={{ minHeight: 250, display: 'flex', flexDirection: 'column' }}
+            >
+              {step === 0 && (
+                <>
+                  <div className="field-group">
+                    <label className="field-label">Operator Name *</label>
+                    <input className="field" placeholder="Aapka naam kya hai?" value={form.name} onChange={set('name')} autoFocus />
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label">Preferred Language</label>
+                    <div className="grid-2">
+                      {LANGUAGES.map((l) => (
+                        <button
+                          key={l.value}
+                          type="button"
+                          className="card glass-hover"
+                          style={{
+                            textAlign: 'left', cursor: 'pointer', padding: 14,
+                            borderColor: form.language === l.value ? 'var(--accent-1)' : undefined,
+                            boxShadow: form.language === l.value ? '0 0 20px var(--accent-glow)' : undefined,
+                          }}
+                          onClick={() => setForm((f) => ({ ...f, language: l.value }))}
+                        >
+                          <div style={{ fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Sparkles size={13} style={{ color: form.language === l.value ? 'var(--accent-1)' : 'var(--text-3)' }} />
+                            {l.label}
+                          </div>
+                          {l.hint && <div className="tiny" style={{ marginTop: 5, textTransform: 'none', letterSpacing: 0 }}>{l.hint}</div>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {step === 1 && (
+                <>
+                  <div className="field-group">
+                    <label className="field-label">Naira's Tone</label>
+                    <div className="grid-2">
+                      {TONES.map((t) => (
+                        <button
+                          key={t.value}
+                          type="button"
+                          className="card glass-hover"
+                          style={{
+                            textAlign: 'left', cursor: 'pointer', padding: 14,
+                            borderColor: form.tone === t.value ? 'var(--accent-1)' : undefined,
+                            boxShadow: form.tone === t.value ? '0 0 20px var(--accent-glow)' : undefined,
+                          }}
+                          onClick={() => setForm((f) => ({ ...f, tone: t.value }))}
+                        >
+                          <div style={{ fontWeight: 700, fontSize: 14 }}>{t.emoji} {t.label}</div>
+                          {t.hint && <div className="tiny" style={{ marginTop: 5, textTransform: 'none', letterSpacing: 0 }}>{t.hint}</div>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label">Wake Word</label>
+                    <input className="field" placeholder="Hey Naira" value={form.wakeWord} onChange={set('wakeWord')} />
+                    <div className="tiny" style={{ marginTop: 7, textTransform: 'none', letterSpacing: 0 }}>
+                      Isse bolo to Naira turant sunne lagegi
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {step === 2 && (
+                <>
+                  <div className="grid-2">
+                    <div className="field-group">
+                      <label className="field-label">PC Name</label>
+                      <input className="field" placeholder="e.g. DESKTOP-7X" value={form.pcName} onChange={set('pcName')} />
+                    </div>
+                    <div className="field-group">
+                      <label className="field-label">Timezone</label>
+                      <input className="field" placeholder="Asia/Kolkata" value={form.timezone} onChange={set('timezone')} />
+                    </div>
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label">Your Role</label>
+                    <select className="field" value={form.role} onChange={set('role')}>
+                      <option value="">Select...</option>
+                      <option value="student">Student</option>
+                      <option value="developer">Developer</option>
+                      <option value="creator">Creator</option>
+                      <option value="gamer">Gamer</option>
+                      <option value="professional">Professional</option>
+                      <option value="other">Other</option>
+                    </select>
+                    <div className="tiny" style={{ marginTop: 7, textTransform: 'none', letterSpacing: 0 }}>
+                      Isse Naira aapke kaam ka context samajhti hai
+                    </div>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="between">
+            <button className="btn btn-ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
+              <ChevronLeft size={16} /> Back
+            </button>
+            {step < 2 ? (
+              <button className="btn btn-primary" disabled={!valid} onClick={() => setStep((s) => s + 1)}>
+                Continue <ChevronRight size={16} />
+              </button>
+            ) : (
+              <button className="btn btn-primary" onClick={finish}>
+                <Sparkles size={16} /> Seal Identity
+              </button>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  )
+}
+</file>
+
+<file path="src/sections/ChatSection.jsx">
+import { useEffect, useRef, useState } from 'react'
+import { MessageSquare, Volume2, VolumeX, Send, MicOff } from 'lucide-react'
+import { SectionShell, Toggle } from '../components/ui.jsx'
+import { useApp } from '../state/AppContext.jsx'
+import { formatTime } from '../state/store.js'
+
+export default function ChatSection({ onClose, chatMessages, setChatMessages, speakRef, send, onNavigate }) {
+  const { setAvatarState, toast } = useApp()
+  const [text, setText] = useState('')
+  const [speak, setSpeak] = useState(false)
+  const bottomRef = useRef(null)
+
+  useEffect(() => {
+    speakRef.current = speak
+  }, [speak, speakRef])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [chatMessages])
+
+  const handleSend = () => {
+    const msg = text.trim()
+    if (!msg) return
+    setChatMessages((m) => [...m.slice(-199), { id: `c_${Date.now()}`, ts: Date.now(), sender: 'user', text: msg }])
+    setText('')
+    setAvatarState('thinking')
+    const ok = send(msg)
+    if (!ok) {
+      toast('Connection offline — backend chal raha hai?', 'error')
+      setAvatarState('idle')
+    }
+  }
+
+  return (
+    <SectionShell
+      icon={<MessageSquare size={18} />}
+      title="Chat"
+      subtitle="Typed conversations with Naira"
+      onClose={onClose}
+    >
+      <div
+        className="glass-soft"
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 16, gap: 10, overflow: 'hidden' }}
+      >
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, paddingRight: 4 }}>
+          {chatMessages.length === 0 && (
+            <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 13, margin: 'auto 0', lineHeight: 1.8 }}>
+              <MicOff size={26} style={{ opacity: 0.5, marginBottom: 8 }} />
+              <div>Abhi koi conversation nahi.</div>
+              <div className="tiny">Voice commands yahan nahi dikhte — woh History mein jate hain.</div>
+            </div>
+          )}
+          {chatMessages.map((m) => (
+            <div key={m.id} className={`chat-msg ${m.sender === 'user' ? 'user' : 'naira'}`}>
+              <div className="chat-bubble">{m.text}</div>
+              <div className="chat-meta">{m.sender === 'user' ? 'You' : 'Naira'} · {formatTime(m.ts)}</div>
+            </div>
+          ))}
+          <div ref={bottomRef} />
+        </div>
+
+        <div className="row" style={{ borderTop: '1px solid var(--stroke)', paddingTop: 12 }}>
+          <input
+            className="field"
+            placeholder="Naira ko kuch bolo..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          />
+          <button className="btn btn-primary btn-icon" onClick={handleSend} title="Send">
+            <Send size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="card between">
+        <div className="row" style={{ gap: 12 }}>
+          {speak ? <Volume2 size={18} style={{ color: 'var(--accent-1)' }} /> : <VolumeX size={18} style={{ color: 'var(--text-3)' }} />}
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13.5 }}>Voice Replies</div>
+            <div className="tiny" style={{ textTransform: 'none', letterSpacing: 0 }}>
+              {speak ? 'Naira likhegi aur bolegi bhi' : 'Sirf text reply — bol kar nahi batayegi'}
+            </div>
+          </div>
+        </div>
+        <Toggle checked={speak} onChange={setSpeak} />
+      </div>
+
+      <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'center' }} onClick={() => onNavigate('history')}>
+        Voice conversations → History section mein
+      </button>
+    </SectionShell>
+  )
+}
+</file>
+
+<file path="src/sections/CodingSection.jsx">
+import { useEffect, useRef, useState } from 'react'
+import { Code2, Play, Plus, Trash2, FolderOpen, Loader2, CheckCircle2, Circle, TerminalSquare, GitBranch } from 'lucide-react'
+import { SectionShell, GlassCard, Toggle } from '../components/ui.jsx'
+import { useApp } from '../state/AppContext.jsx'
+import { usePersistedState, makeId } from '../state/store.js'
+
+const MODES = [
+  { id: 'plan', label: 'Plan', desc: 'Task ko steps mein todo' },
+  { id: 'code', label: 'Code', desc: 'Implementation likho' },
+  { id: 'test', label: 'Test', desc: 'TDD — pehle test, phir code' },
+]
+
+export default function CodingSection({ onClose, toolLogs, setToolLogs, send, sourceRef }) {
+  const { setAvatarState, toast } = useApp()
+  const [task, setTask] = useState('')
+  const [projectPath, setProjectPath] = usePersistedState('naira.coding.path', 'C:\\Users\\user\\Desktop\\Project-AIF-main')
+  const [mode, setMode] = usePersistedState('naira.coding.mode', 'plan')
+  const [tdd, setTdd] = usePersistedState('naira.coding.tdd', true)
+  const [autoFix, setAutoFix] = usePersistedState('naira.coding.autofix', true)
+  const [plans, setPlans] = usePersistedState('naira.coding.plans', [])
+  const [running, setRunning] = useState(false)
+  const consoleRef = useRef(null)
+
+  useEffect(() => {
+    consoleRef.current?.scrollTo({ top: consoleRef.current.scrollHeight, behavior: 'smooth' })
+  }, [toolLogs])
+
+  const runTask = () => {
+    const text = task.trim()
+    if (!text) return
+    setTask('')
+    setRunning(true)
+    sourceRef.current = 'coding'
+    setAvatarState('thinking')
+    setToolLogs((logs) => [
+      ...logs.slice(-198),
+      {
+        id: makeId('log'),
+        ts: Date.now(),
+        type: 'task_start',
+        tool: mode === 'plan' ? 'Planner' : mode === 'test' ? 'TDD Loop' : 'Coding Agent',
+        text: `Task (${mode}): ${text}`,
+      },
+    ])
+    const ok = send(text)
+    if (!ok) {
+      toast('Connection offline', 'error')
+      setRunning(false)
+      setAvatarState('idle')
+    }
+    setTimeout(() => setRunning(false), 800)
+  }
+
+  const addPlanStep = () => {
+    const step = window.prompt('Naya plan step likho:')
+    if (step) setPlans((p) => [...p, { id: makeId('step'), text: step, done: false }])
+  }
+
+  const modeMeta = MODES.find((m) => m.id === mode)
+
+  return (
+    <SectionShell
+      icon={<Code2 size={18} />}
+      title="Coding Agent"
+      subtitle="Naira ka developer workspace"
+      onClose={onClose}
+    >
+      <div className="row" style={{ gap: 8 }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <FolderOpen size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', zIndex: 1 }} />
+          <input className="field" style={{ paddingLeft: 36, fontSize: 12.5 }} value={projectPath} onChange={(e) => setProjectPath(e.target.value)} placeholder="Project path" />
+        </div>
+        <span className="badge badge-violet" style={{ textTransform: 'none', letterSpacing: 0 }}>24 skill packs</span>
+      </div>
+
+      <div className="grid-2">
+        {MODES.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            className="card glass-hover"
+            style={{
+              textAlign: 'left', cursor: 'pointer', padding: 13,
+              borderColor: mode === m.id ? 'var(--accent-1)' : undefined,
+              boxShadow: mode === m.id ? '0 0 18px var(--accent-glow)' : undefined,
+            }}
+            onClick={() => setMode(m.id)}
+          >
+            <div style={{ fontWeight: 700, fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 8 }}>
+              {m.id === 'plan' ? <GitBranch size={13} /> : m.id === 'code' ? <Code2 size={13} /> : <CheckCircle2 size={13} />}
+              {m.label}
+            </div>
+            <div className="tiny" style={{ marginTop: 4, textTransform: 'none', letterSpacing: 0 }}>{m.desc}</div>
+          </button>
+        ))}
+      </div>
+
+      <div className="row">
+        <input
+          className="field"
+          placeholder={`Task bolo — e.g. "backend mein new endpoint add karo" (${modeMeta.label})`}
+          value={task}
+          onChange={(e) => setTask(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && runTask()}
+        />
+        <button className="btn btn-primary btn-icon" onClick={runTask} disabled={running} title="Run task">
+          {running ? <Loader2 size={17} className="spin" /> : <Play size={17} />}
+        </button>
+      </div>
+
+      <div className="row" style={{ flexWrap: 'wrap', gap: 10 }}>
+        <div className="row" style={{ gap: 8, flex: 1, minWidth: 130 }}>
+          <span className="tiny">TDD Loop</span>
+          <Toggle checked={tdd} onChange={setTdd} />
+        </div>
+        <div className="row" style={{ gap: 8, flex: 1, minWidth: 130 }}>
+          <span className="tiny">Auto-fix</span>
+          <Toggle checked={autoFix} onChange={setAutoFix} />
+        </div>
+      </div>
+
+      {mode === 'plan' && (
+        <GlassCard className="card">
+          <div className="between" style={{ marginBottom: 10 }}>
+            <div className="card-title" style={{ marginBottom: 0 }}>Task Plan</div>
+            <button className="btn btn-ghost btn-tiny" onClick={addPlanStep}><Plus size={12} /> Step</button>
+          </div>
+          {plans.length === 0 ? (
+            <div className="tiny" style={{ padding: '8px 2px' }}>Koi steps nahi — "+ Step" se add karo ya Naira ko task do.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {plans.map((p) => (
+                <div key={p.id} className="row" style={{ gap: 10 }}>
+                  <button
+                    className="btn btn-ghost btn-tiny"
+                    onClick={() => setPlans((list) => list.map((x) => (x.id === p.id ? { ...x, done: !x.done } : x)))}
+                  >
+                    {p.done ? <CheckCircle2 size={13} style={{ color: 'var(--mint)' }} /> : <Circle size={13} />}
+                  </button>
+                  <span style={{ flex: 1, fontSize: 13, textDecoration: p.done ? 'line-through' : 'none', opacity: p.done ? 0.5 : 1 }}>
+                    {p.text}
+                  </span>
+                  <button className="btn btn-ghost btn-tiny" onClick={() => setPlans((list) => list.filter((x) => x.id !== p.id))}>
+                    <Trash2 size={11} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </GlassCard>
+      )}
+
+      <GlassCard className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 180 }}>
+        <div className="card-title"><TerminalSquare size={14} /> Agent Console</div>
+        <div
+          ref={consoleRef}
+          className="glass-soft no-scrollbar"
+          style={{ flex: 1, overflowY: 'auto', padding: 12, fontFamily: 'monospace', fontSize: 11.5, lineHeight: 1.7, maxHeight: 280 }}
+        >
+          {toolLogs.length === 0 && <div style={{ color: 'var(--text-3)' }}># Console ready — task bhejo, live execution yahan dikhega.</div>}
+          {toolLogs.map((log) => (
+            <div key={log.id} style={{ marginBottom: 6 }}>
+              <span
+                style={{
+                  color:
+                    log.type === 'task_start' ? 'var(--violet)' :
+                    log.type === 'tool_execution_start' ? 'var(--amber)' :
+                    log.type === 'tool_execution_result' ? 'var(--mint)' : 'var(--cyan)',
+                  fontWeight: 700,
+                }}
+              >
+                [{log.type.includes('start') ? '>' : log.type === 'agent_output' ? '◆' : '✓'} {log.tool}]
+              </span>{' '}
+              <span style={{ color: 'var(--text-2)', whiteSpace: 'pre-wrap' }}>{log.text}</span>
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+
+      <div className="row" style={{ justifyContent: 'center', gap: 12 }}>
+        <span className="badge badge-mint" style={{ textTransform: 'none', letterSpacing: 0 }}>✓ 100% regression baseline</span>
+        <span className="badge badge-gray" style={{ textTransform: 'none', letterSpacing: 0 }}>Cost tracker: active</span>
+      </div>
+    </SectionShell>
+  )
+}
+</file>
+
+<file path="src/sections/HistorySection.jsx">
+import { History, Trash2, Volume2, User, Sparkles } from 'lucide-react'
+import { SectionShell, GlassCard, EmptyState } from '../components/ui.jsx'
+import { groupByDate, formatTime } from '../state/store.js'
+
+export default function HistorySection({ onClose, historyItems, setHistoryItems, speakRef }) {
+  const groups = groupByDate(historyItems, 'ts')
+
+  const clearAll = () => {
+    if (window.confirm('Saari voice conversations delete karni hain?')) setHistoryItems([])
+  }
+
+  return (
+    <SectionShell icon={<History size={18} />} title="History" subtitle="Voice conversations with Naira" onClose={onClose}>
+      {historyItems.length > 0 && (
+        <div className="between">
+          <span className="tiny">{historyItems.length} conversations</span>
+          <button className="btn btn-ghost btn-tiny" onClick={clearAll}>
+            <Trash2 size={12} /> Clear all
+          </button>
+        </div>
+      )}
+
+      {historyItems.length === 0 ? (
+        <EmptyState
+          icon={<History size={30} />}
+          title="No voice conversations yet"
+          note="Mic dabake Naira se baat karo — har conversation yahan save hoga, chat mein nahi."
+        />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {groups.map((g) => (
+            <div key={g.label}>
+              <div className="tiny" style={{ marginBottom: 10, color: 'var(--accent-2)' }}>{g.label}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {g.items.map((item) => (
+                  <GlassCard key={item.id} className="card" style={{ padding: 14 }}>
+                    <div className="row" style={{ gap: 10, marginBottom: 8 }}>
+                      <div style={{ width: 30, height: 30, borderRadius: 10, display: 'grid', placeItems: 'center', background: 'rgba(34,211,238,0.12)', color: 'var(--cyan)', flexShrink: 0 }}>
+                        <User size={14} />
+                      </div>
+                      <div className="grow">
+                        <div style={{ fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-1)' }}>{item.user}</div>
+                        <div className="tiny" style={{ marginTop: 3 }}>{formatTime(item.ts)}</div>
+                      </div>
+                      <button
+                        className="btn btn-ghost btn-tiny"
+                        title="Speak reply"
+                        onClick={() => {
+                          if ('speechSynthesis' in window) {
+                            const u = new SpeechSynthesisUtterance(item.naira)
+                            u.lang = 'hi-IN'
+                            u.rate = 1
+                            window.speechSynthesis.speak(u)
+                          }
+                        }}
+                      >
+                        <Volume2 size={12} />
+                      </button>
+                    </div>
+                    <div className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
+                      <div style={{ width: 30, height: 30, borderRadius: 10, display: 'grid', placeItems: 'center', background: 'rgba(167,139,250,0.12)', color: 'var(--violet)', flexShrink: 0 }}>
+                        <Sparkles size={14} />
+                      </div>
+                      <div style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--text-2)' }}>{item.naira}</div>
+                    </div>
+                  </GlassCard>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </SectionShell>
+  )
+}
+</file>
+
+<file path="src/sections/HomeSection.jsx">
+import { useEffect, useState } from 'react'
+import { Home as HomeIcon, Cpu, Wifi, Database, MessageSquare, Smartphone, Sparkles } from 'lucide-react'
+import { SectionShell, GlassCard, StatusPill } from '../components/ui.jsx'
+import { getVaultStatus } from '../api/client.js'
+
+export default function HomeSection({ onClose, onNavigate, profile, chatMessages, historyItems, wsStatus }) {
+  const [vault, setVault] = useState(null)
+
+  useEffect(() => {
+    getVaultStatus().then(setVault)
+  }, [])
+
+  const stats = [
+    { icon: MessageSquare, label: 'Chat messages', value: chatMessages.length },
+    { icon: Sparkles, label: 'Voice conversations', value: historyItems.length },
+    { icon: Database, label: 'Vault provider', value: vault?.provider === 'gemini' ? 'Gemini' : vault?.provider ? 'DeepSeek (Zen)' : '—' },
+    { icon: Smartphone, label: 'Memory slots', value: 6 },
+  ]
+
+  return (
+    <SectionShell icon={<HomeIcon size={18} />} title="Home" subtitle="System overview" onClose={onClose}>
+      <div className="card fade-up" style={{ background: 'linear-gradient(140deg, rgba(34,211,238,0.12), rgba(167,139,250,0.1))' }}>
+        <div className="row" style={{ gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 14, display: 'grid', placeItems: 'center', background: 'linear-gradient(120deg, var(--accent-1), var(--accent-2))', color: '#071021', boxShadow: '0 8px 26px var(--accent-glow)' }}>
+            <Sparkles size={20} />
+          </div>
+          <div>
+            <div className="font-display" style={{ fontSize: 16, fontWeight: 700 }}>
+              Namaste, {profile?.name || 'Operator'} {profile?.tone === 'playful' ? '✨' : '🌸'}
+            </div>
+            <div className="muted" style={{ fontSize: 12.5, marginTop: 3 }}>
+              Naira aapke saath hai — kuch bhi bolo, main sun loongi.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid-2">
+        {stats.map((s) => (
+          <GlassCard key={s.label} className="card" hover style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 14 }}>
+            <s.icon size={16} style={{ color: 'var(--accent-1)' }} />
+            <div className="font-display" style={{ fontSize: 22, fontWeight: 800 }}>{s.value}</div>
+            <div className="tiny">{s.label}</div>
+          </GlassCard>
+        ))}
+      </div>
+
+      <GlassCard className="card">
+        <div className="card-title"><Cpu size={14} /> System Status</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <StatusPill label="Neural Link (WS)" value={wsStatus === 'online' ? 'Connected' : wsStatus === 'connecting' ? 'Connecting' : 'Offline'} tone={wsStatus === 'online' ? 'mint' : wsStatus === 'connecting' ? 'amber' : 'rose'} />
+          <StatusPill label="API Vault" value={vault?.configured ? 'Sealed' : 'Empty'} tone={vault?.configured ? 'mint' : 'amber'} />
+          <StatusPill label="Remote Bridge" value="Standby" tone="gray" />
+          <StatusPill label="Voice Engine" value="RVC Ready" tone="violet" />
+        </div>
+      </GlassCard>
+
+      <div className="grid-2">
+        {[
+          { id: 'chat', label: 'Open Chat', desc: 'Typed conversations' },
+          { id: 'coding', label: 'Coding Agent', desc: 'Dev workspace' },
+          { id: 'bridge', label: 'Remote Bridge', desc: 'Phone control' },
+          { id: 'voice', label: 'Voice Studio', desc: 'RVC voices' },
+        ].map((b) => (
+          <button key={b.id} className="card glass-hover" style={{ textAlign: 'left', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4 }} onClick={() => onNavigate(b.id)}>
+            <div style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--text-1)' }}>{b.label}</div>
+            <div className="tiny" style={{ textTransform: 'none', letterSpacing: 0 }}>{b.desc}</div>
+          </button>
+        ))}
+      </div>
+
+      <div className="row" style={{ justifyContent: 'center', gap: 8 }}>
+        <Wifi size={13} style={{ color: 'var(--mint)' }} />
+        <span className="tiny">All systems operational</span>
+      </div>
+    </SectionShell>
+  )
+}
+</file>
+
+<file path="src/sections/MemorySection.jsx">
+import { useState } from 'react'
+import { Brain, Plus, Trash2, Search, Tag, User, Pencil } from 'lucide-react'
+import { SectionShell, GlassCard, EmptyState, Modal } from '../components/ui.jsx'
+import { useApp } from '../state/AppContext.jsx'
+import { usePersistedState, makeId } from '../state/store.js'
+
+const SEED_MEMORIES = [
+  { id: 'seed_1', title: 'Operator Profile', detail: 'Handshake se bhari hui basic details — naam, language, tone.', tags: ['profile'], pinned: true },
+]
+
+export default function MemorySection({ onClose }) {
+  const { profile } = useApp()
+  const [memories, setMemories] = usePersistedState('naira.memories', SEED_MEMORIES)
+  const [query, setQuery] = useState('')
+  const [editing, setEditing] = useState(null)
+
+  const profileMemories = profile
+    ? [
+        { title: 'Name', value: profile.name, key: 'name' },
+        { title: 'Language', value: profile.language, key: 'language' },
+        { title: 'Tone', value: profile.tone, key: 'tone' },
+        { title: 'Wake Word', value: profile.wakeWord, key: 'wakeWord' },
+        { title: 'PC Name', value: profile.pcName || '—', key: 'pcName' },
+        { title: 'Role', value: profile.role || '—', key: 'role' },
+      ]
+    : []
+
+  const filtered = memories.filter(
+    (m) =>
+      !query ||
+      m.title.toLowerCase().includes(query.toLowerCase()) ||
+      m.detail.toLowerCase().includes(query.toLowerCase()) ||
+      m.tags.some((t) => t.toLowerCase().includes(query.toLowerCase()))
+  )
+
+  return (
+    <SectionShell icon={<Brain size={18} />} title="Memory" subtitle="Jo Naira aapke baare mein jaanti hai" onClose={onClose}>
+      <div className="row" style={{ position: 'relative' }}>
+        <Search size={15} style={{ position: 'absolute', left: 14, color: 'var(--text-3)', zIndex: 1 }} />
+        <input className="field" placeholder="Memory search karo..." value={query} onChange={(e) => setQuery(e.target.value)} style={{ paddingLeft: 38 }} />
+      </div>
+
+      <div>
+        <div className="tiny" style={{ marginBottom: 10 }}>Handshake Profile</div>
+        <div className="grid-2">
+          {profileMemories.map((p) => (
+            <div key={p.key} className="glass-soft" style={{ padding: '11px 13px' }}>
+              <div className="tiny" style={{ textTransform: 'none', letterSpacing: 0 }}>{p.title}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, marginTop: 4, color: 'var(--text-1)' }}>{p.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="between">
+        <div className="tiny">{memories.length} saved memories</div>
+        <button className="btn btn-primary btn-sm" onClick={() => setEditing({ id: null, title: '', detail: '', tags: [] })}>
+          <Plus size={14} /> Add memory
+        </button>
+      </div>
+
+      {filtered.length === 0 ? (
+        <EmptyState icon={<Brain size={30} />} title="Koi memory nahi mili" note="Handshake mein kuch miss hua toh yahan add kar sakte ho." />
+      ) : (
+        filtered.map((m) => (
+          <GlassCard key={m.id} className="card">
+            <div className="between">
+              <div className="row" style={{ gap: 8 }}>
+                <Tag size={13} style={{ color: 'var(--accent-2)' }} />
+                <div style={{ fontWeight: 700, fontSize: 13.5 }}>{m.title}</div>
+              </div>
+              <div className="row" style={{ gap: 4 }}>
+                <button className="btn btn-ghost btn-tiny" onClick={() => setEditing(m)}><Pencil size={11} /></button>
+                <button
+                  className="btn btn-ghost btn-tiny"
+                  onClick={() => setMemories((list) => list.filter((x) => x.id !== m.id))}
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
+            </div>
+            <div className="muted" style={{ fontSize: 12.5, lineHeight: 1.6, marginTop: 8 }}>{m.detail}</div>
+            <div className="row" style={{ marginTop: 10, flexWrap: 'wrap', gap: 6 }}>
+              {m.tags.map((t) => (
+                <span key={t} className="badge badge-gray" style={{ textTransform: 'none', letterSpacing: 0 }}>#{t}</span>
+              ))}
+            </div>
+          </GlassCard>
+        ))
+      )}
+
+      <MemoryModal
+        editing={editing}
+        onClose={() => setEditing(null)}
+        onSave={(data) => {
+          if (editing?.id) {
+            setMemories((list) => list.map((m) => (m.id === editing.id ? { ...m, ...data } : m)))
+          } else {
+            setMemories((list) => [{ id: makeId('mem'), ...data, pinned: false }, ...list])
+          }
+          setEditing(null)
+        }}
+      />
+    </SectionShell>
+  )
+}
+
+function MemoryModal({ editing, onClose, onSave }) {
+  const [form, setForm] = useState(() => ({
+    title: editing?.title || '',
+    detail: editing?.detail || '',
+    tags: editing?.tags.join(', ') || '',
+  }))
+  if (!editing) return null
+
+  return (
+    <Modal open={!!editing} onClose={onClose} title={editing.id ? 'Edit memory' : 'New memory'}>
+      <div className="field-group">
+        <label className="field-label">Title</label>
+        <input className="field" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Meri favourite chai" />
+      </div>
+      <div className="field-group">
+        <label className="field-label">Detail</label>
+        <textarea className="field" rows={4} value={form.detail} onChange={(e) => setForm((f) => ({ ...f, detail: e.target.value }))} placeholder="Jo bhi Naira ko yaad rakhna ho..." style={{ resize: 'none' }} />
+      </div>
+      <div className="field-group">
+        <label className="field-label">Tags (comma separated)</label>
+        <input className="field" value={form.tags} onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))} placeholder="personal, work, food" />
+      </div>
+      <button
+        className="btn btn-primary"
+        style={{ width: '100%' }}
+        disabled={!form.title.trim()}
+        onClick={() => onSave({ title: form.title.trim(), detail: form.detail.trim(), tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean) })}
+      >
+        Save memory
+      </button>
+    </Modal>
+  )
+}
+</file>
+
+<file path="src/sections/PluginsSection.jsx">
+import { useState } from 'react'
+import { Puzzle, Plus, Trash2, Upload, Wand2, Power } from 'lucide-react'
+import { SectionShell, GlassCard, Toggle, Modal, EmptyState } from '../components/ui.jsx'
+import { useApp } from '../state/AppContext.jsx'
+import { usePersistedState, makeId } from '../state/store.js'
+
+const SEED_PLUGINS = [
+  { id: 'plug_1', name: 'PC Control', desc: 'System commands, apps, volume, lock', builtin: true, enabled: true },
+  { id: 'plug_2', name: 'Browser', desc: 'Chrome tabs, search, navigation', builtin: true, enabled: true },
+  { id: 'plug_3', name: 'Vision', desc: 'Screen dekh ke samajhna (Gemini Vision)', builtin: true, enabled: true },
+  { id: 'plug_4', name: 'Memory Engine', desc: '6 engines — relation, context, semantic', builtin: true, enabled: true },
+  { id: 'plug_5', name: 'Voice Studio', desc: 'RVC voice conversion + TTS', builtin: true, enabled: true },
+  { id: 'plug_6', name: 'Autonomous Tasks', desc: 'Background proactive tasks', builtin: true, enabled: false },
+]
+
+export default function PluginsSection({ onClose }) {
+  const { toast } = useApp()
+  const [plugins, setPlugins] = usePersistedState('naira.plugins', SEED_PLUGINS)
+  const [skills, setSkills] = usePersistedState('naira.skills', [])
+  const [builderOpen, setBuilderOpen] = useState(false)
+  const [skillForm, setSkillForm] = useState({ name: '', desc: '', steps: '' })
+
+  const saveSkill = () => {
+    if (!skillForm.name.trim()) return
+    setSkills((s) => [
+      {
+        id: makeId('skill'),
+        name: skillForm.name.trim(),
+        desc: skillForm.desc.trim(),
+        steps: skillForm.steps.split('\n').filter(Boolean),
+        createdAt: Date.now(),
+      },
+      ...s,
+    ])
+    setSkillForm({ name: '', desc: '', steps: '' })
+    setBuilderOpen(false)
+    toast(`Skill "${skillForm.name}" saved`, 'success')
+  }
+
+  return (
+    <SectionShell icon={<Puzzle size={18} />} title="Plugins & Skills" subtitle="Extend Naira ki powers" onClose={onClose}>
+      <div className="tiny" style={{ marginBottom: -4 }}>Installed Plugins</div>
+      {plugins.map((p) => (
+        <GlassCard key={p.id} className="card">
+          <div className="between">
+            <div className="row" style={{ gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 11, display: 'grid', placeItems: 'center', background: 'rgba(167,139,250,0.13)', color: 'var(--violet)', flexShrink: 0 }}>
+                <Power size={16} />
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 13.5 }}>{p.name}</div>
+                <div className="tiny" style={{ marginTop: 3, textTransform: 'none', letterSpacing: 0 }}>{p.desc}</div>
+              </div>
+            </div>
+            <Toggle
+              checked={p.enabled}
+              onChange={(v) => setPlugins((list) => list.map((x) => (x.id === p.id ? { ...x, enabled: v } : x)))}
+            />
+          </div>
+        </GlassCard>
+      ))}
+
+      <div className="between" style={{ marginTop: 6 }}>
+        <div className="tiny">Custom Skills ({skills.length})</div>
+        <button className="btn btn-primary btn-sm" onClick={() => setBuilderOpen(true)}>
+          <Plus size={14} /> Skill Builder
+        </button>
+      </div>
+
+      {skills.length === 0 ? (
+        <EmptyState icon={<Wand2 size={30} />} title="Koi skill nahi bani" note="Skill Builder se apni custom skill banao — upload ya create karke." />
+      ) : (
+        skills.map((s) => (
+          <GlassCard key={s.id} className="card">
+            <div className="between">
+              <div className="row" style={{ gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 11, display: 'grid', placeItems: 'center', background: 'rgba(34,211,238,0.13)', color: 'var(--cyan)', flexShrink: 0 }}>
+                  <Wand2 size={16} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13.5 }}>{s.name}</div>
+                  <div className="tiny" style={{ marginTop: 3, textTransform: 'none', letterSpacing: 0 }}>{s.desc || 'No description'}</div>
+                </div>
+              </div>
+              <button className="btn btn-ghost btn-tiny" onClick={() => setSkills((list) => list.filter((x) => x.id !== s.id))}>
+                <Trash2 size={12} />
+              </button>
+            </div>
+            {s.steps.length > 0 && (
+              <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {s.steps.map((st, i) => (
+                  <div key={i} className="row" style={{ gap: 8, fontSize: 12, color: 'var(--text-2)' }}>
+                    <span style={{ color: 'var(--accent-2)', fontFamily: 'monospace' }}>{i + 1}.</span> {st}
+                  </div>
+                ))}
+              </div>
+            )}
+          </GlassCard>
+        ))
+      )}
+
+      <button className="btn btn-ghost btn-sm" style={{ borderStyle: 'dashed' }}>
+        <Upload size={14} /> Upload skill file (.json)
+      </button>
+
+      <SkillBuilder
+        open={builderOpen}
+        form={skillForm}
+        setForm={setSkillForm}
+        onClose={() => setBuilderOpen(false)}
+        onSave={saveSkill}
+      />
+    </SectionShell>
+  )
+}
+
+function SkillBuilder({ open, form, setForm, onClose, onSave }) {
+  return (
+    <Modal open={open} onClose={onClose} title="Create a skill">
+      <div className="field-group">
+        <label className="field-label">Skill Name</label>
+        <input className="field" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. WhatsApp Message Sender" />
+      </div>
+      <div className="field-group">
+        <label className="field-label">Description</label>
+        <input className="field" value={form.desc} onChange={(e) => setForm((f) => ({ ...f, desc: e.target.value }))} placeholder="Ye skill kya karti hai?" />
+      </div>
+      <div className="field-group">
+        <label className="field-label">Steps (ek line mein ek)</label>
+        <textarea className="field" rows={5} value={form.steps} onChange={(e) => setForm((f) => ({ ...f, steps: e.target.value }))} placeholder={'1. Contact pick karo\n2. Message type karo\n3. Send dabao'} style={{ resize: 'none' }} />
+      </div>
+      <button className="btn btn-primary" style={{ width: '100%' }} disabled={!form.name.trim()} onClick={onSave}>
+        <Wand2 size={15} /> Save skill
+      </button>
+    </Modal>
+  )
+}
+</file>
+
+<file path="src/sections/RemoteBridgeSection.jsx">
+import { useCallback, useEffect, useState } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
+import { Smartphone, QrCode, RefreshCw, Lock, Trash2, ShieldCheck, ShieldAlert, Activity, Wifi, Phone, Eye, EyeOff } from 'lucide-react'
+import { SectionShell, GlassCard, Toggle, Slider, Modal, EmptyState, StatusPill } from '../components/ui.jsx'
+import { useApp } from '../state/AppContext.jsx'
+import { usePersistedState, useInterval, makeId, nowSec, randomHex, formatTime } from '../state/store.js'
+import { getRemoteBridgeStatus } from '../api/client.js'
+
+const COMMANDS = [
+  { action: 'GET_BATTERY', risk: 5 },
+  { action: 'TOGGLE_WIFI', risk: 10 },
+  { action: 'TOGGLE_BLUETOOTH', risk: 10 },
+  { action: 'SET_VOLUME', risk: 15 },
+  { action: 'LOCK_DEVICE', risk: 20 },
+  { action: 'OPEN_APP', risk: 25 },
+  { action: 'TAKE_SCREENSHOT', risk: 30 },
+  { action: 'READ_CONTACTS', risk: 35 },
+  { action: 'READ_SMS', risk: 40 },
+  { action: 'LOCATION_GET', risk: 50 },
+  { action: 'MAKE_CALL', risk: 60 },
+  { action: 'SEND_SMS', risk: 70 },
+  { action: 'CHANGE_PASSWORD', risk: 90 },
+  { action: 'OPEN_BANK_APP', risk: 95 },
+  { action: 'TRANSFER_FUNDS', risk: 95 },
+  { action: 'FACTORY_RESET', risk: 100 },
+]
+
+export default function RemoteBridgeSection({ onClose }) {
+  const { toast } = useApp()
+  const [ngrokUrl, setNgrokUrl] = usePersistedState('naira.bridge.ngrok', 'wss://swampland-flatten-rockstar.ngrok-free.dev/ws/remote')
+  const [devices, setDevices] = usePersistedState('naira.bridge.devices', [])
+  const [threshold, setThreshold] = usePersistedState('naira.bridge.threshold', 80)
+  const [commandPolicy, setCommandPolicy] = usePersistedState('naira.bridge.policy', {})
+  const [alwaysBiometric, setAlwaysBiometric] = usePersistedState('naira.bridge.alwaysBio', false)
+  const [logs, setLogs] = usePersistedState('naira.bridge.logs', [])
+  const [qrPayload, setQrPayload] = useState(null)
+  const [expiresIn, setExpiresIn] = useState(60)
+  const [showQr, setShowQr] = useState(false)
+  const [confirmLock, setConfirmLock] = useState(false)
+  const [confirmWipe, setConfirmWipe] = useState(false)
+  const [bridge, setBridge] = useState({ connected: false, queue_size: 0, fcm_ready: false, reachable: false })
+
+  const addLog = useCallback(
+    (message, tone = 'info') => {
+      setLogs((l) => [{ id: makeId('log'), ts: Date.now(), message, tone }, ...l.slice(0, 60)])
+    },
+    [setLogs]
+  )
+
+  const generateQr = useCallback(() => {
+    setQrPayload({
+      master_key: randomHex(32),
+      ngrok_url: ngrokUrl,
+      timestamp: nowSec(),
+    })
+    setExpiresIn(60)
+    addLog('New pairing QR generated', 'violet')
+  }, [ngrokUrl, addLog])
+
+  useEffect(() => {
+    if (!showQr) return
+    generateQr()
+  }, [showQr, generateQr])
+
+  useInterval(() => {
+    if (!qrPayload) return
+    const age = nowSec() - qrPayload.timestamp
+    if (age >= 60) {
+      setExpiresIn(0)
+      generateQr()
+    } else {
+      setExpiresIn(60 - age)
+    }
+  }, 1000)
+
+  useInterval(() => {
+    getRemoteBridgeStatus().then((s) => {
+      setBridge(s)
+      const wasConnected = bridge.connected
+      if (s.connected && !wasConnected) addLog('Remote device connected via mTLS WebSocket', 'mint')
+      if (!s.connected && wasConnected) addLog('Remote device disconnected', 'rose')
+    })
+  }, 5000)
+
+  const addDevice = () => {
+    const name = window.prompt('Device ka naam (e.g. "Mera Phone"):')
+    if (!name) return
+    setDevices((d) => [...d, { id: makeId('dev'), name, pairedAt: Date.now(), fcm: `token_${randomHex(6)}` }])
+    addLog(`Device paired: ${name}`, 'mint')
+  }
+
+  const revokeDevice = (dev) => {
+    setDevices((d) => d.filter((x) => x.id !== dev.id))
+    addLog(`Device revoked: ${dev.name}`, 'rose')
+    toast(`"${dev.name}" revoke kar diya gaya`, 'info')
+  }
+
+  const setPolicy = (action, mode) => {
+    setCommandPolicy((p) => ({ ...p, [action]: mode }))
+    addLog(`Policy changed: ${action} → ${mode === 'allow' ? 'Allow' : mode === 'block' ? 'Block' : 'Always Biometric'}`, 'cyan')
+  }
+
+  const lockDevice = () => {
+    setConfirmLock(false)
+    addLog('LOCK_SIGNAL dispatched → device admin lock request sent', 'amber')
+    toast('Device lock signal sent — phone turant lock ho jayega', 'info')
+  }
+
+  const wipeDevice = () => {
+    setConfirmWipe(false)
+    addLog('WIPE_DATA requested (placeholder — future update)', 'rose')
+    toast('Wipe is a placeholder — abhi available nahi', 'error')
+  }
+
+  const policyIcon = (action) => {
+    const mode = alwaysBiometric ? 'bio' : commandPolicy[action] || (COMMANDS.find((c) => c.action === action)?.risk > threshold ? 'bio' : 'allow')
+    return { allow: { icon: ShieldCheck, tone: 'mint', label: 'Allow' }, bio: { icon: ShieldAlert, tone: 'amber', label: 'Biometric' }, block: { icon: Lock, tone: 'rose', label: 'Block' } }[mode]
+  }
+
+  return (
+    <SectionShell icon={<Smartphone size={18} />} title="Remote Bridge" subtitle="Zero-trust phone ↔ PC control" onClose={onClose}>
+      {/* ---------- Pairing ---------- */}
+      <GlassCard className="card">
+        <div className="card-title"><QrCode size={14} /> Device Pairing</div>
+        <div className="field-group" style={{ marginBottom: 10 }}>
+          <label className="field-label">Ngrok Tunnel URL</label>
+          <input className="field" style={{ fontSize: 12.5 }} value={ngrokUrl} onChange={(e) => setNgrokUrl(e.target.value)} placeholder="wss://...ngrok-free.app/ws/remote" />
+        </div>
+        <button className="btn btn-primary btn-sm" style={{ width: '100%' }} onClick={() => setShowQr(true)}>
+          <QrCode size={15} /> Generate Pairing QR
+        </button>
+
+        {showQr && qrPayload && (
+          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            <div className="glass-soft" style={{ padding: 14, borderRadius: 16 }}>
+              <QRCodeSVG value={JSON.stringify(qrPayload)} size={190} fgColor="#070b1e" bgColor="#ffffff" level="M" />
+            </div>
+            <div className="between" style={{ width: '100%' }}>
+              <span className={`badge ${expiresIn < 15 ? 'badge-rose' : 'badge-cyan'}`} style={{ textTransform: 'none', letterSpacing: 0 }}>
+                Expires in {expiresIn}s
+              </span>
+              <div className="row" style={{ gap: 6 }}>
+                <button className="btn btn-ghost btn-tiny" onClick={generateQr}><RefreshCw size={12} /> Regenerate</button>
+                <button className="btn btn-ghost btn-tiny" onClick={() => setShowQr(false)}>Close</button>
+              </div>
+            </div>
+            <div className="tiny" style={{ textTransform: 'none', letterSpacing: 0, textAlign: 'center', lineHeight: 1.7 }}>
+              Android app se QR scan karo — master key EncryptedVault mein save hogi. 60s expiry, replay-proof.
+            </div>
+          </div>
+        )}
+      </GlassCard>
+
+      {/* ---------- Devices ---------- */}
+      <GlassCard className="card">
+        <div className="between">
+          <div className="card-title" style={{ marginBottom: 0 }}>Paired Devices</div>
+          <button className="btn btn-ghost btn-tiny" onClick={addDevice}><QrCode size={12} /> Add device</button>
+        </div>
+        {devices.length === 0 ? (
+          <div className="tiny" style={{ padding: '10px 2px' }}>Koi device paired nahi — QR generate karke phone se scan karo.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+            {devices.map((d) => (
+              <div key={d.id} className="glass-soft between" style={{ padding: '11px 13px' }}>
+                <div className="row" style={{ gap: 10 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, display: 'grid', placeItems: 'center', background: 'rgba(52,211,153,0.12)', color: 'var(--mint)' }}>
+                    <Smartphone size={15} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>{d.name}</div>
+                    <div className="tiny" style={{ marginTop: 2 }}>Paired {formatTime(d.pairedAt)} · {d.fcm.slice(0, 12)}...</div>
+                  </div>
+                </div>
+                <button className="btn btn-ghost btn-tiny" onClick={() => revokeDevice(d)} title="Revoke">
+                  <Trash2 size={12} style={{ color: 'var(--rose)' }} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </GlassCard>
+
+      {/* ---------- Connection Status ---------- */}
+      <GlassCard className="card">
+        <div className="card-title"><Activity size={14} /> Connection Status</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <StatusPill label="WebSocket / mTLS" value={bridge.connected ? 'Connected' : bridge.reachable === false ? 'Backend offline' : 'Disconnected'} tone={bridge.connected ? 'mint' : 'rose'} />
+          <StatusPill label="FCM Wakeup Service" value={bridge.fcm_ready ? 'Active' : 'Standby'} tone={bridge.fcm_ready ? 'mint' : 'amber'} />
+          <StatusPill label="Offline Action Queue" value={`${bridge.queue_size} pending`} tone={bridge.queue_size > 0 ? 'amber' : 'gray'} />
+          <StatusPill label="Tunnel" value={ngrokUrl.includes('ngrok') ? 'Ngrok' : 'Custom'} tone="violet" />
+        </div>
+      </GlassCard>
+
+      {/* ---------- Risk Engine ---------- */}
+      <GlassCard className="card">
+        <div className="card-title"><ShieldCheck size={14} /> Risk Engine & Rules</div>
+        <div className="between" style={{ marginBottom: 6 }}>
+          <span className="tiny">Biometric Threshold</span>
+          <span className="badge badge-violet" style={{ textTransform: 'none', letterSpacing: 0 }}>&gt; {threshold}</span>
+        </div>
+        <Slider min={0} max={100} value={threshold} onChange={(v) => { setThreshold(v); addLog(`Biometric threshold set to > ${v}`, 'violet') }} />
+        <div className="tiny" style={{ marginTop: 6, textTransform: 'none', letterSpacing: 0 }}>
+          Threshold se upar wale commands ke liye fingerprint chahiye hoga.
+        </div>
+        <div className="row" style={{ marginTop: 12 }}>
+          <span className="tiny grow">Always Biometric (sab commands lock)</span>
+          <Toggle checked={alwaysBiometric} onChange={(v) => { setAlwaysBiometric(v); addLog(v ? 'Always Biometric mode ON' : 'Always Biometric mode OFF', 'amber') }} />
+        </div>
+      </GlassCard>
+
+      {/* ---------- Command permissions ---------- */}
+      <GlassCard className="card">
+        <div className="card-title">Command Permissions</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {COMMANDS.map((c) => {
+            const mode = alwaysBiometric ? 'bio' : commandPolicy[c.action] || (c.risk > threshold ? 'bio' : 'allow')
+            const P = policyIcon(c.action)
+            return (
+              <div key={c.action} className="between" style={{ padding: '7px 10px', borderRadius: 10, background: 'rgba(255,255,255,0.03)' }}>
+                <div className="row" style={{ gap: 10 }}>
+                  <P.icon size={14} style={{ color: { mint: 'var(--mint)', amber: 'var(--amber)', rose: 'var(--rose)' }[P.tone] }} />
+                  <span style={{ fontSize: 12.5, fontWeight: 600, letterSpacing: '0.03em' }}>{c.action}</span>
+                </div>
+                <div className="row" style={{ gap: 6 }}>
+                  <span className="tiny" style={{ color: 'var(--text-3)' }}>{c.risk}</span>
+                  <select
+                    className="field"
+                    style={{ width: 122, padding: '5px 8px', fontSize: 11.5, borderRadius: 8 }}
+                    value={mode}
+                    disabled={alwaysBiometric}
+                    onChange={(e) => setPolicy(c.action, e.target.value)}
+                  >
+                    <option value="allow">Allow</option>
+                    <option value="bio">Biometric</option>
+                    <option value="block">Block</option>
+                  </select>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </GlassCard>
+
+      {/* ---------- Emergency ---------- */}
+      <GlassCard className="card" style={{ borderColor: 'rgba(251,113,133,0.35)' }}>
+        <div className="card-title" style={{ color: 'var(--rose)' }}>Emergency & Anti-Theft</div>
+        <div className="grid-2">
+          <button className="btn btn-danger btn-sm" onClick={() => setConfirmLock(true)}>
+            <Lock size={14} /> Lock Device
+          </button>
+          <button className="btn btn-ghost btn-sm" style={{ borderColor: 'rgba(251,113,133,0.4)' }} onClick={() => setConfirmWipe(true)}>
+            <Trash2 size={14} /> Wipe Data
+          </button>
+        </div>
+        <div className="tiny" style={{ marginTop: 10, textTransform: 'none', letterSpacing: 0 }}>
+          Lock = turant phone/PC lock (Device Admin). Wipe = future update placeholder.
+        </div>
+      </GlassCard>
+
+      {/* ---------- Security logs ---------- */}
+      <GlassCard className="card">
+        <div className="card-title"><Activity size={14} /> Live Security Logs</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+          {logs.length === 0 && <div className="tiny" style={{ padding: '8px 2px' }}>Activity yahan log hogi — pairing, policy, status changes.</div>}
+          {logs.map((l) => (
+            <div key={l.id} className="row" style={{ gap: 8, fontSize: 11.5, alignItems: 'flex-start' }}>
+              <span style={{ color: 'var(--text-3)', fontFamily: 'monospace', flexShrink: 0 }}>{formatTime(l.ts)}</span>
+              <span style={{ color: { mint: 'var(--mint)', rose: 'var(--rose)', amber: 'var(--amber)', violet: 'var(--violet)', cyan: 'var(--cyan)' }[l.tone] || 'var(--text-2)', lineHeight: 1.5 }}>
+                {l.message}
+              </span>
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+
+      <Modal open={confirmLock} onClose={() => setConfirmLock(false)} title="Lock device?" danger>
+        <div className="muted" style={{ fontSize: 13.5, lineHeight: 1.7 }}>
+          Ye signed <b style={{ color: 'var(--text-1)' }}>LOCK_DEVICE</b> action bhejega (risk 20). Device admin receiver turant phone lock karega. Continue karna hai?
+        </div>
+        <div className="row" style={{ justifyContent: 'flex-end', gap: 8 }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => setConfirmLock(false)}>Cancel</button>
+          <button className="btn btn-danger btn-sm" onClick={lockDevice}><Lock size={14} /> Lock Now</button>
+        </div>
+      </Modal>
+
+      <Modal open={confirmWipe} onClose={() => setConfirmWipe(false)} title="Wipe device data?" danger>
+        <div className="muted" style={{ fontSize: 13.5, lineHeight: 1.7 }}>
+          Risk score <b style={{ color: 'var(--rose)' }}>100</b> — yeh action future update mein aayega. Abhi placeholder hai.
+        </div>
+        <div className="row" style={{ justifyContent: 'flex-end', gap: 8 }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => setConfirmWipe(false)}>Cancel</button>
+          <button className="btn btn-danger btn-sm" onClick={wipeDevice}><Trash2 size={14} /> Wipe</button>
+        </div>
+      </Modal>
+    </SectionShell>
+  )
+}
+</file>
+
+<file path="src/sections/SettingsSection.jsx">
+import { useEffect, useState } from 'react'
+import { Settings, KeyRound, ShieldCheck, Loader2, Upload, AudioLines, Cpu, Globe, Eye, Palette, Check, Wand2 } from 'lucide-react'
+import { SectionShell, GlassCard, Toggle } from '../components/ui.jsx'
+import { useApp, ACCENTS } from '../state/AppContext.jsx'
+import { getVaultStatus, saveVaultConfiguration } from '../api/client.js'
+import KeyField from '../components/KeyField.jsx'
+import { usePersistedState, makeId } from '../state/store.js'
+
+const CAPABILITIES = [
+  { id: 'pc_control', key: 'PC Control', icon: Cpu, desc: 'System commands, apps, volume, lock' },
+  { id: 'browser', key: 'Browser', icon: Globe, desc: 'Chrome tabs, search, navigation' },
+  { id: 'vision', key: 'Vision', icon: Eye, desc: 'Screen dekh ke samajhna (Gemini Vision)' },
+]
+
+export default function SettingsSection({ onClose, accent }) {
+  const { toast, setAccent } = useApp()
+  const [vault, setVault] = useState(null)
+  const [provider, setProvider] = useState('gemini')
+  const [apiKey, setApiKey] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [plugins, setPlugins] = usePersistedState('naira.plugins', [])
+  const [voices, setVoices] = usePersistedState('naira.voices', [])
+  const [uploadName, setUploadName] = useState('')
+
+  useEffect(() => {
+    getVaultStatus().then((s) => {
+      setVault(s)
+      if (s.provider) setProvider(s.provider)
+    })
+  }, [])
+
+  const updateVault = async () => {
+    if (!apiKey.trim()) {
+      toast('Naya API key paste karo pehle', 'error')
+      return
+    }
+    setBusy(true)
+    try {
+      await saveVaultConfiguration({ provider, apiKey: apiKey.trim() })
+      setApiKey('')
+      const s = await getVaultStatus()
+      setVault(s)
+      toast('Key updated — vault hot-reload ho gaya, restart nahi chahiye', 'success')
+    } catch (err) {
+      toast(err.message || 'Key update failed', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const capabilityEnabled = (cap) => {
+    const p = plugins.find((x) => x.id === cap.id)
+    if (p) return p.enabled
+    return cap.id !== 'autonomous'
+  }
+
+  const toggleCapability = (cap, v) => {
+    const existing = plugins.find((x) => x.id === cap.id)
+    if (existing) {
+      setPlugins((list) => list.map((x) => (x.id === cap.id ? { ...x, enabled: v } : x)))
+    } else {
+      setPlugins((list) => [
+        ...list,
+        { id: cap.id, name: cap.key, desc: cap.desc, builtin: true, enabled: v },
+      ])
+    }
+    toast(`${cap.key} ${v ? 'enabled' : 'disabled'}`, v ? 'success' : 'info')
+  }
+
+  const handleVoiceUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const name = uploadName.trim() || file.name.replace(/\.(pth|index|zip)$/i, '')
+    setVoices((list) => [
+      ...list,
+      {
+        id: makeId('v'),
+        name,
+        desc: 'Settings se upload kiya gaya RVC model',
+        model: file.name,
+        builtin: false,
+        active: false,
+      },
+    ])
+    setUploadName('')
+    toast(`Voice "${name}" library mein add ho gayi — Voice section se select karo`, 'success')
+    e.target.value = ''
+  }
+
+  return (
+    <SectionShell icon={<Settings size={18} />} title="Settings" subtitle="System ke controls" onClose={onClose}>
+      {/* ---------- API Key update ---------- */}
+      <GlassCard className="card">
+        <div className="card-title"><KeyRound size={14} /> API Key Update</div>
+        <div className="row" style={{ marginBottom: 14 }}>
+          <span className="badge badge-violet" style={{ textTransform: 'none', letterSpacing: 0 }}>
+            Active: {vault?.provider === 'gemini' ? 'Gemini' : vault?.provider === 'deepseek' ? 'DeepSeek (Zen)' : '—'}
+          </span>
+          {vault?.configured && (
+            <span className="badge badge-mint" style={{ textTransform: 'none', letterSpacing: 0 }}>
+              <ShieldCheck size={11} /> Sealed
+            </span>
+          )}
+        </div>
+        <div className="field-group">
+          <label className="field-label">Provider</label>
+          <div className="grid-2">
+            <button
+              type="button"
+              className="card glass-hover"
+              style={{
+                textAlign: 'center', cursor: 'pointer', padding: 10, fontSize: 13, fontWeight: 700,
+                borderColor: provider === 'gemini' ? 'var(--accent-1)' : undefined,
+                boxShadow: provider === 'gemini' ? '0 0 16px var(--accent-glow)' : undefined,
+              }}
+              onClick={() => setProvider('gemini')}
+            >
+              Gemini
+            </button>
+            <button
+              type="button"
+              className="card glass-hover"
+              style={{
+                textAlign: 'center', cursor: 'pointer', padding: 10, fontSize: 13, fontWeight: 700,
+                borderColor: provider === 'deepseek' ? 'var(--accent-1)' : undefined,
+                boxShadow: provider === 'deepseek' ? '0 0 16px var(--accent-glow)' : undefined,
+              }}
+              onClick={() => setProvider('deepseek')}
+            >
+              DeepSeek (Zen)
+            </button>
+          </div>
+        </div>
+        <KeyField
+          label={provider === 'gemini' ? 'Naya Gemini API Key' : 'Naya OpenCode Zen API Key'}
+          placeholder={provider === 'gemini' ? 'AIzaSy...' : 'zen-...'}
+          value={apiKey}
+          onChange={setApiKey}
+          status={apiKey ? 'set' : 'optional'}
+          helper="Verify hote hi memory/user_vault.json mein auto-save — hot reload, restart nahi"
+          getKeyLink={provider === 'gemini' ? 'https://aistudio.google.com/apikey' : 'https://opencode.ai/zen'}
+        />
+        <button className="btn btn-primary btn-sm" style={{ width: '100%' }} disabled={busy} onClick={updateVault}>
+          {busy ? <Loader2 size={15} className="spin" /> : <ShieldCheck size={15} />}
+          {busy ? 'Verifying & sealing...' : 'Update & Seal'}
+        </button>
+      </GlassCard>
+
+      {/* ---------- RVC voice upload ---------- */}
+      <GlassCard className="card">
+        <div className="card-title"><AudioLines size={14} /> RVC Trained Voice</div>
+        <div className="row" style={{ gap: 12, marginBottom: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 11, display: 'grid', placeItems: 'center', background: 'rgba(244,114,182,0.13)', color: 'var(--pink)', flexShrink: 0 }}>
+            <AudioLines size={16} />
+          </div>
+          <div className="tiny" style={{ textTransform: 'none', letterSpacing: 0, lineHeight: 1.6 }}>
+            Voice section se connected — yahan upload karo, wahan select karo. ({voices.filter((v) => v.active).length || 1} active voice)
+          </div>
+        </div>
+        <input
+          className="field"
+          placeholder="Voice name (optional)"
+          value={uploadName}
+          onChange={(e) => setUploadName(e.target.value)}
+          style={{ marginBottom: 10 }}
+        />
+        <label className="btn btn-ghost btn-sm" style={{ width: '100%', cursor: 'pointer' }}>
+          <Upload size={14} /> Upload .pth / .index model
+          <input
+            type="file"
+            accept=".pth,.index,.zip,.onnx"
+            style={{ display: 'none' }}
+            onChange={handleVoiceUpload}
+          />
+        </label>
+        <div className="tiny" style={{ marginTop: 10, textTransform: 'none', letterSpacing: 0 }}>
+          Model path: <b style={{ color: 'var(--text-2)' }}>backend/modules/voice/rvc_model/</b>
+        </div>
+      </GlassCard>
+
+      {/* ---------- Capabilities ---------- */}
+      <GlassCard className="card">
+        <div className="card-title"><Wand2 size={14} /> Capabilities</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {CAPABILITIES.map((cap) => (
+            <div key={cap.id} className="glass-soft between" style={{ padding: '11px 13px' }}>
+              <div className="row" style={{ gap: 11 }}>
+                <cap.icon size={15} style={{ color: 'var(--accent-2)' }} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>{cap.key}</div>
+                  <div className="tiny" style={{ marginTop: 2, textTransform: 'none', letterSpacing: 0 }}>{cap.desc}</div>
+                </div>
+              </div>
+              <Toggle checked={capabilityEnabled(cap)} onChange={(v) => toggleCapability(cap, v)} />
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+
+      {/* ---------- Appearance ---------- */}
+      <GlassCard className="card">
+        <div className="card-title"><Palette size={14} /> Appearance</div>
+        <div className="row" style={{ flexWrap: 'wrap', gap: 10 }}>
+          {Object.entries(ACCENTS).map(([key, vars]) => {
+            const active = accent === key
+            return (
+              <button
+                key={key}
+                type="button"
+                className="row glass-hover"
+                style={{
+                  cursor: 'pointer', padding: '9px 14px', borderRadius: 12, border: '1px solid var(--stroke)',
+                  background: active ? 'linear-gradient(120deg, var(--accent-1), var(--accent-2))' : 'var(--surface-2)',
+                  color: active ? '#071021' : 'var(--text-2)',
+                  boxShadow: active ? '0 6px 20px var(--accent-glow)' : 'none',
+                  gap: 8,
+                }}
+                onClick={() => {
+                  setAccent(key)
+                  toast(`Theme set: ${key}`, 'success')
+                }}
+              >
+                <span
+                  style={{
+                    width: 16, height: 16, borderRadius: 99,
+                    background: `linear-gradient(120deg, ${vars['--accent-1']}, ${vars['--accent-2']})`,
+                    boxShadow: '0 0 8px rgba(255,255,255,0.25)',
+                  }}
+                />
+                <span style={{ fontSize: 12.5, fontWeight: 700, textTransform: 'capitalize' }}>
+                  {key}
+                </span>
+                {active && <Check size={13} />}
+              </button>
+            )
+          })}
+        </div>
+      </GlassCard>
+
+      <div className="tiny" style={{ textAlign: 'center', lineHeight: 1.7, padding: '0 10px' }}>
+        Naam/bhasha update karni hai? → <b style={{ color: 'var(--accent-1)' }}>Memory</b> section mein Handshake Profile edit karo.
+      </div>
+    </SectionShell>
+  )
+}
+</file>
+
+<file path="src/sections/VoiceSection.jsx">
+import { useState } from 'react'
+import { AudioLines, Play, Plus, Trash2, Sparkles, FileAudio } from 'lucide-react'
+import { SectionShell, GlassCard, Modal, EmptyState } from '../components/ui.jsx'
+import { useApp } from '../state/AppContext.jsx'
+import { usePersistedState, makeId } from '../state/store.js'
+
+const SEED_VOICES = [
+  { id: 'v_naira', name: 'Naira', desc: 'Naira OS default — RVC trained', model: 'naira.pth', builtin: true, active: true },
+  { id: 'v_zen', name: 'Naira Zen', desc: 'Alternate RVC timbre', model: 'naira_zen.pth', builtin: true, active: false },
+]
+
+export default function VoiceSection({ onClose }) {
+  const { toast } = useApp()
+  const [voices, setVoices] = usePersistedState('naira.voices', SEED_VOICES)
+  const [addOpen, setAddOpen] = useState(false)
+  const [form, setForm] = useState({ name: '', desc: '', model: '', index: '' })
+
+  const selectVoice = (id) => {
+    setVoices((list) => list.map((v) => ({ ...v, active: v.id === id })))
+    const v = voices.find((x) => x.id === id)
+    toast(`Active voice: ${v?.name || 'selected'}`, 'success')
+  }
+
+  const preview = (name) => {
+    if (!('speechSynthesis' in window)) return
+    const u = new SpeechSynthesisUtterance(`Hi, I'm ${name}. Naira voice library ready.`)
+    u.lang = 'en-US'
+    u.pitch = 1.15
+    u.rate = 1
+    window.speechSynthesis.cancel()
+    window.speechSynthesis.speak(u)
+  }
+
+  const addVoice = () => {
+    if (!form.name.trim()) return
+    setVoices((list) => [...list, { id: makeId('v'), name: form.name.trim(), desc: form.desc.trim() || 'Custom trained RVC voice', model: form.model.trim() || `${form.name.trim().toLowerCase()}.pth`, builtin: false, active: false }])
+    setForm({ name: '', desc: '', model: '', index: '' })
+    setAddOpen(false)
+    toast('Voice added — Settings se bhi manage kar sakte ho', 'success')
+  }
+
+  return (
+    <SectionShell icon={<AudioLines size={18} />} title="Voice" subtitle="RVC voice library" onClose={onClose}>
+      <div className="card fade-up" style={{ background: 'linear-gradient(140deg, rgba(244,114,182,0.1), rgba(167,139,250,0.08))' }}>
+        <div className="row" style={{ gap: 12 }}>
+          <Sparkles size={18} style={{ color: 'var(--pink)' }} />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13.5 }}>RVC Voice Conversion</div>
+            <div className="tiny" style={{ marginTop: 3, textTransform: 'none', letterSpacing: 0, lineHeight: 1.6 }}>
+              Base TTS (EdgeTTS) → <b style={{ color: 'var(--text-2)' }}>.pth + .index</b> model se Naira ki awaaz. Abhi limited library — aage badhenge.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="between">
+        <div className="tiny">{voices.length} voices in library</div>
+        <button className="btn btn-primary btn-sm" onClick={() => setAddOpen(true)}>
+          <Plus size={14} /> Add trained voice
+        </button>
+      </div>
+
+      {voices.map((v) => (
+        <GlassCard
+          key={v.id}
+          className="card"
+          hover
+          style={{ cursor: 'pointer', borderColor: v.active ? 'var(--accent-2)' : undefined, boxShadow: v.active ? '0 0 22px var(--accent-glow)' : undefined }}
+          onClick={() => selectVoice(v.id)}
+        >
+          <div className="between">
+            <div className="row" style={{ gap: 12 }}>
+              <div
+                style={{
+                  width: 40, height: 40, borderRadius: 99,
+                  display: 'grid', placeItems: 'center', flexShrink: 0,
+                  background: v.active ? 'linear-gradient(120deg, var(--accent-1), var(--accent-2))' : 'rgba(255,255,255,0.06)',
+                  color: v.active ? '#071021' : 'var(--text-2)',
+                  boxShadow: v.active ? '0 6px 20px var(--accent-glow)' : 'none',
+                }}
+              >
+                <AudioLines size={17} />
+              </div>
+              <div>
+                <div className="row" style={{ gap: 8 }}>
+                  <span style={{ fontWeight: 700, fontSize: 14 }}>{v.name}</span>
+                  {v.active && <span className="badge badge-pink" style={{ textTransform: 'none', letterSpacing: 0 }}>Active</span>}
+                  {v.builtin && <span className="badge badge-gray" style={{ textTransform: 'none', letterSpacing: 0 }}>Built-in</span>}
+                </div>
+                <div className="tiny" style={{ marginTop: 3, textTransform: 'none', letterSpacing: 0 }}>{v.desc}</div>
+                <div className="tiny" style={{ marginTop: 3, textTransform: 'none', letterSpacing: 0, fontFamily: 'monospace' }}>{v.model}</div>
+              </div>
+            </div>
+            <div className="row" style={{ gap: 6 }}>
+              <button className="btn btn-ghost btn-tiny" onClick={(e) => { e.stopPropagation(); preview(v.name) }} title="Preview">
+                <Play size={12} />
+              </button>
+              {!v.builtin && (
+                <button className="btn btn-ghost btn-tiny" onClick={(e) => { e.stopPropagation(); setVoices((list) => list.filter((x) => x.id !== v.id)) }}>
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+        </GlassCard>
+      ))}
+
+      {voices.length === 0 && (
+        <EmptyState icon={<AudioLines size={30} />} title="Voice library khaali" note="Nayi trained RVC voice add karo — jaise hi library badegi, voices yahan update hongi." />
+      )}
+
+      <div className="tiny" style={{ textAlign: 'center', lineHeight: 1.7, padding: '0 10px' }}>
+        Models path: <b style={{ color: 'var(--text-2)' }}>backend/modules/voice/rvc_model/</b> · Naira ki awaaz RVC inference se transform hoti hai.
+      </div>
+
+      <AddVoiceModal open={addOpen} form={form} setForm={setForm} onClose={() => setAddOpen(false)} onSave={addVoice} />
+    </SectionShell>
+  )
+}
+
+function AddVoiceModal({ open, form, setForm, onClose, onSave }) {
+  return (
+    <Modal open={open} onClose={onClose} title="Add trained voice">
+      <div className="row" style={{ gap: 10, color: 'var(--accent-2)' }}>
+        <FileAudio size={17} />
+        <span className="tiny" style={{ textTransform: 'none', letterSpacing: 0 }}>Apna trained RVC voice model register karo — Settings section se bhi connected hai.</span>
+      </div>
+      <div className="field-group">
+        <label className="field-label">Voice Name</label>
+        <input className="field" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Trend Voice 2026" />
+      </div>
+      <div className="field-group">
+        <label className="field-label">Description</label>
+        <input className="field" value={form.desc} onChange={(e) => setForm((f) => ({ ...f, desc: e.target.value }))} placeholder="Kis style ki voice hai?" />
+      </div>
+      <div className="grid-2">
+        <div className="field-group">
+          <label className="field-label">Model file (.pth)</label>
+          <input className="field" value={form.model} onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))} placeholder="voice.pth" />
+        </div>
+        <div className="field-group">
+          <label className="field-label">Index file (.index)</label>
+          <input className="field" value={form.index} onChange={(e) => setForm((f) => ({ ...f, index: e.target.value }))} placeholder="voice.index" />
+        </div>
+      </div>
+      <button className="btn btn-primary" style={{ width: '100%' }} disabled={!form.name.trim()} onClick={onSave}>
+        <Plus size={15} /> Add to library
+      </button>
+    </Modal>
+  )
+}
+</file>
+
+<file path="src/state/AppContext.jsx">
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { WS_URL } from '../api/client.js'
+
+export const AppContext = createContext(null)
+
+const ACCENTS = {
+  aurora: { '--accent-1': '#22d3ee', '--accent-2': '#a78bfa', '--accent-3': '#f472b6', '--accent-glow': 'rgba(34,211,238,0.45)' },
+  cyber: { '--accent-1': '#22d3ee', '--accent-2': '#60a5fa', '--accent-3': '#38bdf8', '--accent-glow': 'rgba(34,211,238,0.45)' },
+  sakura: { '--accent-1': '#f472b6', '--accent-2': '#c084fc', '--accent-3': '#fb7185', '--accent-glow': 'rgba(244,114,182,0.4)' },
+  mint: { '--accent-1': '#34d399', '--accent-2': '#22d3ee', '--accent-3': '#a3e635', '--accent-glow': 'rgba(52,211,153,0.4)' },
+}
+
+export const AVATAR_STATES = {
+  idle: { video: 'idle.mp4', label: 'Naira Idle' },
+  listening: { video: 'listening.mp4', label: 'Naira Listening' },
+  thinking: { video: 'thinking.mp4', label: 'Naira Thinking' },
+  talking: { video: 'talking.mp4', label: 'Naira Speaking' },
+  laughing: { video: 'laughing.mp4', label: 'Naira Laughing' },
+}
+
+const HALO_COLORS = {
+  idle: { '--halo-1': '#a78bfa', '--halo-2': '#22d3ee', '--halo-3': '#f472b6' },
+  listening: { '--halo-1': '#22d3ee', '--halo-2': '#38bdf8', '--halo-3': '#a78bfa' },
+  thinking: { '--halo-1': '#60a5fa', '--halo-2': '#818cf8', '--halo-3': '#22d3ee' },
+  talking: { '--halo-1': '#f472b6', '--halo-2': '#c084fc', '--halo-3': '#fb7185' },
+  laughing: { '--halo-1': '#34d399', '--halo-2': '#a3e635', '--halo-3': '#22d3ee' },
+}
+
+export function AppProvider({ children }) {
+  const [screen, setScreen] = useState('boot')
+  const [profile, setProfile] = useState(() => {
+    try {
+      const raw = localStorage.getItem('naira.profile')
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  })
+  const [accent, setAccent] = useState(() => {
+    try {
+      return localStorage.getItem('naira.accent') || 'aurora'
+    } catch {
+      return 'aurora'
+    }
+  })
+  const [toasts, setToasts] = useState([])
+  const [avatarState, setAvatarState] = useState('idle')
+  const [wsStatus, setWsStatus] = useState('connecting')
+
+  const socketRef = useRef(null)
+  const onMessageRef = useRef(null)
+
+  useEffect(() => {
+    const root = document.documentElement
+    const vars = ACCENTS[accent] || ACCENTS.aurora
+    Object.entries(vars).forEach(([k, v]) => root.style.setProperty(k, v))
+    localStorage.setItem('naira.accent', accent)
+  }, [accent])
+
+  useEffect(() => {
+    if (profile) localStorage.setItem('naira.profile', JSON.stringify(profile))
+  }, [profile])
+
+  const connect = useCallback(() => {
+    if (socketRef.current && socketRef.current.readyState <= WebSocket.OPEN) return
+    setWsStatus('connecting')
+    const ws = new WebSocket(WS_URL())
+    socketRef.current = ws
+    ws.onopen = () => setWsStatus('online')
+    ws.onclose = () => {
+      setWsStatus('offline')
+      setTimeout(connect, 2500)
+    }
+    ws.onerror = () => ws.close()
+    ws.onmessage = (ev) => {
+      try {
+        const data = JSON.parse(ev.data)
+        onMessageRef.current?.(data)
+      } catch {
+        /* ignore malformed frames */
+      }
+    }
+  }, [])
+
+  const send = useCallback((payload) => {
+    const ws = socketRef.current
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false
+    ws.send(typeof payload === 'string' ? payload : JSON.stringify(payload))
+    return true
+  }, [])
+
+  const toast = useCallback((message, kind = 'info') => {
+    const id = Math.random().toString(36).slice(2)
+    setToasts((t) => [...t, { id, message, kind }])
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3800)
+  }, [])
+
+  const value = useMemo(
+    () => ({
+      screen,
+      setScreen,
+      profile,
+      setProfile,
+      accent,
+      setAccent,
+      toasts,
+      toast,
+      avatarState,
+      setAvatarState,
+      wsStatus,
+      connect,
+      send,
+      setOnMessage: (fn) => {
+        onMessageRef.current = fn
+      },
+    }),
+    [screen, profile, accent, toasts, toast, avatarState, wsStatus, connect, send]
+  )
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>
+}
+
+export function useApp() {
+  return useContext(AppContext)
+}
+
+export { ACCENTS }
+</file>
+
+<file path="src/state/store.js">
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+export function usePersistedState(key, initial) {
+  const [value, setValue] = useState(() => {
+    try {
+      const raw = localStorage.getItem(key)
+      if (raw !== null) return JSON.parse(raw)
+    } catch {
+      /* ignore */
+    }
+    return typeof initial === 'function' ? initial() : initial
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value))
+    } catch {
+      /* ignore */
+    }
+  }, [key, value])
+
+  return [value, setValue]
+}
+
+export function makeId(prefix = 'id') {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+export function nowSec() {
+  return Math.floor(Date.now() / 1000)
+}
+
+export function formatTime(ts) {
+  const d = new Date(ts)
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+export function formatDate(ts) {
+  const d = new Date(ts)
+  const today = new Date()
+  const sameDay = d.toDateString() === today.toDateString()
+  if (sameDay) return 'Today'
+  const yest = new Date(today)
+  yest.setDate(yest.getDate() - 1)
+  if (d.toDateString() === yest.toDateString()) return 'Yesterday'
+  return d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+export function groupByDate(items, tsKey) {
+  const groups = []
+  for (const item of [...items].reverse()) {
+    const label = formatDate(item[tsKey])
+    const last = groups[groups.length - 1]
+    if (last && last.label === label) last.items.push(item)
+    else groups.push({ label, items: [item] })
+  }
+  return groups
+}
+
+export function useInterval(callback, delay) {
+  const saved = useRef(callback)
+  useEffect(() => {
+    saved.current = callback
+  }, [callback])
+  useEffect(() => {
+    if (delay === null) return
+    const t = setInterval(() => saved.current(), delay)
+    return () => clearInterval(t)
+  }, [delay])
+}
+
+export function randomHex(bytes = 32) {
+  const arr = new Uint8Array(bytes)
+  crypto.getRandomValues(arr)
+  return Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('')
+}
+</file>
+
+<file path="src/App.jsx">
+import { AnimatePresence, motion } from 'framer-motion'
+import { AppProvider, useApp } from './state/AppContext.jsx'
+import BootScreen from './screens/BootScreen.jsx'
+import ApiVaultScreen from './screens/ApiVaultScreen.jsx'
+import HandshakeScreen from './screens/HandshakeScreen.jsx'
+import DashboardScreen from './screens/DashboardScreen.jsx'
+
+function Screens() {
+  const { screen, toasts } = useApp()
+
+  return (
+    <>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={screen}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'absolute', inset: 0 }}
+        >
+          {screen === 'boot' && <BootScreen />}
+          {screen === 'vault' && <ApiVaultScreen />}
+          {screen === 'handshake' && <HandshakeScreen />}
+          {screen === 'dashboard' && <DashboardScreen />}
+        </motion.div>
+      </AnimatePresence>
+
+      <div className="toast-wrap">
+        <AnimatePresence>
+          {toasts.map((t) => (
+            <motion.div
+              key={t.id}
+              className={`toast ${t.kind}`}
+              initial={{ opacity: 0, y: -18, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -12, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+            >
+              {t.message}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+    </>
+  )
+}
+
+export default function App() {
+  return (
+    <AppProvider>
+      <Screens />
+    </AppProvider>
+  )
+}
+</file>
+
+<file path="src/index.css">
+/* ============================================================
+   NAIRA OS v2 — "Aurora Glass" Design System
+   ============================================================ */
+
+:root {
+  --bg-0: #070b1e;
+  --bg-1: #0b1028;
+  --bg-2: #111735;
+
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-2: rgba(255, 255, 255, 0.075);
+  --surface-3: rgba(255, 255, 255, 0.11);
+  --stroke: rgba(255, 255, 255, 0.09);
+  --stroke-2: rgba(255, 255, 255, 0.16);
+
+  --cyan: #22d3ee;
+  --blue: #60a5fa;
+  --violet: #a78bfa;
+  --pink: #f472b6;
+  --mint: #34d399;
+  --amber: #fbbf24;
+  --rose: #fb7185;
+
+  --accent-1: #22d3ee;
+  --accent-2: #a78bfa;
+  --accent-3: #f472b6;
+  --accent-glow: rgba(34, 211, 238, 0.45);
+
+  --text-1: #eef2ff;
+  --text-2: #a5b4cf;
+  --text-3: #64748b;
+
+  --font-body: 'Inter', 'Nunito', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', 'Inter', sans-serif;
+  --font-hindi: 'Nunito', 'Inter', sans-serif;
+
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --radius-xs: 9px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-body);
+  background: radial-gradient(1200px 800px at 70% -10%, var(--bg-2) 0%, transparent 55%),
+    radial-gradient(900px 700px at -10% 110%, #141b3d 0%, transparent 50%),
+    var(--bg-0);
+  color: var(--text-1);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+  color: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ---------- Typography helpers ---------- */
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+.text-hindi {
+  font-family: var(--font-hindi);
+}
+.grad-text {
+  background: linear-gradient(120deg, var(--accent-1), var(--accent-2) 55%, var(--accent-3));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.muted {
+  color: var(--text-2);
+}
+.tiny {
+  color: var(--text-3);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---------- Glass ---------- */
+.glass {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 18px 60px rgba(2, 6, 23, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+.glass-soft {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-md);
+}
+.glass-hover {
+  transition: all 0.35s var(--ease-out);
+}
+.glass-hover:hover {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+  border-color: var(--stroke-2);
+  transform: translateY(-2px);
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--stroke-2);
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.28s var(--ease-out);
+  overflow: hidden;
+}
+.btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent-glow);
+  background: var(--surface-3);
+}
+.btn:active {
+  transform: translateY(0) scale(0.98);
+}
+.btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.btn-primary {
+  background: linear-gradient(120deg, var(--accent-1), var(--accent-2));
+  border: none;
+  color: #071021;
+  box-shadow: 0 8px 30px var(--accent-glow);
+}
+.btn-primary:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 10px 40px var(--accent-glow);
+}
+.btn-danger {
+  background: linear-gradient(120deg, #fb7185, #f43f5e);
+  border: none;
+  color: #fff;
+  box-shadow: 0 8px 30px rgba(244, 63, 94, 0.35);
+}
+.btn-ghost {
+  background: transparent;
+  border-color: var(--stroke);
+  color: var(--text-2);
+}
+.btn-ghost:hover {
+  color: var(--text-1);
+  border-color: var(--stroke-2);
+  background: var(--surface-2);
+}
+.btn-sm {
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: var(--radius-xs);
+}
+.btn-icon {
+  padding: 10px;
+  border-radius: var(--radius-sm);
+}
+.btn-tiny {
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+/* ---------- Inputs ---------- */
+.field {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--stroke);
+  background: rgba(7, 11, 30, 0.55);
+  color: var(--text-1);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.25s var(--ease-out);
+}
+.field::placeholder {
+  color: var(--text-3);
+}
+.field:focus {
+  border-color: var(--accent-1);
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.12), 0 0 24px rgba(34, 211, 238, 0.15);
+  background: rgba(7, 11, 30, 0.8);
+}
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  margin-bottom: 8px;
+}
+.field-group {
+  margin-bottom: 18px;
+}
+select.field option {
+  background: #0b1028;
+  color: var(--text-1);
+}
+
+/* ---------- Badges / chips ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.badge-cyan {
+  background: rgba(34, 211, 238, 0.12);
+  color: var(--cyan);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+}
+.badge-violet {
+  background: rgba(167, 139, 250, 0.12);
+  color: var(--violet);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+.badge-pink {
+  background: rgba(244, 114, 182, 0.12);
+  color: var(--pink);
+  border: 1px solid rgba(244, 114, 182, 0.3);
+}
+.badge-mint {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--mint);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+.badge-amber {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--amber);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+.badge-rose {
+  background: rgba(251, 113, 133, 0.12);
+  color: var(--rose);
+  border: 1px solid rgba(251, 113, 133, 0.3);
+}
+.badge-gray {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-2);
+  border: 1px solid var(--stroke);
+}
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* ---------- Toggle ---------- */
+.toggle {
+  position: relative;
+  width: 44px;
+  height: 25px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid var(--stroke);
+  cursor: pointer;
+  transition: all 0.3s var(--ease-out);
+  flex-shrink: 0;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 19px;
+  height: 19px;
+  border-radius: 99px;
+  background: #cbd5e1;
+  transition: all 0.3s var(--ease-out);
+}
+.toggle.on {
+  background: linear-gradient(120deg, var(--accent-1), var(--accent-2));
+  border-color: transparent;
+  box-shadow: 0 0 18px var(--accent-glow);
+}
+.toggle.on::after {
+  left: 21px;
+  background: #fff;
+}
+
+/* ---------- Slider ---------- */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 99px;
+  background: linear-gradient(
+    to right,
+    var(--accent-1) 0%,
+    var(--accent-2) var(--fill, 50%),
+    rgba(255, 255, 255, 0.1) var(--fill, 50%)
+  );
+  outline: none;
+  cursor: pointer;
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 99px;
+  background: #fff;
+  border: 3px solid var(--accent-2);
+  box-shadow: 0 0 16px var(--accent-glow);
+  cursor: grab;
+}
+
+/* ---------- Avatar & halo ---------- */
+.avatar-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.avatar-orb-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  animation: orbBounce 3.4s ease-in-out infinite;
+}
+@keyframes orbBounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-7px) scale(1.012);
+  }
+}
+.avatar-halo {
+  position: absolute;
+  inset: -9%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    var(--halo-1, var(--violet)),
+    var(--halo-2, var(--cyan)) 25%,
+    var(--halo-3, var(--pink)) 50%,
+    var(--halo-1, var(--violet)) 75%,
+    var(--halo-2, var(--cyan))
+  );
+  filter: blur(9px);
+  opacity: 0.85;
+  animation: haloSpin 9s linear infinite;
+  -webkit-mask: radial-gradient(closest-side, transparent 58%, black 62%, transparent 72%);
+  mask: radial-gradient(closest-side, transparent 58%, black 62%, transparent 72%);
+}
+@keyframes haloSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.avatar-glow {
+  position: absolute;
+  inset: -4%;
+  border-radius: 50%;
+  background: var(--halo-1, var(--violet));
+  filter: blur(55px);
+  opacity: 0.28;
+  animation: glowPulse 3.4s ease-in-out infinite;
+}
+@keyframes glowPulse {
+  0%, 100% {
+    opacity: 0.22;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.42;
+    transform: scale(1.05);
+  }
+}
+.avatar-video {
+  position: relative;
+  z-index: 2;
+  border-radius: 50%;
+  object-fit: cover;
+  background: radial-gradient(circle at 50% 30%, #16204a, #0a0f2a 70%);
+}
+.avatar-video.sm {
+  width: 130px;
+  height: 130px;
+}
+.avatar-video.md {
+  width: 200px;
+  height: 200px;
+}
+.avatar-video.lg {
+  width: 300px;
+  height: 300px;
+}
+
+/* ---------- Mic button ---------- */
+.mic-btn {
+  position: relative;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  border: 1px solid var(--stroke-2);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+  color: var(--text-1);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.3s var(--ease-out);
+}
+.mic-btn svg {
+  width: 22px;
+  height: 22px;
+}
+.mic-btn:hover {
+  transform: scale(1.06);
+  border-color: var(--accent-glow);
+}
+.mic-btn.on {
+  background: linear-gradient(120deg, var(--accent-1), var(--accent-2));
+  color: #071021;
+  box-shadow: 0 0 40px var(--accent-glow);
+}
+.mic-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--accent-1);
+  animation: micPulse 1.6s ease-out infinite;
+  opacity: 0;
+}
+.mic-btn.on .mic-pulse {
+  opacity: 1;
+}
+@keyframes micPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.75);
+    opacity: 0;
+  }
+}
+.mic-label {
+  margin-top: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  transition: color 0.3s;
+}
+.mic-label.on {
+  color: var(--accent-1);
+  text-shadow: 0 0 14px var(--accent-glow);
+}
+
+/* ---------- Sidebar ---------- */
+.sidebar {
+  width: 74px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 0 14px;
+  border-right: 1px solid var(--stroke);
+  background: linear-gradient(180deg, rgba(11, 16, 40, 0.55), rgba(7, 11, 30, 0.35));
+  backdrop-filter: blur(14px);
+  z-index: 30;
+}
+.sidebar-btn {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.3s var(--ease-out);
+}
+.sidebar-btn svg {
+  width: 20px;
+  height: 20px;
+}
+.sidebar-btn:hover {
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+.sidebar-btn.active {
+  color: #071021;
+  background: linear-gradient(120deg, var(--accent-1), var(--accent-2));
+  box-shadow: 0 8px 26px var(--accent-glow);
+}
+.sidebar-btn.active::before {
+  content: '';
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 22px;
+  border-radius: 99px;
+  background: var(--accent-1);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+.sidebar-tooltip {
+  position: absolute;
+  left: 62px;
+  top: 50%;
+  transform: translateY(-50%) translateX(-6px);
+  background: #0d1330;
+  border: 1px solid var(--stroke-2);
+  padding: 6px 12px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.25s var(--ease-out);
+  z-index: 60;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.sidebar-btn:hover .sidebar-tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+.sidebar-spacer {
+  flex: 1;
+}
+
+/* ---------- Panels / sections ---------- */
+.section-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(460px, 92vw);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(200deg, rgba(13, 18, 48, 0.82), rgba(7, 11, 30, 0.9));
+  border-left: 1px solid var(--stroke);
+  backdrop-filter: blur(22px);
+  box-shadow: -30px 0 80px rgba(0, 0, 0, 0.5);
+}
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--stroke);
+}
+.section-head-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  display: grid;
+  place-items: center;
+  background: linear-gradient(120deg, var(--accent-1), var(--accent-2));
+  color: #071021;
+  box-shadow: 0 6px 20px var(--accent-glow);
+}
+.section-head-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+}
+.section-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------- Cards ---------- */
+.card {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  transition: all 0.3s var(--ease-out);
+}
+.card:hover {
+  border-color: var(--stroke-2);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.03));
+}
+.card-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+/* ---------- Chat bubbles ---------- */
+.chat-msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 86%;
+  animation: msgIn 0.4s var(--ease-out);
+}
+@keyframes msgIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.chat-msg.user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+.chat-msg.naira {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+.chat-bubble {
+  padding: 11px 15px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.chat-msg.user .chat-bubble {
+  background: linear-gradient(120deg, var(--accent-1), var(--accent-2));
+  color: #071021;
+  border-bottom-right-radius: 6px;
+  font-weight: 500;
+}
+.chat-msg.naira .chat-bubble {
+  background: var(--surface-2);
+  border: 1px solid var(--stroke);
+  border-bottom-left-radius: 6px;
+}
+.chat-meta {
+  font-size: 10px;
+  color: var(--text-3);
+  margin-top: 4px;
+  padding: 0 6px;
+}
+
+/* ---------- Misc ---------- */
+.divider {
+  height: 1px;
+  background: var(--stroke);
+  margin: 6px 0;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.grow {
+  flex: 1;
+}
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------- Toast ---------- */
+.toast-wrap {
+  position: fixed;
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(160deg, rgba(20, 26, 58, 0.95), rgba(10, 14, 38, 0.95));
+  border: 1px solid var(--stroke-2);
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+}
+.toast.success {
+  border-color: rgba(52, 211, 153, 0.4);
+  color: var(--mint);
+}
+.toast.error {
+  border-color: rgba(251, 113, 133, 0.4);
+  color: var(--rose);
+}
+.toast.info {
+  border-color: rgba(34, 211, 238, 0.4);
+  color: var(--cyan);
+}
+
+/* ---------- Modal ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 7, 20, 0.7);
+  backdrop-filter: blur(8px);
+  z-index: 150;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.modal-card {
+  width: min(420px, 94vw);
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------- Progress ---------- */
+.progress-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3));
+  box-shadow: 0 0 16px var(--accent-glow);
+  transition: width 0.25s var(--ease-out);
+}
+
+/* ---------- Boot screen ---------- */
+.boot-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  transition: all 0.3s;
+}
+.boot-line.done {
+  color: var(--mint);
+}
+
+/* ---------- Status orbit ---------- */
+.orbit-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-3);
+  box-shadow: 0 0 10px currentColor;
+  transition: all 0.3s;
+}
+.orbit-dot.on {
+  background: var(--mint);
+  box-shadow: 0 0 14px var(--mint);
+  animation: glowPulse 2s infinite;
+}
+.orbit-dot.off {
+  background: var(--rose);
+  box-shadow: 0 0 14px var(--rose);
+}
+
+/* ---------- Animations ---------- */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fade-up {
+  animation: fadeUp 0.55s var(--ease-out) both;
+}
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+.shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.05) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 2.2s infinite linear;
+}
+
+@media (max-width: 720px) {
+  .section-panel {
+    width: 94vw;
+  }
+  .avatar-video.lg {
+    width: 230px;
+    height: 230px;
+  }
+}
+</file>
+
+<file path="src/main.jsx">
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.jsx'
+import './index.css'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+)
+</file>
+
+<file path="index.html">
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#070b1e" />
+    <title>NAIRA OS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+</file>
+
+<file path="package.json">
+{
+  "name": "naira-os-frontend",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@react-three/drei": "^9.114.3",
+    "@react-three/fiber": "^8.17.10",
+    "framer-motion": "^11.11.9",
+    "lucide-react": "^0.454.0",
+    "qrcode.react": "^4.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.3",
+    "vite": "^5.4.10"
+  }
+}
+</file>
+
+<file path="vite.config.js">
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  base: './',
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: 'ws://localhost:8000',
+        ws: true,
+        changeOrigin: true,
+      },
+    },
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+  },
+})
+</file>
+
+</files>

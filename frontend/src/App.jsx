@@ -1,65 +1,55 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import BootScreen from './screens/Screen1_Boot/BootScreen';
-import ApiVaultScreen from './screens/Screen2_ApiVault/ApiVaultScreen';
-import HandshakeScreen from './screens/Screen3_Handshake/HandshakeScreen';
-import DashboardScreen from './screens/Screen4_Dashboard/DashboardScreen';
-import { useNairaStore } from './state/useNairaStore';
-import { getVaultStatus } from './utils/apiVerification';
+import { AnimatePresence, motion } from 'framer-motion'
+import { AppProvider, useApp } from './state/AppContext.jsx'
+import BootScreen from './screens/BootScreen.jsx'
+import ApiVaultScreen from './screens/ApiVaultScreen.jsx'
+import HandshakeScreen from './screens/HandshakeScreen.jsx'
+import DashboardScreen from './screens/DashboardScreen.jsx'
 
-function App() {
-  const setHandshakeComplete = useNairaStore((state) => state.setHandshakeComplete);
-  const [currentScreen, setCurrentScreen] = useState('boot');
-
-  // This is the only startup vault check.  It is deliberately mount-only:
-  // a screen transition must never trigger another credential check.
-  useEffect(() => {
-    let cancelled = false;
-
-    const resolveStartupScreen = async () => {
-      const status = await getVaultStatus();
-      if (cancelled) return;
-
-      const isHandshakeDone =
-        useNairaStore.getState().isHandshakeComplete ||
-        localStorage.getItem('naira_handshake_done') === 'true';
-      const nextScreen = status.configured
-        ? (isHandshakeDone ? 'dashboard' : 'handshake')
-        : 'api_vault';
-
-      setCurrentScreen((screen) => (screen === nextScreen ? screen : nextScreen));
-    };
-
-    void resolveStartupScreen();
-    return () => { cancelled = true; };
-  }, []);
-
-  // Fallback only if the boot animation completes before the mount-time
-  // status request.  It cannot re-route an already selected screen.
-  const handleBootComplete = useCallback(() => {
-    setCurrentScreen((screen) => (screen === 'boot' ? 'api_vault' : screen));
-  }, []);
-
-  const handleVaultProceed = useCallback(() => {
-    const isHandshakeDone =
-      useNairaStore.getState().isHandshakeComplete ||
-      localStorage.getItem('naira_handshake_done') === 'true';
-    setCurrentScreen(isHandshakeDone ? 'dashboard' : 'handshake');
-  }, []);
-
-  const handleHandshakeComplete = useCallback(() => {
-    localStorage.setItem('naira_handshake_done', 'true');
-    setHandshakeComplete(true);
-    setCurrentScreen('dashboard');
-  }, [setHandshakeComplete]);
+function Screens() {
+  const { screen, toasts } = useApp()
 
   return (
-    <div className="relative w-screen h-screen bg-[#0A0E27] overflow-hidden flex flex-col">
-      {currentScreen === 'boot' && <BootScreen onBootComplete={handleBootComplete} />}
-      {currentScreen === 'api_vault' && <ApiVaultScreen onProceed={handleVaultProceed} />}
-      {currentScreen === 'handshake' && <HandshakeScreen onHandshakeComplete={handleHandshakeComplete} />}
-      {currentScreen === 'dashboard' && <DashboardScreen />}
-    </div>
-  );
+    <>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={screen}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'absolute', inset: 0 }}
+        >
+          {screen === 'boot' && <BootScreen />}
+          {screen === 'vault' && <ApiVaultScreen />}
+          {screen === 'handshake' && <HandshakeScreen />}
+          {screen === 'dashboard' && <DashboardScreen />}
+        </motion.div>
+      </AnimatePresence>
+
+      <div className="toast-wrap">
+        <AnimatePresence>
+          {toasts.map((t) => (
+            <motion.div
+              key={t.id}
+              className={`toast ${t.kind}`}
+              initial={{ opacity: 0, y: -18, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -12, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+            >
+              {t.message}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+    </>
+  )
 }
 
-export default App;
+export default function App() {
+  return (
+    <AppProvider>
+      <Screens />
+    </AppProvider>
+  )
+}

@@ -112,6 +112,7 @@ from backend.orchestrator import FSMState, Orchestrator
 from backend.runtime.proactive_watchdog import ProactiveWatchdog
 from backend.types import UserRequest, UserResponse
 from backend.api.settings import router as settings_router
+from backend.api.capabilities import router as capabilities_router
 # --- Naya Remote Bridge Router Import Yahan Hai ---
 from backend.modules.remote_bridge.remote_router import router as remote_bridge_router
 
@@ -203,6 +204,7 @@ async def lifespan(app: FastAPI):
             event_bus=event_bus,
         )
         app.state.llm_manager = _modules.get("llm")
+        app.state.capability_manager = _modules.get("capability")
     except RuntimeError:
         _LOG.critical("[BOOT] Boot aborted — see errors above")
         _modules = {}
@@ -229,6 +231,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(settings_router)
+app.include_router(capabilities_router)
 # --- Naya Remote Bridge Router Yahan Mount Hua Hai ---
 app.include_router(remote_bridge_router)
 

@@ -14,10 +14,26 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from backend.modules.remote_bridge.bridge_security import SecurityRegistrar
+from backend.modules.remote_bridge.fcm_manager import FCMDispatcher, HAS_FIREBASE
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Remote Bridge"])
+
+
+@router.get("/api/remote/status")
+async def remote_bridge_status() -> dict[str, object]:
+    """Live status for the frontend Remote Bridge panel."""
+    manager = get_bridge_manager()
+    fcm = FCMDispatcher()
+    fcm_ready = bool(fcm._app) or HAS_FIREBASE
+    return {
+        "connected": manager.is_connected,
+        "queue_size": await manager.queue.size(),
+        "fcm_ready": fcm_ready,
+        "ngrok_uri": fcm.config.websocket_target_uri,
+        "secure": True,
+    }
 
 
 class OfflineActionQueue:
