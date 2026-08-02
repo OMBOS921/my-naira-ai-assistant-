@@ -1,4 +1,4 @@
-name: Android Build
+name: Build Android App
 
 on:
   push:
@@ -13,20 +13,25 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: gradle
 
+      - name: Configure Safe Directory
+        run: git config --global --add safe.directory '*'
+
       - name: Inject google-services.json
         run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" > naira_android_app/app/google-services.json
 
       - name: Build Debug APK
-        run: gradle assembleDebug
         working-directory: ./naira_android_app
+        run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
