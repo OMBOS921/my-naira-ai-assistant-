@@ -111,5 +111,28 @@ class BrowserSearchResponse:
     duration_ms: float = 0.0
 
 
+@dataclass(frozen=True)
+class DownloadResult:
+    """Result of a browser file download operation.
+
+    Parameters
+    ----------
+    path : str
+        Local filesystem path where the file was saved.
+    suggested_filename : str
+        Suggested filename from response header or download event.
+    size_bytes : int
+        Size of the downloaded file in bytes.
+    url : str
+        Source URL of the downloaded file.
+    """
+
+    path: str
+    suggested_filename: str
+    size_bytes: int = 0
+    url: str = ""
+
+
 type BrowserAction = Literal["navigate", "search", "extract", "screenshot"]
 """Types of browser actions tracked by the module."""
+

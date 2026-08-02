@@ -39,3 +39,23 @@ class PCControlNotImplementedError(PCControlError):
             "PC control adapter not available — no OS automation driver configured",
             context=context,
         )
+
+
+class PCControlUnsupportedPlatformError(PCControlError):
+    """The operation is not supported on the current platform."""
+
+    def __init__(self, context: dict[str, Any] | None = None) -> None:
+        super().__init__(
+            "Operation not supported on this platform",
+            context=context,
+        )
+
+
+class PCControlPackageManagerNotFoundError(PCControlError):
+    """No supported package manager found on the system."""
+
+    def __init__(self, context: dict[str, Any] | None = None) -> None:
+        super().__init__(
+            "No supported package manager found",
+            context=context,
+        )

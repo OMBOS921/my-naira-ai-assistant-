@@ -27,17 +27,21 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import inspect
 import logging
 import re
 import time
 import urllib.parse
 from typing import Any
 
+from backend.modules.browser._downloads import BrowserDownloader
 from backend.modules.browser._exceptions import (
     BrowserContentError,
+    BrowserDownloadError,
     BrowserError,
     BrowserNavigationError,
     BrowserNotImplementedError,
+    BrowserPermissionError,
     BrowserSearchError,
     BrowserSessionError,
     BrowserTimeoutError,
@@ -46,6 +50,7 @@ from backend.modules.browser._types import (
     BrowserPage,
     BrowserSearchResponse,
     BrowserSearchResult,
+    DownloadResult,
 )
 from backend.modules.browser.ports.browser_port import BrowserPort
 
@@ -85,21 +90,8 @@ type _PWTypes = tuple[type[Exception], type[Exception], Any, type]
 class PlaywrightBrowserAdapter(BrowserPort):
     """Playwright-based browser adapter.
 
-    Lazily launches a Chromium browser on the first operation.
+    Lazily launches a Chromium/Firefox/WebKit browser on the first operation.
     Manages a single browser context and multiple pages (tabs).
-
-    Parameters
-    ----------
-    logger:
-        Module-scoped logger.
-    headless:
-        Run browser in headless mode (default ``True``).
-    slow_mo:
-        Slow down Playwright operations by *N* milliseconds.
-    launch_args:
-        Additional Chromium command-line arguments.
-    default_timeout:
-        Default timeout in seconds for all operations (default 30).
     """
 
     def __init__(
@@ -110,12 +102,17 @@ class PlaywrightBrowserAdapter(BrowserPort):
         slow_mo: int = 0,
         launch_args: list[str] | None = None,
         default_timeout: float = 30.0,
+        user_data_dir: str | None = None,
+        browser_engine: str = "chromium",
     ) -> None:
         self._logger = logger or _LOG
         self._headless = headless
         self._slow_mo = slow_mo
         self._launch_args = launch_args or []
         self._default_timeout_ms = int(default_timeout * 1000)
+        self._user_data_dir = user_data_dir
+        self._browser_engine = browser_engine.lower()
+        self._downloader = BrowserDownloader(logger=logger)
 
         self._playwright: Any = None
         self._browser: Any = None
@@ -234,9 +231,54 @@ class PlaywrightBrowserAdapter(BrowserPort):
                 context={"selector": selector},
             ) from exc
 
+    async def wait_for_selector(
+        self,
+        selector: str,
+        state: str = "visible",
+        timeout: float | None = None,
+    ) -> None:
+        """Wait for an element matching *selector* to reach *state*."""
+        PW_Error, PW_TimeoutError, _, _ = self._pw_types()
+        page = self._require_active_page()
+        effective_ms = _to_ms(timeout, self._default_timeout_ms)
+        try:
+            res = page.wait_for_selector(selector, state=state, timeout=effective_ms)
+            if inspect.isawaitable(res):
+                await res
+        except PW_TimeoutError as exc:
+            raise BrowserTimeoutError(
+                f"Element '{selector}' not {state} after {effective_ms / 1000.0}s",
+                context={"selector": selector, "state": state},
+            ) from exc
+        except PW_Error as exc:
+            raise BrowserError(
+                f"Wait for selector '{selector}' failed: {exc}",
+                context={"selector": selector},
+            ) from exc
+
+    async def click(self, selector: str, timeout: float | None = None) -> None:
+        """Click an element matching the CSS selector."""
+        PW_Error, PW_TimeoutError, _, _ = self._pw_types()
+        effective_timeout = timeout if timeout is not None else (self._default_timeout_ms / 1000.0)
+        await self.wait_for_selector(selector, state="visible", timeout=effective_timeout)
+        page = self._require_active_page()
+        try:
+            await page.click(selector, timeout=_to_ms(timeout, self._default_timeout_ms))
+        except PW_TimeoutError as exc:
+            raise BrowserTimeoutError(
+                f"Click on '{selector}' timed out", context={"selector": selector}
+            ) from exc
+        except PW_Error as exc:
+            raise BrowserError(
+                f"Click on '{selector}' failed: {exc}",
+                context={"selector": selector},
+            ) from exc
+
     async def fill(self, selector: str, value: str, timeout: float | None = None) -> None:
         """Fill an input field with text."""
         PW_Error, PW_TimeoutError, _, _ = self._pw_types()
+        effective_timeout = timeout if timeout is not None else (self._default_timeout_ms / 1000.0)
+        await self.wait_for_selector(selector, state="visible", timeout=effective_timeout)
         page = self._require_active_page()
         try:
             await page.fill(selector, value, timeout=_to_ms(timeout, self._default_timeout_ms))
@@ -250,16 +292,248 @@ class PlaywrightBrowserAdapter(BrowserPort):
                 context={"selector": selector},
             ) from exc
 
-    async def press_key(self, key: str) -> None:
-        """Press a keyboard key on the active page."""
+    async def select_option(
+        self, selector: str, value: str | list[str], timeout: float | None = None
+    ) -> None:
+        """Select option(s) in a dropdown element matching *selector*."""
+        PW_Error, PW_TimeoutError, _, _ = self._pw_types()
+        effective_timeout = timeout if timeout is not None else (self._default_timeout_ms / 1000.0)
+        await self.wait_for_selector(selector, state="visible", timeout=effective_timeout)
+        page = self._require_active_page()
+        try:
+            await page.select_option(selector, value, timeout=_to_ms(timeout, self._default_timeout_ms))
+        except PW_TimeoutError as exc:
+            raise BrowserTimeoutError(
+                f"Select option on '{selector}' timed out", context={"selector": selector}
+            ) from exc
+        except PW_Error as exc:
+            raise BrowserError(
+                f"Select option on '{selector}' failed: {exc}", context={"selector": selector}
+            ) from exc
+
+    async def hover(self, selector: str, timeout: float | None = None) -> None:
+        """Hover cursor over element matching *selector*."""
+        PW_Error, PW_TimeoutError, _, _ = self._pw_types()
+        effective_timeout = timeout if timeout is not None else (self._default_timeout_ms / 1000.0)
+        await self.wait_for_selector(selector, state="visible", timeout=effective_timeout)
+        page = self._require_active_page()
+        try:
+            await page.hover(selector, timeout=_to_ms(timeout, self._default_timeout_ms))
+        except PW_TimeoutError as exc:
+            raise BrowserTimeoutError(
+                f"Hover on '{selector}' timed out", context={"selector": selector}
+            ) from exc
+        except PW_Error as exc:
+            raise BrowserError(
+                f"Hover on '{selector}' failed: {exc}", context={"selector": selector}
+            ) from exc
+
+    async def right_click(self, selector: str, timeout: float | None = None) -> None:
+        """Right-click element matching *selector*."""
+        PW_Error, PW_TimeoutError, _, _ = self._pw_types()
+        effective_timeout = timeout if timeout is not None else (self._default_timeout_ms / 1000.0)
+        await self.wait_for_selector(selector, state="visible", timeout=effective_timeout)
+        page = self._require_active_page()
+        try:
+            await page.click(selector, button="right", timeout=_to_ms(timeout, self._default_timeout_ms))
+        except PW_TimeoutError as exc:
+            raise BrowserTimeoutError(
+                f"Right-click on '{selector}' timed out", context={"selector": selector}
+            ) from exc
+        except PW_Error as exc:
+            raise BrowserError(
+                f"Right-click on '{selector}' failed: {exc}", context={"selector": selector}
+            ) from exc
+
+    async def drag_and_drop(
+        self, source_selector: str, target_selector: str, timeout: float | None = None
+    ) -> None:
+        """Drag element from *source_selector* and drop onto *target_selector*."""
+        PW_Error, PW_TimeoutError, _, _ = self._pw_types()
+        effective_timeout = timeout if timeout is not None else (self._default_timeout_ms / 1000.0)
+        await self.wait_for_selector(source_selector, state="visible", timeout=effective_timeout)
+        await self.wait_for_selector(target_selector, state="visible", timeout=effective_timeout)
+        page = self._require_active_page()
+        try:
+            await page.drag_and_drop(
+                source_selector, target_selector, timeout=_to_ms(timeout, self._default_timeout_ms)
+            )
+        except PW_TimeoutError as exc:
+            raise BrowserTimeoutError(
+                "Drag and drop timed out",
+                context={"source": source_selector, "target": target_selector},
+            ) from exc
+        except PW_Error as exc:
+            raise BrowserError(
+                f"Drag and drop failed: {exc}",
+                context={"source": source_selector, "target": target_selector},
+            ) from exc
+
+    async def check(self, selector: str, timeout: float | None = None) -> None:
+        """Check checkbox/radio element matching *selector*."""
+        PW_Error, PW_TimeoutError, _, _ = self._pw_types()
+        effective_timeout = timeout if timeout is not None else (self._default_timeout_ms / 1000.0)
+        await self.wait_for_selector(selector, state="visible", timeout=effective_timeout)
+        page = self._require_active_page()
+        try:
+            await page.check(selector, timeout=_to_ms(timeout, self._default_timeout_ms))
+        except PW_TimeoutError as exc:
+            raise BrowserTimeoutError(
+                f"Check on '{selector}' timed out", context={"selector": selector}
+            ) from exc
+        except PW_Error as exc:
+            raise BrowserError(
+                f"Check on '{selector}' failed: {exc}", context={"selector": selector}
+            ) from exc
+
+    async def uncheck(self, selector: str, timeout: float | None = None) -> None:
+        """Uncheck checkbox element matching *selector*."""
+        PW_Error, PW_TimeoutError, _, _ = self._pw_types()
+        effective_timeout = timeout if timeout is not None else (self._default_timeout_ms / 1000.0)
+        await self.wait_for_selector(selector, state="visible", timeout=effective_timeout)
+        page = self._require_active_page()
+        try:
+            await page.uncheck(selector, timeout=_to_ms(timeout, self._default_timeout_ms))
+        except PW_TimeoutError as exc:
+            raise BrowserTimeoutError(
+                f"Uncheck on '{selector}' timed out", context={"selector": selector}
+            ) from exc
+        except PW_Error as exc:
+            raise BrowserError(
+                f"Uncheck on '{selector}' failed: {exc}", context={"selector": selector}
+            ) from exc
+
+    async def export_pdf(self, save_path: str = "", timeout: float | None = None) -> str:
+        """Export current page as PDF (Chromium headless mode only)."""
+        if not self._headless or self._browser_engine != "chromium":
+            raise BrowserNotImplementedError(
+                "PDF export is only supported in headless Chromium mode",
+                context={
+                    "operation": "export_pdf",
+                    "reason": "PDF export is only supported in headless Chromium mode",
+                    "headless": self._headless,
+                    "engine": self._browser_engine,
+                },
+            )
+        PW_Error, PW_TimeoutError, _, _ = self._pw_types()
+        self._check_playwright_available()
+        await self.ensure_initialized()
+        page = self._require_active_page()
+        effective_ms = _to_ms(timeout, self._default_timeout_ms)
+        out_path = save_path or str((Path.cwd() / "data" / "exports" / f"page_{int(time.time())}.pdf").resolve())
+        Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+        try:
+            await page.pdf(path=out_path, timeout=effective_ms)
+            return out_path
+        except PW_TimeoutError as exc:
+            raise BrowserTimeoutError("PDF export timed out", context={"timeout": timeout}) from exc
+        except PW_Error as exc:
+            raise BrowserError(f"PDF export failed: {exc}") from exc
+
+    async def wait_for_download(self, timeout: float | None = None) -> DownloadResult:
+        """Wait for a download event and save the downloaded file to sandboxed dir."""
+        PW_Error, PW_TimeoutError, _, _ = self._pw_types()
+        self._check_playwright_available()
+        await self.ensure_initialized()
+        page = self._require_active_page()
+        effective_ms = _to_ms(timeout, self._default_timeout_ms)
+        try:
+            async with page.expect_download(timeout=effective_ms) as download_info:
+                download = await download_info.value
+            filename = download.suggested_filename
+            target = self._downloader.prepare_target_file(filename)
+            await self._downloader.validate_path(str(target))
+            await download.save_as(str(target))
+            size = target.stat().st_size if target.exists() else 0
+            return DownloadResult(
+                path=str(target),
+                suggested_filename=filename,
+                size_bytes=size,
+                url=download.url,
+            )
+        except PW_TimeoutError as exc:
+            raise BrowserTimeoutError("Download timed out", context={"timeout": timeout}) from exc
+        except PW_Error as exc:
+            raise BrowserDownloadError(f"Download failed: {exc}") from exc
+        except Exception as exc:
+            if isinstance(exc, (BrowserTimeoutError, BrowserDownloadError, BrowserPermissionError)):
+                raise
+            raise BrowserDownloadError(f"Download failed: {exc}") from exc
+
+    async def get_local_storage(self, key: str | None = None) -> str:
+        """Get local storage content or specific key."""
         PW_Error, _, _, _ = self._pw_types()
         page = self._require_active_page()
         try:
-            await page.press("body", key)
+            if key:
+                val = await page.evaluate(f"window.localStorage.getItem({json.dumps(key)})")
+                return str(val) if val is not None else ""
+            res = await page.evaluate("JSON.stringify(window.localStorage)")
+            return str(res or "{}")
+        except PW_Error as exc:
+            raise BrowserError(f"Get local storage failed: {exc}") from exc
+
+    async def set_local_storage(self, key: str, value: str) -> None:
+        """Set key in local storage."""
+        PW_Error, _, _, _ = self._pw_types()
+        page = self._require_active_page()
+        try:
+            await page.evaluate(f"window.localStorage.setItem({json.dumps(key)}, {json.dumps(value)})")
+        except PW_Error as exc:
+            raise BrowserError(f"Set local storage failed: {exc}") from exc
+
+    async def clear_local_storage(self) -> None:
+        """Clear local storage."""
+        PW_Error, _, _, _ = self._pw_types()
+        page = self._require_active_page()
+        try:
+            await page.evaluate("window.localStorage.clear()")
+        except PW_Error as exc:
+            raise BrowserError(f"Clear local storage failed: {exc}") from exc
+
+    async def get_session_storage(self, key: str | None = None) -> str:
+        """Get session storage content or specific key."""
+        PW_Error, _, _, _ = self._pw_types()
+        page = self._require_active_page()
+        try:
+            if key:
+                val = await page.evaluate(f"window.sessionStorage.getItem({json.dumps(key)})")
+                return str(val) if val is not None else ""
+            res = await page.evaluate("JSON.stringify(window.sessionStorage)")
+            return str(res or "{}")
+        except PW_Error as exc:
+            raise BrowserError(f"Get session storage failed: {exc}") from exc
+
+    async def set_session_storage(self, key: str, value: str) -> None:
+        """Set key in session storage."""
+        PW_Error, _, _, _ = self._pw_types()
+        page = self._require_active_page()
+        try:
+            await page.evaluate(f"window.sessionStorage.setItem({json.dumps(key)}, {json.dumps(value)})")
+        except PW_Error as exc:
+            raise BrowserError(f"Set session storage failed: {exc}") from exc
+
+    async def clear_session_storage(self) -> None:
+        """Clear session storage."""
+        PW_Error, _, _, _ = self._pw_types()
+        page = self._require_active_page()
+        try:
+            await page.evaluate("window.sessionStorage.clear()")
+        except PW_Error as exc:
+            raise BrowserError(f"Clear session storage failed: {exc}") from exc
+
+    async def press_key(self, key: str, selector: str | None = None) -> None:
+        """Press a keyboard key on active page or element."""
+        PW_Error, _, _, _ = self._pw_types()
+        page = self._require_active_page()
+        target = selector or "body"
+        try:
+            await page.press(target, key)
         except PW_Error as exc:
             raise BrowserError(
                 f"Key press '{key}' failed: {exc}", context={"key": key}
             ) from exc
+
 
     async def scroll(self, delta_x: int = 0, delta_y: int = 500) -> None:
         """Scroll the page by the given delta."""
@@ -510,18 +784,23 @@ class PlaywrightBrowserAdapter(BrowserPort):
 
     @property
     def is_available(self) -> bool:
-        return self._initialized and self._browser is not None
+        return self._initialized and (self._browser is not None or self._context is not None)
 
     async def navigate(
         self,
         url: str,
         timeout: float = 30.0,
         extract_content: bool = True,
+        extra_http_headers: dict[str, str] | None = None,
+        http_credentials: tuple[str, str] | None = None,
     ) -> BrowserPage:
         """Navigate to *url* and return the resulting page."""
         PW_Error, PW_TimeoutError, PW_async_playwright, PW_Response = self._pw_types()
         self._check_playwright_available()
         await self.ensure_initialized()
+        if extra_http_headers and self._context:
+            with contextlib.suppress(Exception):
+                await self._context.set_extra_http_headers(extra_http_headers)
         page = self._require_active_page()
         effective_ms = _to_ms(timeout, self._default_timeout_ms)
 
@@ -593,6 +872,13 @@ class PlaywrightBrowserAdapter(BrowserPort):
         try:
             links = await page.query_selector_all("a.result__a")
             snippets = await page.query_selector_all(".result__snippet")
+            if not links:
+                links = await page.query_selector_all("a.result__url")
+                snippets = await page.query_selector_all(".result__snippet")
+            if not links:
+                links = await page.query_selector_all(".result__title a")
+                snippets = await page.query_selector_all(".result__snippet")
+
             for i, link in enumerate(links):
                 if len(results) >= max_results:
                     break
@@ -767,23 +1053,48 @@ class PlaywrightBrowserAdapter(BrowserPort):
 
     async def _do_launch(self) -> None:
         _, _, PW_async_playwright, _ = self._pw_types()
-        self._logger.info("Launching Playwright browser (headless=%s) ...", self._headless)
+        engine_type = self._browser_engine.lower()
+        self._logger.info("Launching Playwright browser engine=%s (headless=%s) ...", engine_type, self._headless)
         try:
             pw = await PW_async_playwright().start()
-            browser = await pw.chromium.launch(
-                headless=self._headless,
-                slow_mo=self._slow_mo,
-                args=self._launch_args,
+            if engine_type == "firefox":
+                engine = pw.firefox
+            elif engine_type == "webkit":
+                engine = pw.webkit
+            else:
+                engine = pw.chromium
+
+            browser_args = self._launch_args if engine_type == "chromium" else []
+            viewport = {"width": 1280, "height": 720}
+            user_agent = (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
             )
-            context = await browser.new_context(
-                viewport={"width": 1280, "height": 720},
-                user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/120.0.0.0 Safari/537.36"
-                ),
-            )
-            page = await context.new_page()
+
+            if self._user_data_dir:
+                context = await engine.launch_persistent_context(
+                    self._user_data_dir,
+                    headless=self._headless,
+                    slow_mo=self._slow_mo,
+                    args=browser_args,
+                    viewport=viewport,
+                    user_agent=user_agent,
+                )
+                browser = None
+                page = context.pages[0] if context.pages else await context.new_page()
+            else:
+                browser = await engine.launch(
+                    headless=self._headless,
+                    slow_mo=self._slow_mo,
+                    args=browser_args,
+                )
+                context = await browser.new_context(
+                    viewport=viewport,
+                    user_agent=user_agent,
+                )
+                page = await context.new_page()
+
             page_id = self._next_page_id()
             self._playwright = pw
             self._browser = browser

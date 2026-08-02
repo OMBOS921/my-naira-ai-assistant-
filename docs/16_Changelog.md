@@ -4,6 +4,51 @@ All notable changes, architectural updates, and phase releases for the Naira-OS 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Phase 4.2] - Browser Module Hardening & Capability Expansion - 2026-08-02
+
+### Added
+- **Exposed Existing & New Browser Tools (Phase 1 & Phase 2):**
+  - Navigation & History: `browser_screenshot`, `browser_back`, `browser_forward`, `browser_reload`, `browser_new_tab`, `browser_close_tab`, `browser_list_tabs`, `browser_switch_tab`.
+  - Element Waiting & Actionability: `browser_wait_for_selector` (`state="visible"` internal pre-wait for `click` and `fill`).
+  - Richer Element Interactions: `browser_select_option`, `browser_hover`, `browser_right_click`, `browser_drag_and_drop`, `browser_check`, `browser_uncheck`, `browser_upload_file`, `browser_press_key`.
+  - Cookies & Web Storage: `browser_get_cookies`, `browser_set_cookies`, `browser_clear_cookies`, `browser_get_local_storage`, `browser_set_local_storage`, `browser_clear_local_storage`, `browser_get_session_storage`, `browser_set_session_storage`, `browser_clear_session_storage`.
+  - File Operations & PDF Export: `browser_export_pdf` (headless Chromium), `browser_download_file` with sandboxed storage (`BrowserDownloader` and `PathValidator`).
+  - Code Execution: `browser_execute_js` with security policy gating.
+- **Engine & Profile Support:**
+  - Multi-engine support (`chromium`, `firefox`, `webkit`).
+  - Persistent browser profiles via `user_data_dir`.
+  - Custom HTTP headers and basic authentication support in `navigate()`.
+- **Search Reliability:**
+  - Selector fallback chain (`a.result__a`, `a.result__url`, `.result__title a`) and `BrowserSearchError` handling.
+- **Security & Sandbox Integration:**
+  - Registered high-risk tools (`browser_execute_js`, `browser_download_file`, cookie/storage writes) in `_risk_analyzer.py`, `_sandbox_manager.py`, and `config/security_policy.json`.
+- **Tests & Documentation:**
+  - Verified 224 unit tests passing under `testing/unit/modules/browser/`.
+  - Updated `docs/07_Module_Design.md` and `docs/21_System_Contracts.md` (§27 Browser Port & Automation Contracts).
+
+---
+
+## [Phase 4.2] - PC Control Capability Expansion - 2026-08-02
+
+### Added
+- **System Settings group (`PCSystemSettings`):**
+  - Wi-Fi: `wifi_set_power`, `wifi_get_power`, `wifi_list_networks`, `wifi_connect`.
+  - Bluetooth: `bluetooth_set_power`, `bluetooth_get_power`, `bluetooth_list_devices`, `bluetooth_pair`.
+  - Display: brightness, resolution (get/set/list), night light, and dark-mode toggles.
+  - Power: airplane mode and Do-Not-Disturb get/set.
+- **Software Management group (`PCSoftwareManager`):**
+  - `software_list_installed`, `software_install`, `software_uninstall`, `software_check_update` via the native package manager (winget/apt/brew).
+- **User Account Management group (`PCAccountManager`):**
+  - `account_list_users`, `account_get_current_user`, `account_create_user`, `account_set_enabled`, `account_modify_groups`.
+- **Architecture:**
+  - Extended `PCControlPort` with 30 new abstract methods; `LocalPCControlAdapter` raises `PCControlNotImplementedError`.
+  - `ProductionPCControlAdapter` dispatches per-OS via subprocess helpers with retry/permission/error mapping; new destructive operations added to `DANGEROUS_OPERATIONS`.
+  - Added `PCControlExecutor` forwarding methods, `PCControlManager` public API, and new tool registrations (`pc_wifi`, `pc_bluetooth`, `pc_display`, `pc_system_settings`, `pc_software`, `pc_account`).
+- **Security integration:**
+  - New tools added to `_risk_analyzer.py` high/medium risk tables and `_sandbox_manager.py` allow/deny lists.
+  - New `SecurityPolicyRule` entries in `config/security_policy.json` (confirm for software/display/settings, admin for account operations).
+- **Tests:** 66 new unit tests under `testing/unit/modules/pc_control/test_new_capabilities.py`.
+
 ---
 
 ## [Unreleased] / [Phase 4.2 Blueprint] - 2026-07-30

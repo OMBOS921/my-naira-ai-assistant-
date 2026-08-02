@@ -261,6 +261,135 @@ class SystemMetrics:
     open_ports: tuple[int, ...] = ()
 
 
+# --- System Settings Types ---
+
+
+@dataclass(frozen=True)
+class WifiNetwork:
+    """Information about a Wi-Fi network.
+
+    Parameters
+    ----------
+    ssid : str
+        Network name (Service Set Identifier).
+    signal_strength : int
+        Signal strength percentage (0-100).
+    secured : bool
+        Whether the network requires authentication.
+    """
+
+    ssid: str
+    signal_strength: int = 0
+    secured: bool = False
+
+
+@dataclass(frozen=True)
+class BluetoothDevice:
+    """Information about a Bluetooth device.
+
+    Parameters
+    ----------
+    name : str
+        Device name.
+    address : str
+        MAC address or unique identifier.
+    paired : bool
+        Whether the device is paired with this system.
+    trusted : bool
+        Whether the device is marked as trusted.
+    """
+
+    name: str
+    address: str
+    paired: bool = False
+    trusted: bool = False
+
+
+@dataclass(frozen=True)
+class DisplaySettings:
+    """Display settings.
+
+    Parameters
+    ----------
+    brightness : int
+        Brightness level (0-100).
+    width : int
+        Screen width in pixels.
+    height : int
+        Screen height in pixels.
+    refresh_rate : float
+        Refresh rate in Hz.
+    """
+
+    brightness: int = 50
+    width: int = 1920
+    height: int = 1080
+    refresh_rate: float = 60.0
+
+
+@dataclass(frozen=True)
+class InstalledPackage:
+    """Information about an installed software package.
+
+    Parameters
+    ----------
+    name : str
+        Package name.
+    version : str
+        Installed version.
+    publisher : str
+        Software publisher/vendor.
+    install_date : str
+        Installation date (ISO format).
+    """
+
+    name: str
+    version: str = ""
+    publisher: str = ""
+    install_date: str = ""
+
+
+@dataclass
+class PackageOpResult:
+    """Result of a package operation (install/uninstall/update).
+
+    Parameters
+    ----------
+    success : bool
+        Whether the operation succeeded.
+    package : str
+        Package name.
+    message : str
+        Additional information or error message.
+    """
+
+    success: bool
+    package: str
+    message: str = ""
+
+
+@dataclass(frozen=True)
+class UserAccount:
+    """Information about a user account.
+
+    Parameters
+    ----------
+    username : str
+        Username.
+    full_name : str
+        Full name/GECOS field.
+    enabled : bool
+        Whether the account is enabled.
+    admin : bool
+        Whether the account has administrator privileges.
+    """
+
+    username: str
+    full_name: str = ""
+    enabled: bool = True
+    admin: bool = False
+
+
 type PCControlAction = Literal[
     "mouse_move",
     "mouse_click",
@@ -298,5 +427,35 @@ type PCControlAction = Literal[
     "volume_mute",
     "screen_capture",
     "screen_info",
+    "wifi_set_power",
+    "wifi_get_power",
+    "wifi_list_networks",
+    "wifi_connect",
+    "bluetooth_set_power",
+    "bluetooth_get_power",
+    "bluetooth_list_devices",
+    "bluetooth_pair",
+    "display_get_brightness",
+    "display_set_brightness",
+    "display_get_resolution",
+    "display_set_resolution",
+    "display_list_resolutions",
+    "display_set_night_light",
+    "display_get_night_light",
+    "display_set_dark_mode",
+    "display_get_dark_mode",
+    "power_set_airplane_mode",
+    "power_get_airplane_mode",
+    "power_set_do_not_disturb",
+    "power_get_do_not_disturb",
+    "software_list_installed",
+    "software_install",
+    "software_uninstall",
+    "software_check_update",
+    "account_list_users",
+    "account_get_current_user",
+    "account_create_user",
+    "account_set_enabled",
+    "account_modify_groups",
 ]
 """Types of PC-control actions tracked by the module."""

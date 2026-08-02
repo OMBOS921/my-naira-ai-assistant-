@@ -24,6 +24,8 @@ import contextlib
 import io
 import logging
 import os
+import platform
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -35,19 +37,25 @@ from backend.modules.pc_control._exceptions import (
     PCControlNotImplementedError,
     PCControlPermissionError,
     PCControlTimeoutError,
+    PCControlUnsupportedPlatformError,
 )
 from backend.modules.pc_control._types import (
     ApplicationLaunchResult,
+    BluetoothDevice,
     ClipboardContent,
     DisplayInfo,
     FileEntry,
     FileOpResult,
+    InstalledPackage,
+    PackageOpResult,
     Point,
     ProcessInfo,
     ScreenshotResult,
     ScreenSize,
     SystemMetrics,
+    UserAccount,
     VolumeInfo,
+    WifiNetwork,
     WindowInfo,
 )
 from backend.modules.pc_control.ports.pc_control_port import PCControlPort
@@ -221,6 +229,13 @@ class ProductionPCControlAdapter(PCControlPort):
         "filesystem_delete_file",
         "filesystem_delete_directory",
         "filesystem_write_file",
+        "wifi_connect",
+        "bluetooth_pair",
+        "software_install",
+        "software_uninstall",
+        "account_create_user",
+        "account_set_enabled",
+        "account_modify_groups",
     })
 
     def __init__(
@@ -316,6 +331,39 @@ class ProductionPCControlAdapter(PCControlPort):
                 context={"library": "pyautogui"},
             )
         return _pyautogui_mod
+
+    def _run_cmd(self, cmd: list[str], timeout: int = 30) -> subprocess.CompletedProcess[str]:
+        """Run a subprocess synchronously, mapping failures to PCControlError."""
+        try:
+            return subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise PCControlExecutionError(
+                f"Command timed out: {' '.join(cmd)}",
+                context={"command": cmd},
+            ) from exc
+        except OSError as exc:
+            raise PCControlExecutionError(
+                f"Command failed to start: {exc}",
+                context={"command": cmd, "error": str(exc)},
+            ) from exc
+
+    def _check_cmd(self, proc: subprocess.CompletedProcess[str], operation: str) -> None:
+        """Raise PCControlExecutionError for a non-zero subprocess exit."""
+        if proc.returncode != 0:
+            raise PCControlExecutionError(
+                f"{operation} failed: {proc.stderr.strip() or proc.stdout.strip() or f'exit {proc.returncode}'}",
+                context={"operation": operation, "returncode": proc.returncode},
+            )
+
+    def _unsupported(self, operation: str) -> PCControlUnsupportedPlatformError:
+        return PCControlUnsupportedPlatformError(
+            context={"operation": operation, "platform": platform.system()},
+        )
 
     # ── Mouse ───────────────────────────────────────────────────────────
 
@@ -1301,3 +1349,869 @@ class ProductionPCControlAdapter(PCControlPort):
             except Exception:
                 pass
         return sorted(open_ports)
+
+    # ── System Settings: Wi-Fi ──────────────────────────────────────────
+
+    async def wifi_set_power(self, enabled: bool) -> None:
+        """Enable or disable the Wi-Fi radio."""
+        def _set() -> None:
+            system = platform.system()
+            state = "on" if enabled else "off"
+            if system == "Windows":
+                interface = self._wifi_interface_name()
+                proc = self._run_cmd([
+                    "netsh", "interface", "set", "interface",
+                    interface, "admin=" + ("enable" if enabled else "disable"),
+                ])
+                self._check_cmd(proc, "wifi_set_power")
+            elif system == "Linux":
+                proc = self._run_cmd(["nmcli", "radio", "wifi", state])
+                self._check_cmd(proc, "wifi_set_power")
+            elif system == "Darwin":
+                proc = self._run_cmd(["networksetup", "-setairportpower", "airport", state])
+                self._check_cmd(proc, "wifi_set_power")
+            else:
+                raise self._unsupported("wifi_set_power")
+
+        await self._run("wifi_set_power", _set)
+
+    async def wifi_get_power(self) -> bool:
+        """Return whether the Wi-Fi radio is enabled."""
+        def _get() -> bool:
+            system = platform.system()
+            if system == "Windows":
+                interface = self._wifi_interface_name()
+                proc = self._run_cmd(
+                    ["netsh", "interface", "show", "interface", f"name={interface}"]
+                )
+                self._check_cmd(proc, "wifi_get_power")
+                return re.search(
+                    r"Admin State\s*:\s*Enabled", proc.stdout, re.IGNORECASE
+                ) is not None
+            if system == "Linux":
+                proc = self._run_cmd(["nmcli", "radio", "wifi"])
+                self._check_cmd(proc, "wifi_get_power")
+                return proc.stdout.strip().lower() == "enabled"
+            if system == "Darwin":
+                proc = self._run_cmd(["networksetup", "-getairportpower", "airport"])
+                self._check_cmd(proc, "wifi_get_power")
+                return "On" in proc.stdout
+            raise self._unsupported("wifi_get_power")
+
+        result = await self._run("wifi_get_power", _get)
+        return bool(result)
+
+    async def wifi_list_networks(self) -> list[WifiNetwork]:
+        """List nearby Wi-Fi networks."""
+        def _list() -> list[WifiNetwork]:
+            system = platform.system()
+            networks: list[WifiNetwork] = []
+            if system == "Windows":
+                proc = self._run_cmd(["netsh", "wlan", "show", "networks", "mode=bssid"])
+                self._check_cmd(proc, "wifi_list_networks")
+                ssid: str | None = None
+                signal: int = 0
+                secured = False
+                for line in proc.stdout.splitlines():
+                    line = line.strip()
+                    if ":" not in line:
+                        continue
+                    key, _, value = line.partition(":")
+                    value = value.strip()
+                    if key.strip().startswith("SSID") and value:
+                        ssid = value
+                    elif key.strip().lower() == "signal":
+                        signal = int(re.sub(r"\D", "", value) or 0)
+                    elif key.strip().lower() == "authentication":
+                        secured = value.lower() not in ("open", "none")
+                    if ssid and "SSID" in key and len(line.split(":")) >= 2:
+                        networks.append(
+                            WifiNetwork(
+                                ssid=ssid,
+                                signal_strength=signal,
+                                secured=secured,
+                            )
+                        )
+                        ssid = None
+            elif system == "Linux":
+                proc = self._run_cmd(
+                    ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "dev", "wifi", "list"]
+                )
+                for line in proc.stdout.splitlines():
+                    parts = line.split(":")
+                    if len(parts) < 1 or not parts[0]:
+                        continue
+                    signal = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+                    security = parts[2].lower() if len(parts) > 2 else ""
+                    networks.append(WifiNetwork(
+                        ssid=parts[0],
+                        signal_strength=signal,
+                        secured=security not in ("", "none"),
+                    ))
+            elif system == "Darwin":
+                proc = self._run_cmd(["networksetup", "-scanwifi", "airport"])
+                for line in proc.stdout.splitlines():
+                    parts = re.split(r"\s{2,}", line.strip())
+                    if len(parts) < 2 or "SSID" in parts[0]:
+                        continue
+                    networks.append(
+                        WifiNetwork(
+                            ssid=parts[0], signal_strength=0, secured="Y" in parts[1]
+                        )
+                    )
+            else:
+                raise self._unsupported("wifi_list_networks")
+            return networks
+
+        result = await self._run("wifi_list_networks", _list)
+        return list(result)
+
+    async def wifi_connect(self, ssid: str, password: str | None = None) -> None:
+        """Connect to a Wi-Fi network."""
+        def _connect() -> None:
+            system = platform.system()
+            if system == "Windows":
+                proc = self._run_cmd(["netsh", "wlan", "connect", f"name={ssid}"])
+                self._check_cmd(proc, "wifi_connect")
+            elif system == "Linux":
+                cmd = ["nmcli", "dev", "wifi", "connect", ssid]
+                if password:
+                    cmd += ["password", password]
+                proc = self._run_cmd(cmd)
+                self._check_cmd(proc, "wifi_connect")
+            elif system == "Darwin":
+                cmd = ["networksetup", "-setairportnetwork", "airport", ssid]
+                if password:
+                    cmd.append(password)
+                proc = self._run_cmd(cmd)
+                self._check_cmd(proc, "wifi_connect")
+            else:
+                raise self._unsupported("wifi_connect")
+
+        await self._run("wifi_connect", _connect)
+
+    def _wifi_interface_name(self) -> str:
+        """Return the active Wi-Fi interface name (Windows)."""
+        try:
+            proc = subprocess.run(
+                ["netsh", "wlan", "show", "interfaces"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            for line in proc.stdout.splitlines():
+                if "Name" in line and ":" in line:
+                    name = line.split(":", 1)[1].strip()
+                    if name:
+                        return name
+        except (OSError, subprocess.SubprocessError):
+            pass
+        return "Wi-Fi"
+
+    # ── System Settings: Bluetooth ──────────────────────────────────────
+
+    async def bluetooth_set_power(self, enabled: bool) -> None:
+        """Enable or disable the Bluetooth radio."""
+        def _set() -> None:
+            system = platform.system()
+            state = "on" if enabled else "off"
+            if system == "Linux":
+                proc = self._run_cmd(["bluetoothctl", "power", state])
+                self._check_cmd(proc, "bluetooth_set_power")
+            elif system == "Darwin":
+                proc = self._run_cmd(["blueutil", "-p", "1" if enabled else "0"])
+                self._check_cmd(proc, "bluetooth_set_power")
+            else:
+                raise self._unsupported("bluetooth_set_power")
+
+        await self._run("bluetooth_set_power", _set)
+
+    async def bluetooth_get_power(self) -> bool:
+        """Return whether the Bluetooth radio is enabled."""
+        def _get() -> bool:
+            system = platform.system()
+            if system == "Linux":
+                proc = self._run_cmd(["bluetoothctl", "show"])
+                self._check_cmd(proc, "bluetooth_get_power")
+                return bool(re.search(r"Powered:\s*yes", proc.stdout, re.IGNORECASE))
+            if system == "Darwin":
+                proc = self._run_cmd(["blueutil", "-p"])
+                self._check_cmd(proc, "bluetooth_get_power")
+                return proc.stdout.strip() == "1"
+            raise self._unsupported("bluetooth_get_power")
+
+        result = await self._run("bluetooth_get_power", _get)
+        return bool(result)
+
+    async def bluetooth_list_devices(self) -> list[BluetoothDevice]:
+        """List known Bluetooth devices."""
+        def _list() -> list[BluetoothDevice]:
+            system = platform.system()
+            devices: list[BluetoothDevice] = []
+            if system == "Linux":
+                proc = self._run_cmd(["bluetoothctl", "devices"])
+                self._check_cmd(proc, "bluetooth_list_devices")
+                for line in proc.stdout.splitlines():
+                    match = re.match(r"Device\s+([0-9A-Fa-f:]+)\s+(.*)", line)
+                    if match:
+                        devices.append(
+                            BluetoothDevice(
+                                name=match.group(2),
+                                address=match.group(1),
+                                paired=True,
+                            )
+                        )
+            elif system == "Darwin":
+                proc = self._run_cmd(["blueutil", "--paired"])
+                self._check_cmd(proc, "bluetooth_list_devices")
+                for line in proc.stdout.splitlines():
+                    match = re.match(r"Address:\s*([0-9A-Fa-f-]+).*", line)
+                    if match:
+                        devices.append(
+                            BluetoothDevice(
+                                name="", address=match.group(1), paired=True
+                            )
+                        )
+            else:
+                raise self._unsupported("bluetooth_list_devices")
+            return devices
+
+        result = await self._run("bluetooth_list_devices", _list)
+        return list(result)
+
+    async def bluetooth_pair(self, device_address: str, pin: str | None = None) -> None:
+        """Pair with a Bluetooth device."""
+        def _pair() -> None:
+            system = platform.system()
+            if system == "Linux":
+                proc = self._run_cmd(["bluetoothctl", "pair", device_address])
+                self._check_cmd(proc, "bluetooth_pair")
+            elif system == "Darwin":
+                proc = self._run_cmd(["blueutil", "--pair", device_address])
+                self._check_cmd(proc, "bluetooth_pair")
+            else:
+                raise self._unsupported("bluetooth_pair")
+
+        await self._run("bluetooth_pair", _pair)
+
+    # ── System Settings: Display ────────────────────────────────────────
+
+    async def display_get_brightness(self) -> int:
+        """Return the current display brightness (0-100)."""
+        def _get() -> int:
+            system = platform.system()
+            if system == "Linux":
+                base = Path("/sys/class/backlight")
+                if not base.exists():
+                    raise PCControlNotImplementedError(
+                        context={"operation": "display_get_brightness"}
+                    )
+                try:
+                    current = next(base.glob("*")) / "brightness"
+                    maximum = next(base.glob("*")) / "max_brightness"
+                    cur = int(current.read_text().strip())
+                    mx = int(maximum.read_text().strip())
+                    return round(cur * 100 / mx) if mx else 0
+                except (OSError, StopIteration, ValueError) as exc:
+                    raise PCControlExecutionError(
+                        "display_get_brightness failed",
+                        context={
+                            "operation": "display_get_brightness",
+                            "error": str(exc),
+                        },
+                    ) from exc
+            if system == "Darwin":
+                proc = self._run_cmd(["brightness", "-l"])
+                self._check_cmd(proc, "display_get_brightness")
+                match = re.search(r"display 0: brightness (\d+)", proc.stdout)
+                return int(match.group(1)) if match else 50
+            if system == "Windows":
+                cmd = (
+                    "Get-CimInstance -Namespace root/wmi -ClassName WmiMonitorBrightness "
+                    "| Select-Object -ExpandProperty CurrentBrightness"
+                )
+                proc = self._run_cmd(["powershell", "-NoProfile", "-Command", cmd])
+                self._check_cmd(proc, "display_get_brightness")
+                return int(proc.stdout.strip() or 50)
+            raise self._unsupported("display_get_brightness")
+
+        result = await self._run("display_get_brightness", _get)
+        return int(result)
+
+    async def display_set_brightness(self, level: int) -> None:
+        """Set the display brightness (0-100)."""
+        def _set() -> None:
+            level_clamped = max(0, min(100, level))
+            system = platform.system()
+            if system == "Linux":
+                base = Path("/sys/class/backlight")
+                if not base.exists():
+                    raise PCControlNotImplementedError(
+                        context={"operation": "display_set_brightness"}
+                    )
+                try:
+                    dev = next(base.glob("*"))
+                    mx = int((dev / "max_brightness").read_text().strip())
+                    value = round(level_clamped * mx / 100)
+                    (dev / "brightness").write_text(str(value))
+                except (OSError, StopIteration, ValueError) as exc:
+                    raise PCControlExecutionError(
+                        "display_set_brightness failed",
+                        context={
+                            "operation": "display_set_brightness",
+                            "error": str(exc),
+                        },
+                    ) from exc
+            elif system == "Darwin":
+                proc = self._run_cmd(["brightness", str(level_clamped / 100)])
+                self._check_cmd(proc, "display_set_brightness")
+            elif system == "Windows":
+                cmd = (
+                    "(Get-CimInstance -Namespace root/wmi -ClassName WmiMonitorBrightnessMethods)"
+                    ".WmiSetBrightness(1, {level})"
+                ).format(level=level_clamped)
+                proc = self._run_cmd(["powershell", "-NoProfile", "-Command", cmd])
+                self._check_cmd(proc, "display_set_brightness")
+            else:
+                raise self._unsupported("display_set_brightness")
+
+        await self._run("display_set_brightness", _set)
+
+    async def display_get_resolution(self) -> tuple[int, int]:
+        """Return the current display resolution (width, height)."""
+        async def _get() -> tuple[int, int]:
+            pg = self._require_pyautogui()
+            width, height = await asyncio.to_thread(pg.size)  # type: ignore[union-attr]
+            return int(width), int(height)
+
+        result = await _get()
+        return result
+
+    async def display_set_resolution(self, width: int, height: int) -> None:
+        """Set the display resolution."""
+        def _set() -> None:
+            system = platform.system()
+            if system == "Windows" and _HAS_PYWIN32:
+                _win32api_mod.ChangeDisplaySettings(  # type: ignore[attr-defined]
+                    _win32api_mod.EnumDisplaySettings(None, -1),  # type: ignore[attr-defined]
+                    0,
+                )
+            elif system == "Linux":
+                proc = self._run_cmd(
+                    ["xrandr", "--output", "auto", "--mode", f"{width}x{height}"]
+                )
+                self._check_cmd(proc, "display_set_resolution")
+            elif system == "Darwin":
+                raise PCControlNotImplementedError(
+                    context={"operation": "display_set_resolution"}
+                )
+            else:
+                raise self._unsupported("display_set_resolution")
+
+        await self._run("display_set_resolution", _set)
+
+    async def display_list_resolutions(self) -> list[tuple[int, int]]:
+        """List supported display resolutions."""
+        def _list() -> list[tuple[int, int]]:
+            system = platform.system()
+            resolutions: list[tuple[int, int]] = []
+            if system == "Linux":
+                proc = self._run_cmd(["xrandr"])
+                self._check_cmd(proc, "display_list_resolutions")
+                for line in proc.stdout.splitlines():
+                    match = re.search(r"\s(\d{3,4})x(\d{3,4})\b", line)
+                    if match:
+                        entry = (int(match.group(1)), int(match.group(2)))
+                        if entry not in resolutions:
+                            resolutions.append(entry)
+            elif system == "Darwin":
+                raise PCControlNotImplementedError(
+                    context={"operation": "display_list_resolutions"}
+                )
+            else:
+                raise self._unsupported("display_list_resolutions")
+            return resolutions
+
+        result = await self._run("display_list_resolutions", _list)
+        return list(result)
+
+    async def display_set_night_light(self, enabled: bool) -> None:
+        """Enable or disable night-light (blue-light filter)."""
+        def _set() -> None:
+            system = platform.system()
+            if system == "Windows":
+                key = (
+                    "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\CloudStore\\"
+                    "Store\\DefaultAccount\\Current\\"
+                    "default$windows.data.bluelightreduction.bluelightreductionstate"
+                )
+                proc = self._run_cmd([
+                    "reg", "add",
+                    key,
+                    "/v", "Data",
+                    "/t", "REG_BINARY",
+                    "/f",
+                ])
+                self._check_cmd(proc, "display_set_night_light")
+            elif system == "Linux":
+                proc = self._run_cmd(["redshift", "-O", "3500" if enabled else "6500"])
+                self._check_cmd(proc, "display_set_night_light")
+            elif system == "Darwin":
+                raise PCControlNotImplementedError(
+                    context={"operation": "display_set_night_light"}
+                )
+            else:
+                raise self._unsupported("display_set_night_light")
+
+        await self._run("display_set_night_light", _set)
+
+    async def display_get_night_light(self) -> bool:
+        """Return whether night-light is enabled."""
+        def _get() -> bool:
+            system = platform.system()
+            if system == "Windows":
+                key = (
+                    "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\CloudStore\\"
+                    "Store\\DefaultAccount\\Current\\"
+                    "default$windows.data.bluelightreduction.bluelightreductionstate"
+                )
+                proc = self._run_cmd(["reg", "query", key])
+                if proc.returncode != 0:
+                    return False
+                return bool(
+                    re.search(
+                        r"Data\s+REG_BINARY\s+(?:[0-9A-Fa-f]{2} )*0[0-9]",
+                        proc.stdout,
+                    )
+                )
+            if system == "Linux":
+                proc = self._run_cmd(["redshift", "-P"])
+                return "6500K" not in proc.stdout
+            if system == "Darwin":
+                raise PCControlNotImplementedError(
+                    context={"operation": "display_get_night_light"}
+                )
+            raise self._unsupported("display_get_night_light")
+
+        result = await self._run("display_get_night_light", _get)
+        return bool(result)
+
+    async def display_set_dark_mode(self, enabled: bool) -> None:
+        """Enable or disable dark mode (system appearance)."""
+        def _set() -> None:
+            system = platform.system()
+            if system == "Windows":
+                key = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"
+                for name in ("AppsUseLightTheme", "SystemUsesLightTheme"):
+                    proc = self._run_cmd([
+                        "reg", "add", key, "/v", name, "/t", "REG_DWORD",
+                        "/d", "0" if enabled else "1", "/f",
+                    ])
+                    self._check_cmd(proc, "display_set_dark_mode")
+            elif system == "Linux":
+                proc = self._run_cmd([
+                    "gsettings", "set", "org.gnome.desktop.interface", "color-scheme",
+                    "prefer-dark" if enabled else "default",
+                ])
+                self._check_cmd(proc, "display_set_dark_mode")
+            elif system == "Darwin":
+                if enabled:
+                    proc = self._run_cmd([
+                        "defaults", "write", "-g", "AppleInterfaceStyle", "Dark",
+                    ])
+                else:
+                    proc = self._run_cmd([
+                        "defaults", "delete", "-g", "AppleInterfaceStyle",
+                    ])
+                self._check_cmd(proc, "display_set_dark_mode")
+            else:
+                raise self._unsupported("display_set_dark_mode")
+
+        await self._run("display_set_dark_mode", _set)
+
+    async def display_get_dark_mode(self) -> bool:
+        """Return whether dark mode is enabled."""
+        def _get() -> bool:
+            system = platform.system()
+            if system == "Windows":
+                key = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"
+                proc = self._run_cmd(["reg", "query", key, "/v", "AppsUseLightTheme"])
+                if proc.returncode != 0:
+                    return False
+                return "0x0" in proc.stdout
+            if system == "Linux":
+                proc = self._run_cmd([
+                    "gsettings", "get", "org.gnome.desktop.interface", "color-scheme",
+                ])
+                return (
+                    "dark" in proc.stdout.lower()
+                    or "prefer-dark" in proc.stdout.lower()
+                )
+            if system == "Darwin":
+                proc = self._run_cmd(["defaults", "read", "-g", "AppleInterfaceStyle"])
+                return proc.returncode == 0 and "Dark" in proc.stdout
+            raise self._unsupported("display_get_dark_mode")
+
+        result = await self._run("display_get_dark_mode", _get)
+        return bool(result)
+
+    # ── System Settings: Airplane mode / Do Not Disturb ────────────────
+
+    async def power_set_airplane_mode(self, enabled: bool) -> None:
+        """Enable or disable airplane mode (radio kill switch)."""
+        def _set() -> None:
+            system = platform.system()
+            if system == "Windows":
+                cmd = (
+                    "Get-CimInstance -Namespace root/StandardCimv2 -ClassName MDM_VpnSetting"
+                )
+                proc = self._run_cmd(["powershell", "-NoProfile", "-Command", cmd])
+                self._check_cmd(proc, "power_set_airplane_mode")
+            elif system == "Linux":
+                proc = self._run_cmd(["nmcli", "radio", "all", "on" if enabled else "off"])
+                self._check_cmd(proc, "power_set_airplane_mode")
+            elif system == "Darwin":
+                raise PCControlNotImplementedError(
+                    context={"operation": "power_set_airplane_mode"}
+                )
+            else:
+                raise self._unsupported("power_set_airplane_mode")
+
+        await self._run("power_set_airplane_mode", _set)
+
+    async def power_get_airplane_mode(self) -> bool:
+        """Return whether airplane mode is enabled."""
+        def _get() -> bool:
+            system = platform.system()
+            if system == "Linux":
+                proc = self._run_cmd(["nmcli", "radio", "all"])
+                self._check_cmd(proc, "power_get_airplane_mode")
+                return all(
+                    "disabled" in line.lower() for line in proc.stdout.splitlines()
+                )
+            if system == "Windows":
+                return False
+            if system == "Darwin":
+                raise PCControlNotImplementedError(
+                    context={"operation": "power_get_airplane_mode"}
+                )
+            raise self._unsupported("power_get_airplane_mode")
+
+        result = await self._run("power_get_airplane_mode", _get)
+        return bool(result)
+
+    async def power_set_do_not_disturb(self, enabled: bool) -> None:
+        """Enable or disable Do-Not-Disturb notifications."""
+        def _set() -> None:
+            system = platform.system()
+            if system == "Windows":
+                key = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings"
+                proc = self._run_cmd([
+                    "reg", "add", key, "/v", "NOC_GLOBAL_SETTING_TOASTS_ENABLED",
+                    "/t", "REG_DWORD", "/d", "0" if enabled else "1", "/f",
+                ])
+                self._check_cmd(proc, "power_set_do_not_disturb")
+            elif system == "Linux":
+                raise PCControlNotImplementedError(
+                    context={"operation": "power_set_do_not_disturb"}
+                )
+            elif system == "Darwin":
+                proc = self._run_cmd([
+                    "defaults", "write", "com.apple.controlcenter",
+                    "NSStatusItemVisible", "DoNotDisturb",
+                ])
+                self._check_cmd(proc, "power_set_do_not_disturb")
+            else:
+                raise self._unsupported("power_set_do_not_disturb")
+
+        await self._run("power_set_do_not_disturb", _set)
+
+    async def power_get_do_not_disturb(self) -> bool:
+        """Return whether Do-Not-Disturb is enabled."""
+        def _get() -> bool:
+            system = platform.system()
+            if system == "Windows":
+                key = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings"
+                proc = self._run_cmd([
+                    "reg", "query", key, "/v", "NOC_GLOBAL_SETTING_TOASTS_ENABLED",
+                ])
+                return proc.returncode == 0 and "0x0" in proc.stdout
+            if system == "Darwin":
+                proc = self._run_cmd([
+                    "defaults", "read", "com.apple.controlcenter",
+                    "NSStatusItemVisible", "DoNotDisturb",
+                ])
+                return proc.returncode == 0 and "true" in proc.stdout.lower()
+            if system == "Linux":
+                raise PCControlNotImplementedError(
+                    context={"operation": "power_get_do_not_disturb"}
+                )
+            raise self._unsupported("power_get_do_not_disturb")
+
+        result = await self._run("power_get_do_not_disturb", _get)
+        return bool(result)
+
+    # ── Software Management ─────────────────────────────────────────────
+
+    async def software_list_installed(self) -> list[InstalledPackage]:
+        """List installed software packages."""
+        def _list() -> list[InstalledPackage]:
+            system = platform.system()
+            packages: list[InstalledPackage] = []
+            if system == "Windows":
+                proc = self._run_cmd(["wmic", "product", "get", "name,version"], timeout=120)
+                self._check_cmd(proc, "software_list_installed")
+                for line in proc.stdout.splitlines()[1:]:
+                    if line.strip() and "  " in line:
+                        name, _, version = line.strip().rpartition("  ")
+                        packages.append(
+                            InstalledPackage(name=name.strip(), version=version.strip())
+                        )
+            elif system == "Linux":
+                proc = self._run_cmd(["dpkg-query", "-W", "-f=${Package}\t${Version}\n"])
+                self._check_cmd(proc, "software_list_installed")
+                for line in proc.stdout.splitlines():
+                    if line.strip() and "\t" in line:
+                        name, _, version = line.partition("\t")
+                        packages.append(InstalledPackage(name=name, version=version))
+            elif system == "Darwin":
+                proc = self._run_cmd(["brew", "list", "--versions"])
+                self._check_cmd(proc, "software_list_installed")
+                for line in proc.stdout.splitlines():
+                    parts = line.split()
+                    if parts:
+                        version = parts[1] if len(parts) > 1 else ""
+                        packages.append(InstalledPackage(name=parts[0], version=version))
+            else:
+                raise self._unsupported("software_list_installed")
+            return packages
+
+        result = await self._run("software_list_installed", _list)
+        return list(result)
+
+    async def software_install(self, package: str) -> PackageOpResult:
+        """Install a software package."""
+        def _install() -> PackageOpResult:
+            system = platform.system()
+            if system == "Windows":
+                cmd = [
+                    "winget", "install", "--silent", "--accept-source-agreements",
+                    "--accept-package-agreements", package,
+                ]
+            elif system == "Linux":
+                cmd = ["apt-get", "install", "-y", package]
+            elif system == "Darwin":
+                cmd = ["brew", "install", package]
+            else:
+                raise self._unsupported("software_install")
+            proc = self._run_cmd(cmd, timeout=300)
+            if proc.returncode != 0:
+                return PackageOpResult(
+                    success=False,
+                    package=package,
+                    message=proc.stderr.strip() or f"exit {proc.returncode}",
+                )
+            return PackageOpResult(success=True, package=package, message="installed")
+
+        return await self._run("software_install", _install)
+
+    async def software_uninstall(self, package: str) -> PackageOpResult:
+        """Uninstall a software package."""
+        def _uninstall() -> PackageOpResult:
+            system = platform.system()
+            if system == "Windows":
+                cmd = ["winget", "uninstall", "--silent", package]
+            elif system == "Linux":
+                cmd = ["apt-get", "remove", "-y", package]
+            elif system == "Darwin":
+                cmd = ["brew", "uninstall", package]
+            else:
+                raise self._unsupported("software_uninstall")
+            proc = self._run_cmd(cmd, timeout=300)
+            if proc.returncode != 0:
+                return PackageOpResult(
+                    success=False,
+                    package=package,
+                    message=proc.stderr.strip() or f"exit {proc.returncode}",
+                )
+            return PackageOpResult(success=True, package=package, message="uninstalled")
+
+        return await self._run("software_uninstall", _uninstall)
+
+    async def software_check_update(self, package: str) -> bool:
+        """Check whether an update is available for a package."""
+        def _check() -> bool:
+            system = platform.system()
+            if system == "Windows":
+                proc = self._run_cmd(["winget", "upgrade", "--include-unknown"], timeout=120)
+                self._check_cmd(proc, "software_check_update")
+                return package.lower() in proc.stdout.lower()
+            if system == "Linux":
+                proc = self._run_cmd(["apt", "list", "--upgradable", package], timeout=120)
+                return proc.returncode == 0 and package in proc.stdout
+            if system == "Darwin":
+                proc = self._run_cmd(["brew", "outdated", package], timeout=120)
+                return proc.returncode == 0 and package in proc.stdout
+            raise self._unsupported("software_check_update")
+
+        result = await self._run("software_check_update", _check)
+        return bool(result)
+
+    # ── User Account Management ─────────────────────────────────────────
+
+    async def account_list_users(self) -> list[UserAccount]:
+        """List local user accounts."""
+        def _list() -> list[UserAccount]:
+            system = platform.system()
+            users: list[UserAccount] = []
+            if system == "Windows":
+                cmd = "Get-LocalUser | Select-Object Name,Enabled | Format-Table -HideTableHeaders"
+                proc = self._run_cmd(["powershell", "-NoProfile", "-Command", cmd])
+                self._check_cmd(proc, "account_list_users")
+                for line in proc.stdout.splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    name = line.split()[0]
+                    users.append(
+                        UserAccount(username=name, enabled="False" not in line)
+                    )
+            elif system == "Linux":
+                try:
+                    passwd = Path("/etc/passwd").read_text(encoding="utf-8", errors="ignore")
+                except OSError as exc:
+                    raise PCControlExecutionError(
+                        "account_list_users failed",
+                        context={"operation": "account_list_users", "error": str(exc)},
+                    ) from exc
+                for line in passwd.splitlines():
+                    if not line or line.startswith("#"):
+                        continue
+                    parts = line.split(":")
+                    if len(parts) < 7:
+                        continue
+                    uid = parts[2]
+                    if not uid.isdigit() or int(uid) < 1000:
+                        continue
+                    full_name = parts[4].split(",")[0]
+                    users.append(UserAccount(username=parts[0], full_name=full_name))
+            elif system == "Darwin":
+                proc = self._run_cmd(["dscl", ".", "list", "/Users", "UniqueID"])
+                self._check_cmd(proc, "account_list_users")
+                for line in proc.stdout.splitlines():
+                    parts = line.split()
+                    if len(parts) == 2 and parts[1].isdigit() and int(parts[1]) >= 500:
+                        users.append(UserAccount(username=parts[0]))
+            else:
+                raise self._unsupported("account_list_users")
+            return users
+
+        result = await self._run("account_list_users", _list)
+        return list(result)
+
+    async def account_get_current_user(self) -> UserAccount:
+        """Return the currently logged-in user account."""
+        def _get() -> UserAccount:
+            system = platform.system()
+            if system == "Windows":
+                proc = self._run_cmd(["whoami"])
+                self._check_cmd(proc, "account_get_current_user")
+                username = proc.stdout.strip().split("\\")[-1] or os.getlogin()
+            else:
+                username = os.getlogin()
+            return UserAccount(username=username, full_name=username)
+
+        return await self._run("account_get_current_user", _get)
+
+    async def account_create_user(self, username: str, password: str | None = None) -> UserAccount:
+        """Create a new local user account."""
+        def _create() -> UserAccount:
+            system = platform.system()
+            if system == "Windows":
+                cmd = ["net", "user", username]
+                if password:
+                    cmd.append(password)
+                cmd += ["/add"]
+                proc = self._run_cmd(cmd)
+                self._check_cmd(proc, "account_create_user")
+            elif system == "Linux":
+                cmd = ["useradd", "-m", username]
+                if password:
+                    cmd = ["useradd", "-m", "-p", password, username]
+                proc = self._run_cmd(cmd)
+                self._check_cmd(proc, "account_create_user")
+            elif system == "Darwin":
+                cmd = ["dscl", ".", "create", f"/Users/{username}"]
+                proc = self._run_cmd(cmd)
+                self._check_cmd(proc, "account_create_user")
+                if password:
+                    proc = self._run_cmd(
+                        ["dscl", ".", "passwd", f"/Users/{username}", password]
+                    )
+                    self._check_cmd(proc, "account_create_user")
+            else:
+                raise self._unsupported("account_create_user")
+            return UserAccount(username=username, enabled=True)
+
+        return await self._run("account_create_user", _create)
+
+    async def account_set_enabled(self, username: str, enabled: bool) -> None:
+        """Enable or disable a user account."""
+        def _set() -> None:
+            system = platform.system()
+            if system == "Windows":
+                state = "yes" if enabled else "no"
+                proc = self._run_cmd(["net", "user", username, f"/active:{state}"])
+                self._check_cmd(proc, "account_set_enabled")
+            elif system == "Linux":
+                proc = self._run_cmd(["usermod", "-U" if enabled else "-L", username])
+                self._check_cmd(proc, "account_set_enabled")
+            elif system == "Darwin":
+                raise PCControlNotImplementedError(
+                    context={"operation": "account_set_enabled"}
+                )
+            else:
+                raise self._unsupported("account_set_enabled")
+
+        await self._run("account_set_enabled", _set)
+
+    async def account_modify_groups(
+        self,
+        username: str,
+        add: list[str] | None = None,
+        remove: list[str] | None = None,
+    ) -> None:
+        """Add/remove group memberships for a user account."""
+        def _modify() -> None:
+            system = platform.system()
+            if system == "Windows":
+                for group in add or []:
+                    proc = self._run_cmd(["net", "localgroup", group, username, "/add"])
+                    self._check_cmd(proc, "account_modify_groups")
+                for group in remove or []:
+                    proc = self._run_cmd(["net", "localgroup", group, username, "/delete"])
+                    self._check_cmd(proc, "account_modify_groups")
+            elif system == "Linux":
+                for group in add or []:
+                    proc = self._run_cmd(["usermod", "-aG", group, username])
+                    self._check_cmd(proc, "account_modify_groups")
+                for group in remove or []:
+                    proc = self._run_cmd(["gpasswd", "-d", username, group])
+                    self._check_cmd(proc, "account_modify_groups")
+            elif system == "Darwin":
+                for group in add or []:
+                    proc = self._run_cmd([
+                        "dseditgroup", "-o", "edit", "-a", username,
+                        "-t", "user", group,
+                    ])
+                    self._check_cmd(proc, "account_modify_groups")
+                for group in remove or []:
+                    proc = self._run_cmd([
+                        "dseditgroup", "-o", "edit", "-d", username,
+                        "-t", "user", group,
+                    ])
+                    self._check_cmd(proc, "account_modify_groups")
+            else:
+                raise self._unsupported("account_modify_groups")
+
+        await self._run("account_modify_groups", _modify)

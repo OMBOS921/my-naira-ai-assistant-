@@ -12,6 +12,7 @@ import logging
 from typing import Any
 
 from backend.exceptions import ModuleDegradedError
+from backend.modules.pc_control._account_manager import PCAccountManager
 from backend.modules.pc_control._application_launcher import PCApplicationLauncher
 from backend.modules.pc_control._clipboard import PCClipboard
 from backend.modules.pc_control._executor import PCControlExecutor
@@ -23,6 +24,8 @@ from backend.modules.pc_control._notification import PCNotification
 from backend.modules.pc_control._power import PCPower
 from backend.modules.pc_control._process_manager import PCProcessManager
 from backend.modules.pc_control._screen import PCScreen
+from backend.modules.pc_control._software_manager import PCSoftwareManager
+from backend.modules.pc_control._system_settings import PCSystemSettings
 from backend.modules.pc_control._volume import PCVolume
 from backend.modules.pc_control._window_manager import PCWindowManager
 from backend.modules.pc_control.ports.pc_control_port import PCControlPort
@@ -87,6 +90,9 @@ class PCControlManager:
         self._power = PCPower(port=self._adapter, logger=logger)
         self._volume = PCVolume(port=self._adapter, logger=logger)
         self._screen = PCScreen(port=self._adapter, logger=logger)
+        self._system_settings = PCSystemSettings(port=self._adapter, logger=logger)
+        self._software_manager = PCSoftwareManager(port=self._adapter, logger=logger)
+        self._account_manager = PCAccountManager(port=self._adapter, logger=logger)
         self._executor = PCControlExecutor(
             adapter=self._adapter,
             default_timeout=default_timeout,
@@ -449,6 +455,173 @@ class PCControlManager:
         return await self._executor.screen_list_displays()
 
     # ------------------------------------------------------------------
+    # Public API — system settings
+    # ------------------------------------------------------------------
+
+    async def wifi_set_power(self, enabled: bool) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.wifi_set_power", {"enabled": enabled})
+        return await self._executor.wifi_set_power(enabled)
+
+    async def wifi_get_power(self) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.wifi_get_power", {})
+        return await self._executor.wifi_get_power()
+
+    async def wifi_list_networks(self) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.wifi_list_networks", {})
+        return await self._executor.wifi_list_networks()
+
+    async def wifi_connect(self, ssid: str, password: str | None = None) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.wifi_connect", {"ssid": ssid})
+        return await self._executor.wifi_connect(ssid, password=password)
+
+    async def bluetooth_set_power(self, enabled: bool) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.bluetooth_set_power", {"enabled": enabled})
+        return await self._executor.bluetooth_set_power(enabled)
+
+    async def bluetooth_get_power(self) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.bluetooth_get_power", {})
+        return await self._executor.bluetooth_get_power()
+
+    async def bluetooth_list_devices(self) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.bluetooth_list_devices", {})
+        return await self._executor.bluetooth_list_devices()
+
+    async def bluetooth_pair(self, device_address: str, pin: str | None = None) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.bluetooth_pair", {"device_address": device_address})
+        return await self._executor.bluetooth_pair(device_address, pin=pin)
+
+    async def display_get_brightness(self) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.display_get_brightness", {})
+        return await self._executor.display_get_brightness()
+
+    async def display_set_brightness(self, level: int) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.display_set_brightness", {"level": level})
+        return await self._executor.display_set_brightness(level)
+
+    async def display_get_resolution(self) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.display_get_resolution", {})
+        return await self._executor.display_get_resolution()
+
+    async def display_set_resolution(self, width: int, height: int) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.display_set_resolution", {"width": width, "height": height})
+        return await self._executor.display_set_resolution(width, height)
+
+    async def display_list_resolutions(self) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.display_list_resolutions", {})
+        return await self._executor.display_list_resolutions()
+
+    async def display_set_night_light(self, enabled: bool) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.display_set_night_light", {"enabled": enabled})
+        return await self._executor.display_set_night_light(enabled)
+
+    async def display_get_night_light(self) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.display_get_night_light", {})
+        return await self._executor.display_get_night_light()
+
+    async def display_set_dark_mode(self, enabled: bool) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.display_set_dark_mode", {"enabled": enabled})
+        return await self._executor.display_set_dark_mode(enabled)
+
+    async def display_get_dark_mode(self) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.display_get_dark_mode", {})
+        return await self._executor.display_get_dark_mode()
+
+    async def power_set_airplane_mode(self, enabled: bool) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.power_set_airplane_mode", {"enabled": enabled})
+        return await self._executor.power_set_airplane_mode(enabled)
+
+    async def power_get_airplane_mode(self) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.power_get_airplane_mode", {})
+        return await self._executor.power_get_airplane_mode()
+
+    async def power_set_do_not_disturb(self, enabled: bool) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.power_set_do_not_disturb", {"enabled": enabled})
+        return await self._executor.power_set_do_not_disturb(enabled)
+
+    async def power_get_do_not_disturb(self) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.power_get_do_not_disturb", {})
+        return await self._executor.power_get_do_not_disturb()
+
+    # ------------------------------------------------------------------
+    # Public API — software management
+    # ------------------------------------------------------------------
+
+    async def software_list_installed(self) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.software_list_installed", {})
+        return await self._executor.software_list_installed()
+
+    async def software_install(self, package: str) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.software_install", {"package": package})
+        return await self._executor.software_install(package)
+
+    async def software_uninstall(self, package: str) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.software_uninstall", {"package": package})
+        return await self._executor.software_uninstall(package)
+
+    async def software_check_update(self, package: str) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.software_check_update", {"package": package})
+        return await self._executor.software_check_update(package)
+
+    # ------------------------------------------------------------------
+    # Public API — user account management
+    # ------------------------------------------------------------------
+
+    async def account_list_users(self) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.account_list_users", {})
+        return await self._executor.account_list_users()
+
+    async def account_get_current_user(self) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.account_get_current_user", {})
+        return await self._executor.account_get_current_user()
+
+    async def account_create_user(self, username: str, password: str | None = None) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.account_create_user", {"username": username})
+        return await self._executor.account_create_user(username, password=password)
+
+    async def account_set_enabled(self, username: str, enabled: bool) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.account_set_enabled", {"username": username})
+        return await self._executor.account_set_enabled(username, enabled)
+
+    async def account_modify_groups(
+        self,
+        username: str,
+        add: list[str] | None = None,
+        remove: list[str] | None = None,
+    ) -> ToolResult:
+        self._ensure_not_degraded()
+        await self._emit_event_async("pc_control.account_modify_groups", {"username": username})
+        return await self._executor.account_modify_groups(username, add=add, remove=remove)
+
+    # ------------------------------------------------------------------
     # Accessors
     # ------------------------------------------------------------------
 
@@ -710,6 +883,135 @@ class PCControlManager:
                         "pc_control",
                     ),
                     (
+                        "pc_wifi",
+                        "Manage the Wi-Fi radio — enable/disable, list networks, connect",
+                        {
+                            "type": "object",
+                            "properties": {
+                                "action": {
+                                    "type": "string",
+                                    "enum": ["set_power", "get_power", "list_networks", "connect"],
+                                    "description": "Wi-Fi action to perform",
+                                },
+                                "enabled": {"type": "boolean", "description": "Whether Wi-Fi is enabled"},
+                                "ssid": {"type": "string", "description": "Network name to connect to"},
+                                "password": {"type": "string", "description": "Network password"},
+                            },
+                            "required": ["action"],
+                        },
+                        "pc_control",
+                    ),
+                    (
+                        "pc_bluetooth",
+                        "Manage the Bluetooth radio — enable/disable, list devices, pair",
+                        {
+                            "type": "object",
+                            "properties": {
+                                "action": {
+                                    "type": "string",
+                                    "enum": ["set_power", "get_power", "list_devices", "pair"],
+                                    "description": "Bluetooth action to perform",
+                                },
+                                "enabled": {"type": "boolean", "description": "Whether Bluetooth is enabled"},
+                                "device_address": {"type": "string", "description": "Device MAC address"},
+                                "pin": {"type": "string", "description": "Pairing PIN"},
+                            },
+                            "required": ["action"],
+                        },
+                        "pc_control",
+                    ),
+                    (
+                        "pc_display",
+                        "Manage display settings — brightness, resolution, night light, dark mode",
+                        {
+                            "type": "object",
+                            "properties": {
+                                "action": {
+                                    "type": "string",
+                                    "enum": [
+                                        "get_brightness", "set_brightness",
+                                        "get_resolution", "set_resolution", "list_resolutions",
+                                        "set_night_light", "get_night_light",
+                                        "set_dark_mode", "get_dark_mode",
+                                    ],
+                                    "description": "Display action to perform",
+                                },
+                                "level": {"type": "integer", "description": "Brightness level (0-100)"},
+                                "width": {"type": "integer", "description": "Resolution width"},
+                                "height": {"type": "integer", "description": "Resolution height"},
+                                "enabled": {"type": "boolean", "description": "Toggle night light / dark mode"},
+                            },
+                            "required": ["action"],
+                        },
+                        "pc_control",
+                    ),
+                    (
+                        "pc_system_settings",
+                        "Manage airplane mode and Do-Not-Disturb notification settings",
+                        {
+                            "type": "object",
+                            "properties": {
+                                "action": {
+                                    "type": "string",
+                                    "enum": [
+                                        "set_airplane_mode", "get_airplane_mode",
+                                        "set_do_not_disturb", "get_do_not_disturb",
+                                    ],
+                                    "description": "System settings action to perform",
+                                },
+                                "enabled": {"type": "boolean", "description": "Toggle the setting"},
+                            },
+                            "required": ["action"],
+                        },
+                        "pc_control",
+                    ),
+                    (
+                        "pc_software",
+                        "List installed software, install/uninstall packages, or check for updates",
+                        {
+                            "type": "object",
+                            "properties": {
+                                "action": {
+                                    "type": "string",
+                                    "enum": ["list_installed", "install", "uninstall", "check_update"],
+                                    "description": "Software action to perform",
+                                },
+                                "package": {"type": "string", "description": "Package name"},
+                            },
+                            "required": ["action"],
+                        },
+                        "pc_control",
+                    ),
+                    (
+                        "pc_account",
+                        "Manage local user accounts — list, create, enable/disable, modify group membership",
+                        {
+                            "type": "object",
+                            "properties": {
+                                "action": {
+                                    "type": "string",
+                                    "enum": ["list_users", "get_current_user", "create_user", "set_enabled", "modify_groups"],
+                                    "description": "Account action to perform",
+                                },
+                                "username": {"type": "string", "description": "Username"},
+                                "password": {"type": "string", "description": "Account password"},
+                                "enabled": {"type": "boolean", "description": "Whether the account is enabled"},
+                                "add": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                    "description": "Groups to add the user to",
+                                },
+                                "remove": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                    "description": "Groups to remove the user from",
+                                },
+                            },
+                            "required": ["action"],
+                        },
+                        "pc_control",
+                    ),
+                    (
                         "mouse_click",
                         "Click mouse at screen coordinates X and Y",
                         {
@@ -871,6 +1173,48 @@ class PCControlManager:
                 "get_size": "screen_get_size",
                 "capture": "screen_capture",
                 "list_displays": "screen_list_displays",
+            },
+            "pc_wifi": {
+                "set_power": "wifi_set_power",
+                "get_power": "wifi_get_power",
+                "list_networks": "wifi_list_networks",
+                "connect": "wifi_connect",
+            },
+            "pc_bluetooth": {
+                "set_power": "bluetooth_set_power",
+                "get_power": "bluetooth_get_power",
+                "list_devices": "bluetooth_list_devices",
+                "pair": "bluetooth_pair",
+            },
+            "pc_display": {
+                "get_brightness": "display_get_brightness",
+                "set_brightness": "display_set_brightness",
+                "get_resolution": "display_get_resolution",
+                "set_resolution": "display_set_resolution",
+                "list_resolutions": "display_list_resolutions",
+                "set_night_light": "display_set_night_light",
+                "get_night_light": "display_get_night_light",
+                "set_dark_mode": "display_set_dark_mode",
+                "get_dark_mode": "display_get_dark_mode",
+            },
+            "pc_system_settings": {
+                "set_airplane_mode": "power_set_airplane_mode",
+                "get_airplane_mode": "power_get_airplane_mode",
+                "set_do_not_disturb": "power_set_do_not_disturb",
+                "get_do_not_disturb": "power_get_do_not_disturb",
+            },
+            "pc_software": {
+                "list_installed": "software_list_installed",
+                "install": "software_install",
+                "uninstall": "software_uninstall",
+                "check_update": "software_check_update",
+            },
+            "pc_account": {
+                "list_users": "account_list_users",
+                "get_current_user": "account_get_current_user",
+                "create_user": "account_create_user",
+                "set_enabled": "account_set_enabled",
+                "modify_groups": "account_modify_groups",
             },
         }
 

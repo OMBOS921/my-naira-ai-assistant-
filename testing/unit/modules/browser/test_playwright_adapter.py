@@ -1269,3 +1269,73 @@ class TestExtractText:
         html = "<p>a&nbsp;b &amp; c &lt; d &gt; e</p>"
         result = PlaywrightBrowserAdapter._extract_text(html)
         assert result == "a b & c < d > e"
+
+
+class TestSearchSelectorFailure:
+    @pytest.mark.asyncio
+    async def test_search_raises_error_when_all_selectors_fail(
+        self, launched_adapter: _Launched
+    ) -> None:
+        adapter, page_mock = launched_adapter
+        PW_Error, _, _, _ = adapter._pw_types()
+        page_mock.goto = AsyncMock(side_effect=PW_Error("Search page load failed"))
+
+        with pytest.raises(BrowserSearchError, match="Search failed"):
+            await adapter.search("python")
+
+
+class TestPhase2AdapterMethods:
+    @pytest.mark.asyncio
+    async def test_wait_for_selector(self, launched_adapter: _Launched) -> None:
+        adapter, page_mock = launched_adapter
+        page_mock.wait_for_selector = AsyncMock()
+
+        await adapter.wait_for_selector("div.target")
+        page_mock.wait_for_selector.assert_awaited_once_with("div.target", state="visible", timeout=30000)
+
+    @pytest.mark.asyncio
+    async def test_select_option(self, launched_adapter: _Launched) -> None:
+        adapter, page_mock = launched_adapter
+        page_mock.wait_for_selector = AsyncMock()
+        page_mock.select_option = AsyncMock()
+
+        await adapter.select_option("select#choice", "value1")
+        page_mock.select_option.assert_awaited_once_with("select#choice", "value1", timeout=30000)
+
+    @pytest.mark.asyncio
+    async def test_hover(self, launched_adapter: _Launched) -> None:
+        adapter, page_mock = launched_adapter
+        page_mock.wait_for_selector = AsyncMock()
+        page_mock.hover = AsyncMock()
+
+        await adapter.hover("button.menu")
+        page_mock.hover.assert_awaited_once_with("button.menu", timeout=30000)
+
+    @pytest.mark.asyncio
+    async def test_right_click(self, launched_adapter: _Launched) -> None:
+        adapter, page_mock = launched_adapter
+        page_mock.wait_for_selector = AsyncMock()
+        page_mock.click = AsyncMock()
+
+        await adapter.right_click("div.context-menu")
+        page_mock.click.assert_awaited_once_with("div.context-menu", button="right", timeout=30000)
+
+    @pytest.mark.asyncio
+    async def test_drag_and_drop(self, launched_adapter: _Launched) -> None:
+        adapter, page_mock = launched_adapter
+        page_mock.wait_for_selector = AsyncMock()
+        page_mock.drag_and_drop = AsyncMock()
+
+        await adapter.drag_and_drop("#source", "#target")
+        page_mock.drag_and_drop.assert_awaited_once_with("#source", "#target", timeout=30000)
+
+    @pytest.mark.asyncio
+    async def test_export_pdf_fails_in_non_headless(self, adapter: PlaywrightBrowserAdapter) -> None:
+        adapter._headless = False
+        adapter._initialized = True
+        adapter._pages["p1"] = MagicMock()
+        adapter._active_page_id = "p1"
+
+        with pytest.raises(BrowserNotImplementedError, match="PDF export is only supported in headless Chromium mode"):
+            await adapter.export_pdf()
+

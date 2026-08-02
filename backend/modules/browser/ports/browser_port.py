@@ -31,6 +31,8 @@ class BrowserPort(ABC):
         url: str,
         timeout: float = 30.0,
         extract_content: bool = True,
+        extra_http_headers: dict[str, str] | None = None,
+        http_credentials: tuple[str, str] | None = None,
     ) -> BrowserPage:
         """Navigate to *url* and return the resulting page.
 
@@ -121,7 +123,7 @@ class BrowserPort(ABC):
     @abstractmethod
     async def screenshot(
         self,
-        url: str,
+        url: str = "",
         timeout: float = 30.0,
     ) -> bytes:
         """Capture a screenshot of the page at *url*.
@@ -145,6 +147,104 @@ class BrowserPort(ABC):
         BrowserTimeoutError
             If the operation exceeds *timeout*.
         """
+
+    @abstractmethod
+    async def wait_for_selector(
+        self,
+        selector: str,
+        state: str = "visible",
+        timeout: float = 30.0,
+    ) -> None:
+        """Wait for an element matching *selector* to reach *state*."""
+
+    @abstractmethod
+    async def select_option(
+        self,
+        selector: str,
+        value: str | list[str],
+        timeout: float = 30.0,
+    ) -> None:
+        """Select option(s) in a dropdown element matching *selector*."""
+
+    @abstractmethod
+    async def hover(
+        self,
+        selector: str,
+        timeout: float = 30.0,
+    ) -> None:
+        """Hover cursor over element matching *selector*."""
+
+    @abstractmethod
+    async def right_click(
+        self,
+        selector: str,
+        timeout: float = 30.0,
+    ) -> None:
+        """Right-click element matching *selector*."""
+
+    @abstractmethod
+    async def drag_and_drop(
+        self,
+        source_selector: str,
+        target_selector: str,
+        timeout: float = 30.0,
+    ) -> None:
+        """Drag element from *source_selector* and drop onto *target_selector*."""
+
+    @abstractmethod
+    async def check(
+        self,
+        selector: str,
+        timeout: float = 30.0,
+    ) -> None:
+        """Check a checkbox or radio element matching *selector*."""
+
+    @abstractmethod
+    async def uncheck(
+        self,
+        selector: str,
+        timeout: float = 30.0,
+    ) -> None:
+        """Uncheck a checkbox element matching *selector*."""
+
+    @abstractmethod
+    async def export_pdf(
+        self,
+        save_path: str = "",
+        timeout: float = 30.0,
+    ) -> str:
+        """Export current page as a PDF file."""
+
+    @abstractmethod
+    async def wait_for_download(
+        self,
+        timeout: float = 30.0,
+    ) -> DownloadResult:
+        """Wait for a file download event to complete."""
+
+    @abstractmethod
+    async def get_local_storage(self, key: str | None = None) -> str:
+        """Get local storage content or specific key."""
+
+    @abstractmethod
+    async def set_local_storage(self, key: str, value: str) -> None:
+        """Set key in local storage."""
+
+    @abstractmethod
+    async def clear_local_storage(self) -> None:
+        """Clear local storage."""
+
+    @abstractmethod
+    async def get_session_storage(self, key: str | None = None) -> str:
+        """Get session storage content or specific key."""
+
+    @abstractmethod
+    async def set_session_storage(self, key: str, value: str) -> None:
+        """Set key in session storage."""
+
+    @abstractmethod
+    async def clear_session_storage(self) -> None:
+        """Clear session storage."""
 
     @abstractmethod
     async def close(self) -> None:

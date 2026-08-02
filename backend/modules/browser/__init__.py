@@ -24,17 +24,19 @@ from backend.modules.browser._types import (
     BrowserSearchResponse,
     BrowserSearchResult,
     BrowserTab,
+    DownloadResult,
 )
 from backend.modules.browser.browser_module import BrowserManager
 from backend.modules.browser.ports.browser_port import BrowserPort
 
 __all__ = [
     "BrowserManager",
-    "BrowserPort",
-    "BrowserSession",
     "BrowserPage",
-    "BrowserTab",
-    "BrowserSearchResult",
+    "BrowserPort",
     "BrowserSearchResponse",
+    "BrowserSearchResult",
+    "BrowserSession",
+    "BrowserTab",
+    "DownloadResult",
     "PlaywrightBrowserAdapter",
 ]

@@ -21,6 +21,9 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Inject google-services.json
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" > naira_android_app/app/google-services.json
+
       - name: Build Debug APK
         run: gradle assembleDebug
         working-directory: ./naira_android_app

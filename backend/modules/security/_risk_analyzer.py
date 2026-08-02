@@ -16,6 +16,19 @@ _HIGH_RISK_TOOLS: frozenset[str] = frozenset({
     "registry_delete",
     "format_drive",
     "fcr_kill_process",
+    "pc_account",
+    "pc_software",
+    "pc_wifi",
+    "pc_bluetooth",
+    "browser_execute_js",
+    "browser_download_file",
+    "browser_set_cookies",
+    "browser_clear_cookies",
+    "browser_set_local_storage",
+    "browser_clear_local_storage",
+    "browser_set_session_storage",
+    "browser_clear_session_storage",
+    "browser_upload_file",
 })
 
 _MEDIUM_RISK_TOOLS: frozenset[str] = frozenset({
@@ -23,6 +36,8 @@ _MEDIUM_RISK_TOOLS: frozenset[str] = frozenset({
     "pc_keyboard",
     "pc_clipboard",
     "pc_volume",
+    "pc_display",
+    "pc_system_settings",
     "browser_navigate",
     "browser_extract",
     "fcr_window_close",
@@ -35,6 +50,10 @@ _DANGEROUS_ARGUMENTS: dict[str, frozenset[str]] = {
     "pc_power": frozenset({"shutdown", "restart", "sleep", "hibernate", "lock"}),
     "pc_keyboard": frozenset({"type_text", "press_key", "hotkey"}),
     "pc_clipboard": frozenset({"set_text", "clear"}),
+    "pc_account": frozenset({"create_user", "set_enabled", "modify_groups"}),
+    "pc_software": frozenset({"install", "uninstall"}),
+    "pc_wifi": frozenset({"connect"}),
+    "pc_bluetooth": frozenset({"pair"}),
     "fcr_run_cmd_safe": frozenset({"run"}),
 }
 

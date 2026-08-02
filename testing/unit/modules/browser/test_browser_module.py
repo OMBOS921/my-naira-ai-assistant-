@@ -27,6 +27,7 @@ from backend.modules.browser import (
     BrowserSearchResponse,
     BrowserSearchResult,
     BrowserTab,
+    DownloadResult,
 )
 from backend.modules.browser._content_extractor import BrowserContentExtractor
 from backend.modules.browser._exceptions import (
@@ -416,6 +417,90 @@ class _MockAdapter:
     async def scroll(self, delta_x: int = 0, delta_y: int = 500) -> None:
         pass
 
+    async def screenshot(self, url: str = "", timeout: float = 30.0) -> bytes:
+        return b"PNG_MOCK_BYTES"
+
+    async def back(self, timeout: float | None = None) -> BrowserPage:
+        return BrowserPage(url="https://example.com/back", title="Back")
+
+    async def forward(self, timeout: float | None = None) -> BrowserPage:
+        return BrowserPage(url="https://example.com/forward", title="Forward")
+
+    async def reload(self, timeout: float | None = None) -> BrowserPage:
+        return BrowserPage(url="https://example.com/reload", title="Reload")
+
+    async def new_tab(self, url: str = "about:blank") -> str:
+        return "tab_mock_1"
+
+    async def close_tab(self, page_id: str | None = None) -> None:
+        pass
+
+    async def list_tabs(self) -> list[object]:
+        return [BrowserTab(id="tab_mock_1", url="about:blank", title="New Tab", created_at=0.0, last_active_at=0.0)]
+
+    async def switch_tab(self, page_id: str) -> None:
+        pass
+
+    async def get_cookies(self, urls: list[str] | None = None) -> list[dict[str, Any]]:
+        return [{"name": "session", "value": "xyz"}]
+
+    async def set_cookies(self, cookies: list[dict[str, Any]]) -> None:
+        pass
+
+    async def clear_cookies(self) -> None:
+        pass
+
+    async def upload_file(self, selector: str, file_paths: str | list[str]) -> None:
+        pass
+
+    async def press_key(self, key: str, selector: str | None = None) -> None:
+        pass
+
+    async def wait_for_selector(self, selector: str, state: str = "visible", timeout: float = 30.0) -> None:
+        pass
+
+    async def select_option(self, selector: str, value: str | list[str], timeout: float = 30.0) -> None:
+        pass
+
+    async def hover(self, selector: str, timeout: float = 30.0) -> None:
+        pass
+
+    async def right_click(self, selector: str, timeout: float = 30.0) -> None:
+        pass
+
+    async def drag_and_drop(self, source_selector: str, target_selector: str, timeout: float = 30.0) -> None:
+        pass
+
+    async def check(self, selector: str, timeout: float = 30.0) -> None:
+        pass
+
+    async def uncheck(self, selector: str, timeout: float = 30.0) -> None:
+        pass
+
+    async def export_pdf(self, save_path: str = "", timeout: float = 30.0) -> str:
+        return "/tmp/mock.pdf"
+
+    async def wait_for_download(self, timeout: float = 30.0) -> DownloadResult:
+        return DownloadResult(path="/tmp/mock.dat", suggested_filename="mock.dat", size_bytes=100)
+
+    async def get_local_storage(self, key: str | None = None) -> str:
+        return '{"token": "xyz"}'
+
+    async def set_local_storage(self, key: str, value: str) -> None:
+        pass
+
+    async def clear_local_storage(self) -> None:
+        pass
+
+    async def get_session_storage(self, key: str | None = None) -> str:
+        return '{"tab": "1"}'
+
+    async def set_session_storage(self, key: str, value: str) -> None:
+        pass
+
+    async def clear_session_storage(self) -> None:
+        pass
+
     async def get_visible_text(self) -> str:
         return "Mock visible page text"
 
@@ -424,6 +509,7 @@ class _MockAdapter:
 
     async def close(self) -> None:
         pass
+
 
 
 
@@ -780,6 +866,37 @@ class TestBrowserManagerDeepWeb:
         assert res.status == "error"
 
 
+class TestBrowserPhase1Operations:
+    @pytest.mark.asyncio
+    async def test_phase1_tools_no_adapter(self) -> None:
+        mgr = BrowserManager()
+        await mgr.async_init()
+
+        assert (await mgr.screenshot()).status == "error"
+        assert (await mgr.back()).status == "error"
+        assert (await mgr.forward()).status == "error"
+        assert (await mgr.reload()).status == "error"
+        assert (await mgr.new_tab()).status == "error"
+        assert (await mgr.close_tab()).status == "error"
+        assert (await mgr.list_tabs()).status == "error"
+        assert (await mgr.switch_tab("tab1")).status == "error"
+        assert (await mgr.get_cookies()).status == "error"
+        assert (await mgr.set_cookies([])).status == "error"
+        assert (await mgr.clear_cookies()).status == "error"
+        assert (await mgr.upload_file("#input", "file.txt")).status == "error"
+        assert (await mgr.press_key("Enter")).status == "error"
+
+    @pytest.mark.asyncio
+    async def test_phase1_tools_with_adapter(self) -> None:
+        adapter = _MockAdapter()
+        mgr = BrowserManager(adapter=adapter)
+        await mgr.async_init()
+
+        res_ss = await mgr.screenshot()
+        assert res_ss.status == "success"
+        assert "data:image/png;base64," in res_ss.output
+
+
 class TestBrowserToolRegistration:
     @pytest.mark.asyncio
     async def test_registers_all_deep_web_tools(self) -> None:
@@ -801,10 +918,106 @@ class TestBrowserToolRegistration:
             "browser_fill",
             "browser_scroll",
             "browser_extract_text",
+            "browser_screenshot",
+            "browser_new_tab",
+            "browser_close_tab",
+            "browser_list_tabs",
+            "browser_switch_tab",
+            "browser_back",
+            "browser_forward",
+            "browser_reload",
+            "browser_get_cookies",
+            "browser_set_cookies",
+            "browser_clear_cookies",
+            "browser_upload_file",
+            "browser_press_key",
+            "browser_wait_for_selector",
+            "browser_select_option",
+            "browser_hover",
+            "browser_right_click",
+            "browser_drag_and_drop",
+            "browser_check",
+            "browser_uncheck",
+            "browser_export_pdf",
+            "browser_download_file",
+            "browser_execute_js",
+            "browser_get_local_storage",
+            "browser_set_local_storage",
+            "browser_clear_local_storage",
+            "browser_get_session_storage",
+            "browser_set_session_storage",
+            "browser_clear_session_storage",
         }
         assert expected_tools.issubset(set(registered_tools.keys()))
         for name in expected_tools:
             tool_def, handler = registered_tools[name]
             assert tool_def.category == "browser"
             assert callable(handler)
+
+
+class TestBrowserPhase2Operations:
+    @pytest.mark.asyncio
+    async def test_phase2_tools_no_adapter(self) -> None:
+        mgr = BrowserManager()
+        await mgr.async_init()
+
+        assert (await mgr.wait_for_selector("div")).status == "error"
+        assert (await mgr.select_option("select", "opt1")).status == "error"
+        assert (await mgr.hover("div")).status == "error"
+        assert (await mgr.right_click("div")).status == "error"
+        assert (await mgr.drag_and_drop("a", "b")).status == "error"
+        assert (await mgr.check("input")).status == "error"
+        assert (await mgr.uncheck("input")).status == "error"
+        assert (await mgr.export_pdf()).status == "error"
+        assert (await mgr.download_file()).status == "error"
+        assert (await mgr.get_local_storage()).status == "error"
+        assert (await mgr.set_local_storage("k", "v")).status == "error"
+        assert (await mgr.clear_local_storage()).status == "error"
+
+    @pytest.mark.asyncio
+    async def test_phase2_tools_with_adapter(self) -> None:
+        adapter = _MockAdapter()
+        mgr = BrowserManager(adapter=adapter)
+        await mgr.async_init()
+
+        assert (await mgr.wait_for_selector("div")).status == "success"
+        assert (await mgr.select_option("select", "opt1")).status == "success"
+        assert (await mgr.hover("div")).status == "success"
+        assert (await mgr.right_click("div")).status == "success"
+        assert (await mgr.drag_and_drop("a", "b")).status == "success"
+        assert (await mgr.check("input")).status == "success"
+        assert (await mgr.uncheck("input")).status == "success"
+        assert (await mgr.export_pdf()).status == "success"
+        assert (await mgr.download_file()).status == "success"
+        assert (await mgr.get_local_storage()).status == "success"
+        assert (await mgr.set_local_storage("k", "v")).status == "success"
+        assert (await mgr.clear_local_storage()).status == "success"
+
+
+class TestBrowserSecurityGating:
+    @pytest.mark.asyncio
+    async def test_security_gate_denies_high_risk_tool(self) -> None:
+        adapter = _MockAdapter()
+        sec_mgr = MagicMock()
+
+        async def mock_check(name: str, args: dict[str, Any]) -> Any:
+            check = MagicMock()
+            check.denied = True
+            check.reason = "High risk operation blocked by policy"
+            check.requires_confirmation = False
+            return check
+
+        sec_mgr.check_tool_execution = mock_check
+        mgr = BrowserManager(adapter=adapter, security_manager=sec_mgr)
+        await mgr.async_init()
+
+        res_js = await mgr.execute_js("alert(1)")
+        assert res_js.status == "error"
+        assert "Security denied" in res_js.error
+
+        res_dl = await mgr.download_file()
+        assert res_dl.status == "error"
+        assert "Security denied" in res_dl.error
+
+
 

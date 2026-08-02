@@ -12,16 +12,21 @@ from abc import ABC, abstractmethod
 
 from backend.modules.pc_control._types import (
     ApplicationLaunchResult,
+    BluetoothDevice,
     ClipboardContent,
     DisplayInfo,
     FileEntry,
     FileOpResult,
+    InstalledPackage,
+    PackageOpResult,
     Point,
     ProcessInfo,
     ScreenshotResult,
     ScreenSize,
     SystemMetrics,
+    UserAccount,
     VolumeInfo,
+    WifiNetwork,
     WindowInfo,
 )
 
@@ -628,4 +633,578 @@ class PCControlPort(ABC):
         A placeholder adapter (e.g. ``LocalPCControlAdapter``) returns
         ``False``; a fully-initialised pyautogui adapter returns
         ``True``.
+        """
+
+    # ------------------------------------------------------------------
+    # System Settings / Software / Accounts
+    # ------------------------------------------------------------------
+
+    # --- Wi-Fi ---
+    @abstractmethod
+    async def wifi_set_power(self, enabled: bool) -> None:
+        """Enable or disable Wi-Fi adapter.
+
+        Parameters
+        ----------
+        enabled : bool
+            ``True`` to enable, ``False`` to disable.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If Wi-Fi control is not supported on this platform.
+        """
+
+    @abstractmethod
+    async def wifi_get_power(self) -> bool:
+        """Get Wi-Fi power state.
+
+        Returns
+        -------
+        bool
+            ``True`` if Wi-Fi is enabled, ``False`` otherwise.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If Wi-Fi status is not available on this platform.
+        """
+
+    @abstractmethod
+    async def wifi_list_networks(self) -> list['WifiNetwork']:
+        """List available Wi-Fi networks.
+
+        Returns
+        -------
+        list[WifiNetwork]
+            List of detected Wi-Fi networks.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the scan fails.
+        PCControlUnsupportedPlatformError
+            If Wi-Fi scanning is not supported on this platform.
+        """
+
+    @abstractmethod
+    async def wifi_connect(self, ssid: str, password: str | None = None) -> None:
+        """Connect to a Wi-Fi network.
+
+        Parameters
+        ----------
+        ssid : str
+            Network SSID.
+        password : str | None
+            Network password (if required).
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the connection fails.
+        PCControlUnsupportedPlatformError
+            If Wi-Fi connection is not supported on this platform.
+        PCControlPermissionError
+            If insufficient privileges to change network settings.
+        """
+
+    # --- Bluetooth ---
+    @abstractmethod
+    async def bluetooth_set_power(self, enabled: bool) -> None:
+        """Enable or disable Bluetooth adapter.
+
+        Parameters
+        ----------
+        enabled : bool
+            ``True`` to enable, ``False`` to disable.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If Bluetooth control is not supported on this platform.
+        """
+
+    @abstractmethod
+    async def bluetooth_get_power(self) -> bool:
+        """Get Bluetooth power state.
+
+        Returns
+        -------
+        bool
+            ``True`` if Bluetooth is enabled, ``False`` otherwise.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If Bluetooth status is not available on this platform.
+        """
+
+    @abstractmethod
+    async def bluetooth_list_devices(self) -> list['BluetoothDevice']:
+        """List discoverable Bluetooth devices.
+
+        Returns
+        -------
+        list[BluetoothDevice]
+            List of discovered Bluetooth devices.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the scan fails.
+        PCControlUnsupportedPlatformError
+            If Bluetooth scanning is not supported on this platform.
+        """
+
+    @abstractmethod
+    async def bluetooth_pair(self, device_address: str, pin: str | None = None) -> None:
+        """Pair with a Bluetooth device.
+
+        Parameters
+        ----------
+        device_address : str
+            MAC address or identifier of the device to pair.
+        pin : str | None
+            PIN code for pairing (if required).
+
+        Raises
+        ------
+        PCControlExecutionError
+            If pairing fails.
+        PCControlUnsupportedPlatformError
+            If Bluetooth pairing is not supported on this platform.
+        PCControlPermissionError
+            If insufficient privileges to pair devices.
+        """
+
+    # --- Display ---
+    @abstractmethod
+    async def display_get_brightness(self) -> int:
+        """Get display brightness level.
+
+        Returns
+        -------
+        int
+            Brightness level as percentage (0-100).
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If brightness control is not supported on this platform.
+        """
+
+    @abstractmethod
+    async def display_set_brightness(self, level: int) -> None:
+        """Set display brightness level.
+
+        Parameters
+        ----------
+        level : int
+            Brightness level as percentage (0-100).
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If brightness control is not supported on this platform.
+        PCControlPermissionError
+            If insufficient privileges to change display settings.
+        """
+
+    @abstractmethod
+    async def display_get_resolution(self) -> tuple[int, int]:
+        """Get current display resolution.
+
+        Returns
+        -------
+        tuple[int, int]
+            Width and height in pixels.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If resolution query is not supported on this platform.
+        """
+
+    @abstractmethod
+    async def display_set_resolution(self, width: int, height: int) -> None:
+        """Set display resolution.
+
+        Parameters
+        ----------
+        width : int
+            Width in pixels.
+        height : int
+            Height in pixels.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If resolution change is not supported on this platform.
+        PCControlPermissionError
+            If insufficient privileges to change display settings.
+        """
+
+    @abstractmethod
+    async def display_list_resolutions(self) -> list[tuple[int, int]]:
+        """List supported display resolutions.
+
+        Returns
+        -------
+        list[tuple[int, int]]
+            List of supported (width, height) tuples.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If resolution enumeration is not supported on this platform.
+        """
+
+    @abstractmethod
+    async def display_set_night_light(self, enabled: bool) -> None:
+        """Enable or disable night light/blue light filter.
+
+        Parameters
+        ----------
+        enabled : bool
+            ``True`` to enable, ``False`` to disable.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If night light control is not supported on this platform.
+        PCControlPermissionError
+            If insufficient privileges to change display settings.
+        """
+
+    @abstractmethod
+    async def display_get_night_light(self) -> bool:
+        """Get night light/blue light filter state.
+
+        Returns
+        -------
+        bool
+            ``True`` if enabled, ``False`` otherwise.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If night light status is not available on this platform.
+        """
+
+    @abstractmethod
+    async def display_set_dark_mode(self, enabled: bool) -> None:
+        """Enable or disable dark mode.
+
+        Parameters
+        ----------
+        enabled : bool
+            ``True`` to enable, ``False`` to disable.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If dark mode control is not supported on this platform.
+        PCControlPermissionError
+            If insufficient privileges to change system appearance.
+        """
+
+    @abstractmethod
+    async def display_get_dark_mode(self) -> bool:
+        """Get dark mode state.
+
+        Returns
+        -------
+        bool
+            ``True`` if enabled, ``False`` otherwise.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If dark mode status is not available on this platform.
+        """
+
+    # --- Power Management ---
+    @abstractmethod
+    async def power_set_airplane_mode(self, enabled: bool) -> None:
+        """Enable or disable airplane mode.
+
+        Parameters
+        ----------
+        enabled : bool
+            ``True`` to enable, ``False`` to disable.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If airplane mode control is not supported on this platform.
+        PCControlPermissionError
+            If insufficient privileges to change network settings.
+        """
+
+    @abstractmethod
+    async def power_get_airplane_mode(self) -> bool:
+        """Get airplane mode state.
+
+        Returns
+        -------
+        bool
+            ``True`` if enabled, ``False`` otherwise.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If airplane mode status is not available on this platform.
+        """
+
+    @abstractmethod
+    async def power_set_do_not_disturb(self, enabled: bool) -> None:
+        """Enable or disable do not disturb/focus mode.
+
+        Parameters
+        ----------
+        enabled : bool
+            ``True`` to enable, ``False`` to disable.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If do not disturb control is not supported on this platform.
+        PCControlPermissionError
+            If insufficient privileges to change notification settings.
+        """
+
+    @abstractmethod
+    async def power_get_do_not_disturb(self) -> bool:
+        """Get do not disturb/focus mode state.
+
+        Returns
+        -------
+        bool
+            ``True`` if enabled, ``False`` otherwise.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If do not disturb status is not available on this platform.
+        """
+
+    # --- Software Management ---
+    @abstractmethod
+    async def software_list_installed(self) -> list['InstalledPackage']:
+        """List installed applications/packages.
+
+        Returns
+        -------
+        list[InstalledPackage]
+            List of installed packages.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        """
+
+    @abstractmethod
+    async def software_install(self, package: str) -> 'PackageOpResult':
+        """Install a software package.
+
+        Parameters
+        ----------
+        package : str
+            Package identifier or name to install.
+
+        Returns
+        -------
+        PackageOpResult
+            Result of the installation operation.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the installation fails.
+        PCControlUnsupportedPlatformError
+            If package installation is not supported on this platform.
+        PCControlPermissionError
+            If insufficient privileges to install software.
+        """
+
+    @abstractmethod
+    async def software_uninstall(self, package: str) -> 'PackageOpResult':
+        """Uninstall a software package.
+
+        Parameters
+        ----------
+        package : str
+            Package identifier or name to uninstall.
+
+        Returns
+        -------
+        PackageOpResult
+            Result of the uninstallation operation.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the uninstallation fails.
+        PCControlUnsupportedPlatformError
+            If package uninstallation is not supported on this platform.
+        PCControlPermissionError
+            If insufficient privileges to uninstall software.
+        """
+
+    @abstractmethod
+    async def software_check_update(self, package: str) -> bool:
+        """Check if updates are available for a package.
+
+        Parameters
+        ----------
+        package : str
+            Package identifier or name to check.
+
+        Returns
+        -------
+        bool
+            ``True`` if an update is available, ``False`` otherwise.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the check fails.
+        PCControlUnsupportedPlatformError
+            If update checking is not supported on this platform.
+        """
+
+    # --- User Account Management ---
+    @abstractmethod
+    async def account_list_users(self) -> list['UserAccount']:
+        """List local user accounts.
+
+        Returns
+        -------
+        list[UserAccount]
+            List of user accounts.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        """
+
+    @abstractmethod
+    async def account_get_current_user(self) -> 'UserAccount':
+        """Get current logged-in user information.
+
+        Returns
+        -------
+        UserAccount
+            Current user information.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        """
+
+    @abstractmethod
+    async def account_create_user(self, username: str, password: str | None = None) -> 'UserAccount':
+        """Create a new standard local user account.
+
+        Parameters
+        ----------
+        username : str
+            Username for the new account.
+        password : str | None
+            Initial password (if None, a passwordless account may be created where supported).
+
+        Returns
+        -------
+        UserAccount
+            Information about the created account.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the account creation fails.
+        PCControlUnsupportedPlatformError
+            If user account creation is not supported on this platform.
+        PCControlPermissionError
+            If insufficient privileges to create user accounts.
+        """
+
+    @abstractmethod
+    async def account_set_enabled(self, username: str, enabled: bool) -> None:
+        """Enable or disable a user account.
+
+        Parameters
+        ----------
+        username : str
+            Username of the account to modify.
+        enabled : bool
+            ``True`` to enable, ``False`` to disable.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If account enable/disable is not supported on this platform.
+        PCControlPermissionError
+            If insufficient privileges to modify user accounts.
+        """
+
+    @abstractmethod
+    async def account_modify_groups(self, username: str, add: list[str] | None = None, remove: list[str] | None = None) -> None:
+        """Add or remove a user from groups.
+
+        Parameters
+        ----------
+        username : str
+            Username of the account to modify.
+        add : list[str] | None
+            List of group names to add the user to.
+        remove : list[str] | None
+            List of group names to remove the user from.
+
+        Raises
+        ------
+        PCControlExecutionError
+            If the operation fails.
+        PCControlUnsupportedPlatformError
+            If group modification is not supported on this platform.
+        PCControlPermissionError
+            If insufficient privileges to modify user group memberships.
         """

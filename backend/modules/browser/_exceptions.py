@@ -43,8 +43,21 @@ class BrowserNotImplementedError(BrowserError):
     to signal that the real implementation has not been wired yet.
     """
 
-    def __init__(self, context: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        message: str = "Browser adapter not available — no Playwright/Selenium driver configured",
+        context: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(
-            "Browser adapter not available — no Playwright/Selenium driver configured",
+            message,
             context=context,
         )
+
+
+class BrowserDownloadError(BrowserError):
+    """A browser file download operation failed."""
+
+
+class BrowserPermissionError(BrowserError):
+    """Operation denied by browser security/sandbox policy."""
+

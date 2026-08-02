@@ -95,16 +95,25 @@ This document defines the strict boundaries, single responsibilities, and lightw
   * Uses lightweight OCR wrappers and relies on Gemini Vision API for deep visual understanding to keep local CPU processing low.
 
 ### C. Browser Module
-* **Purpose:** Automates dynamic web-searches and actions.
+* **Purpose:** Automates dynamic web-searches, deep page interactions, tab management, storage, and file operations.
 * **Responsibilities:**
-  * Uses headless, lightweight scraper mechanisms (e.g., Playwright) to retrieve search contexts.
-  * Lazily loads browser drivers only during active scraping cycles to save ~250MB RAM when idle.
+  * **Headless Scraper & Automation:** Uses Playwright to navigate, search, click, fill, scroll, hover, right-click, select options, check/uncheck elements, and extract structured page text.
+  * **Tab & History Management:** Multi-tab lifecycle management (`new_tab`, `close_tab`, `list_tabs`, `switch_tab`, `back`, `forward`, `reload`).
+  * **Cookies & Web Storage:** Read/write/clear cookies, LocalStorage, and SessionStorage with security gating for write operations.
+  * **File Operations & PDF Export:** Sandboxed file downloads via `PathValidator` (`_downloads.py`), PDF export in headless Chromium, and file upload via selector.
+  * **Security Gating & Execution:** High-risk actions (`browser_execute_js`, `browser_download_file`, cookie/storage writes) are security-gated through `security_manager`.
+  * **Multi-Engine & Profile Persistence:** Supports Chromium, Firefox, and WebKit engines and persistent user profiles via `user_data_dir`.
+  * **Memory Management:** Lazily loads browser drivers only during active scraping cycles to save ~250MB RAM when idle.
 
 ### D. PC Control & File Manager Modules
 * **Purpose:** Safe OS automation wrappers.
 * **Responsibilities:**
   * Performs local automation actions (launching approved apps, modifying files within restricted user directories).
   * Enforces sandboxed paths; blocks any modifications to Windows system directories or standard registries.
+  * **System Settings:** Wi-Fi power/scan/connect, Bluetooth power/scan/pair, display brightness/resolution/night-light/dark-mode, airplane mode, and Do-Not-Disturb toggles (`PCSystemSettings`).
+  * **Software Management:** Installed-package inventory plus install/uninstall/update-check via the native package manager (`PCSoftwareManager`).
+  * **User Account Management:** List/current-user/create/enable-disable/group-membership operations (`PCAccountManager`).
+  * All new operations follow the module's hexagonal-architecture convention: the port (`PCControlPort`) declares the async contract, the placeholder adapter (`LocalPCControlAdapter`) raises `PCControlNotImplementedError`, and the production adapter dispatches per-OS via subprocess helpers. Destructive operations (account/package/Wi-Fi connect/Bluetooth pair) are gated by the sandbox and security policy (`config/security_policy.json`).
 
 ---
 

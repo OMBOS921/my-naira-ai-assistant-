@@ -693,6 +693,282 @@ These rules cannot be overridden, deprecated, or relaxed without a documented ar
 
 ---
 
+## 26. PC Control Port Contracts
+
+The PC Control module (`backend/modules/pc_control/`) provides OS automation and system-settings manipulation through a hexagonal port/adapter architecture. The `PCControlPort` ABC (`backend/modules/pc_control/ports/pc_control_port.py`) is the sole contract boundary; all adapters implement this ABC.
+
+### 26.1 Port Overview
+
+26.1.1. **Canonical Port:** `PCControlPort` (ABC in `backend/modules/pc_control/ports/pc_control_port.py`).
+
+26.1.2. **Adapters:**
+- `LocalPCControlAdapter` — placeholder; `is_available` returns `False`, all methods raise `PCControlNotImplementedError`.
+- `ProductionPCControlAdapter` — real driver-backed adapter; dispatches per-OS via `platform.system()` and subprocess helpers.
+
+26.1.3. **Execution Layer:** `PCControlExecutor` wraps every port method with `asyncio.wait_for()` timeout and `ToolResult` error isolation. `PCControlManager` delegates to the executor for all public API calls.
+
+26.1.4. **Component Delegators:** Thin classes (`PCMouse`, `PCKeyboard`, `PCClipboard`, `PCFilesystem`, `PCWindowManager`, `PCProcessManager`, `PCApplicationLauncher`, `PCNotification`, `PCPower`, `PCVolume`, `PCScreen`, `PCSystemSettings`, `PCSoftwareManager`, `PCAccountManager`) each take a `PCControlPort` and forward calls. These exist for logical grouping; they add no business logic.
+
+### 26.2 Method Groups
+
+The port is organised into clearly delimited sections. Every method is `async`.
+
+#### Desktop Automation (pre-existing)
+
+| Group | Methods |
+|---|---|
+| Mouse | `mouse_get_position`, `mouse_move_to`, `mouse_click`, `mouse_double_click`, `mouse_right_click`, `mouse_drag`, `mouse_scroll` |
+| Keyboard | `keyboard_type_text`, `keyboard_press_key`, `keyboard_hotkey` |
+| Clipboard | `clipboard_get_text`, `clipboard_set_text`, `clipboard_clear` |
+| Filesystem | `filesystem_list_directory`, `filesystem_read_file`, `filesystem_write_file`, `filesystem_delete_file`, `filesystem_create_directory`, `filesystem_delete_directory`, `filesystem_zip_directory`, `filesystem_extract_archive`, `filesystem_copy_item`, `filesystem_move_item` |
+| Windows | `window_list`, `window_get_active`, `window_focus`, `window_minimize`, `window_maximize`, `window_close`, `window_resize`, `window_move` |
+| Processes | `process_list`, `process_kill` |
+| App Launch | `launch_application` |
+| Notifications | `notification_show` |
+| Power | `power_shutdown`, `power_restart`, `power_sleep`, `power_hibernate`, `power_lock` |
+| Volume | `volume_get`, `volume_set`, `volume_mute` |
+| Screen | `screen_get_size`, `screen_capture`, `screen_list_displays` |
+| System Metrics | `get_system_metrics`, `get_open_ports` |
+
+#### System Settings (Phase 4.2)
+
+| Sub-group | Methods | Parameters / Return |
+|---|---|---|
+| Wi-Fi | `wifi_set_power(enabled: bool)` | Toggle adapter on/off |
+| | `wifi_get_power() → bool` | Current power state |
+| | `wifi_list_networks() → list[WifiNetwork]` | Scan nearby SSIDs |
+| | `wifi_connect(ssid, password?)` | Connect to a network |
+| Bluetooth | `bluetooth_set_power(enabled: bool)` | Toggle adapter on/off |
+| | `bluetooth_get_power() → bool` | Current power state |
+| | `bluetooth_list_devices() → list[BluetoothDevice]` | Scan/list paired devices |
+| | `bluetooth_pair(device_address, pin?)` | Pair with a device |
+| Display | `display_get_brightness() → int` | 0–100 percentage |
+| | `display_set_brightness(level: int)` | Set brightness |
+| | `display_get_resolution() → tuple[int, int]` | Current width×height |
+| | `display_set_resolution(width, height)` | Change resolution |
+| | `display_list_resolutions() → list[tuple[int,int]]` | Supported modes |
+| | `display_set_night_light(enabled: bool)` | Blue-light filter |
+| | `display_get_night_light() → bool` | Current state |
+| | `display_set_dark_mode(enabled: bool)` | System dark theme |
+| | `display_get_dark_mode() → bool` | Current state |
+| Power Settings | `power_set_airplane_mode(enabled: bool)` | Radio kill-switch |
+| | `power_get_airplane_mode() → bool` | Current state |
+| | `power_set_do_not_disturb(enabled: bool)` | Focus/DND mode |
+| | `power_get_do_not_disturb() → bool` | Current state |
+
+#### Software Management (Phase 4.2)
+
+| Method | Parameters / Return |
+|---|---|
+| `software_list_installed() → list[InstalledPackage]` | Inventory of installed packages |
+| `software_install(package: str) → PackageOpResult` | Install via native package manager |
+| `software_uninstall(package: str) → PackageOpResult` | Uninstall via native package manager |
+| `software_check_update(package: str) → bool` | Check if update available |
+
+#### User Account Management (Phase 4.2)
+
+| Method | Parameters / Return |
+|---|---|
+| `account_list_users() → list[UserAccount]` | All local user accounts |
+| `account_get_current_user() → UserAccount` | Currently logged-in user |
+| `account_create_user(username, password?) → UserAccount` | Create standard (non-admin) local user |
+| `account_set_enabled(username, enabled: bool)` | Enable/disable an account |
+| `account_modify_groups(username, add?, remove?)` | Change group membership |
+
+### 26.3 Type Contracts
+
+All types are frozen `@dataclass` (immutable) unless explicitly mutable. Defined in `backend/modules/pc_control/_types.py`.
+
+```
+WifiNetwork:
+    ssid: str
+    signal_strength: int  # 0–100
+    secured: bool
+
+BluetoothDevice:
+    name: str
+    address: str          # MAC address
+    paired: bool
+    trusted: bool
+
+DisplaySettings:
+    brightness: int       # 0–100
+    width: int
+    height: int
+    refresh_rate: float
+
+InstalledPackage:
+    name: str
+    version: str
+    publisher: str
+    install_date: str     # ISO format
+
+PackageOpResult:          # @dataclass (mutable)
+    success: bool
+    package: str
+    message: str
+
+UserAccount:
+    username: str
+    full_name: str
+    enabled: bool
+    admin: bool
+```
+
+### 26.4 Exception Hierarchy
+
+All exceptions inherit from `PCControlError` → `NairaError`.
+
+| Exception | Semantics |
+|---|---|
+| `PCControlUnsupportedPlatformError` | The operation is not supported on the current OS or the required hardware (e.g. Bluetooth adapter) is absent. |
+| `PCControlPackageManagerNotFoundError` | No supported package manager (winget/apt/dnf/pacman/brew) was detected on the system. |
+| `PCControlNotImplementedError` | Raised by the placeholder adapter to signal no real driver is configured. |
+| `PCControlPermissionError` | The operation was denied by the sandbox or security policy. |
+| `PCControlExecutionError` | A subprocess or OS call failed during execution. |
+| `PCControlTimeoutError` | The operation exceeded its timeout. |
+
+### 26.5 Cross-Platform Dispatch Pattern
+
+26.5.1. The `ProductionPCControlAdapter` detects the host OS at runtime via `platform.system()` and dispatches to OS-specific private helpers within each method's synchronous closure.
+
+26.5.2. **OS-specific CLI tools used:**
+
+| Capability | Windows | macOS | Linux |
+|---|---|---|---|
+| Wi-Fi | `netsh wlan` / `netsh interface` | `networksetup` | `nmcli` |
+| Bluetooth | *(unsupported)* | `blueutil` | `bluetoothctl` |
+| Display brightness | `powershell WmiSetBrightness` | `brightness` CLI | `xrandr` / `brightnessctl` |
+| Display resolution | `powershell Set-DisplayResolution` | *(not implemented)* | `xrandr` |
+| Night light | Registry (`reg add/query`) | *(not implemented)* | `redshift` |
+| Dark mode | Registry | `defaults write` | `gsettings` |
+| Airplane mode | Registry / `netsh` | `networksetup` | `nmcli radio all` |
+| DND | Registry (Focus Assist) | `defaults write` | `gsettings` |
+| Package manager | `winget` | `brew` | `apt` / `dpkg-query` |
+| User accounts | `net user` / `net localgroup` | `dscl` / `sysadminctl` / `dseditgroup` | `useradd` / `usermod` / `gpasswd` |
+
+26.5.3. **Subprocess safety:** Every external command is executed via `subprocess.run(capture_output=True, text=True, timeout=30)`. `subprocess.TimeoutExpired` maps to `PCControlExecutionError`. `OSError` maps to `PCControlExecutionError`. Non-zero exit codes are checked by `_check_cmd()` and raise `PCControlExecutionError`. Raw `CalledProcessError` must never propagate.
+
+26.5.4. **Unsupported platform fallback:** When `platform.system()` returns an unrecognised value, methods raise `PCControlUnsupportedPlatformError` via the `_unsupported()` helper. macOS methods that are not yet implemented raise `PCControlNotImplementedError` rather than silently failing.
+
+### 26.6 Security Gating
+
+26.6.1. **Dangerous operations set:** The `ProductionPCControlAdapter.DANGEROUS_OPERATIONS` frozenset includes: `wifi_connect`, `bluetooth_pair`, `software_install`, `software_uninstall`, `account_create_user`, `account_set_enabled`, `account_modify_groups` (in addition to pre-existing power/kill/delete operations). These require the operation name to be in the `allowed_commands` tuple when `sandbox_enabled` is `True`.
+
+26.6.2. **Security policy rules** (`config/security_policy.json`):
+
+| Tool Pattern | Mode | Risk Level | Requires Approval |
+|---|---|---|---|
+| `pc_software` | confirm | high | Yes |
+| `pc_account` | admin | high | Yes |
+| `pc_wifi` | confirm | high | Yes |
+| `pc_bluetooth` | confirm | high | Yes |
+| `pc_display` | confirm | medium | No |
+| `pc_system_settings` | confirm | medium | No |
+
+26.6.3. **Risk analyzer integration:** `pc_account`, `pc_software`, `pc_wifi`, `pc_bluetooth` are classified as HIGH risk tools. `pc_display`, `pc_system_settings` are MEDIUM risk. Dangerous argument combinations (e.g., `pc_account` + `create_user`) escalate to HIGH.
+
+26.6.4. **Sandbox allow/deny lists:** Read-only operations (`wifi_get_power`, `wifi_list_networks`, `bluetooth_get_power`, `bluetooth_list_devices`, `display_get_*`, `power_get_*`, `software_list_installed`, `software_check_update`, `account_list_users`, `account_get_current_user`) are in the sandbox allowed list. All mutating operations are in the denied list and require explicit security approval.
+
+26.6.5. **Explicit non-goals:** The PC Control module must NOT: bypass OS authentication/UAC/sudo prompts, disable security software or firewalls, perform remote or unattended privilege escalation, or weaken existing security policy tiers for other modules.
+
+### 26.7 Lifecycle
+
+26.7.1. `PCControlPort.close()` releases all driver resources. Implementations must be idempotent.
+
+26.7.2. `PCControlPort.is_available` returns `True` only when the adapter is operational and not closed.
+
+26.7.3. On platforms where a sub-capability genuinely cannot be supported (no Bluetooth adapter, no supported package manager), individual methods fail gracefully with `PCControlUnsupportedPlatformError` — the adapter does not crash or mark itself unavailable.
+
+---
+
+## 27. Browser Port & Automation Contracts
+
+### 27.1 Overview & Architecture
+
+27.1.1. The **Browser Module** (`backend/modules/browser/`) provides web navigation, search, automated page interaction, multi-tab session management, cookie/storage persistence, PDF export, and sandboxed file download capabilities for Naira OS.
+
+27.1.2. Architecture follows strict **hexagonal / ports-and-adapters** design. `BrowserManager` (`browser_module.py`) is the **ONLY public class** in the module. All internal automation logic delegates to an abstract `BrowserPort` implementation (`PlaywrightBrowserAdapter` or fallback `LocalBrowserAdapter`).
+
+### 27.2 Capability & Method Contracts
+
+`BrowserPort` defines the complete abstract port interface:
+
+| Method | Parameters | Return Type | Description |
+|---|---|---|---|
+| `navigate` | `url: str`, `timeout: float = 30.0`, `extract_content: bool = True`, `extra_http_headers: dict \| None = None`, `http_credentials: tuple \| None = None` | `BrowserPage` | Navigates to target URL and captures page snapshot. |
+| `search` | `query: str`, `max_results: int = 10`, `timeout: float = 30.0` | `BrowserSearchResponse` | Performs search using primary/fallback selector chains. |
+| `extract` | `url: str`, `timeout: float = 30.0` | `BrowserPage` | Fast static DOM content extraction. |
+| `screenshot` | `url: str = ""`, `timeout: float = 30.0` | `bytes` | Captures active or specified page screenshot. |
+| `back` | `timeout: float \| None = None` | `BrowserPage` | Navigates backward in tab history. |
+| `forward` | `timeout: float \| None = None` | `BrowserPage` | Navigates forward in tab history. |
+| `reload` | `timeout: float \| None = None` | `BrowserPage` | Reloads current page tab. |
+| `new_tab` | `url: str = "about:blank"` | `str` | Opens new tab and returns tab identifier. |
+| `close_tab` | `page_id: str \| None = None` | `None` | Closes specified or active tab. |
+| `list_tabs` | None | `list[dict]` | Returns metadata for all open tabs. |
+| `switch_tab` | `page_id: str` | `None` | Switches active tab context. |
+| `get_cookies` | `urls: list[str] \| None = None` | `list[dict]` | Retrieves active browser cookies. |
+| `set_cookies` | `cookies: list[dict]` | `None` | Sets cookies in browser context. |
+| `clear_cookies` | None | `None` | Clears all cookies from browser context. |
+| `upload_file` | `selector: str`, `file_paths: str \| list[str]` | `None` | Uploads file(s) to file input element. |
+| `press_key` | `key: str`, `selector: str \| None = None` | `None` | Presses key on element or active page body. |
+| `wait_for_selector` | `selector: str`, `state: str = "visible"`, `timeout: float = 30.0` | `None` | Explicitly waits for element visibility/actionability. |
+| `select_option` | `selector: str`, `value: str \| list[str]`, `timeout: float = 30.0` | `None` | Selects option(s) in dropdown element. |
+| `hover` | `selector: str`, `timeout: float = 30.0` | `None` | Hovers mouse cursor over element matching selector. |
+| `right_click` | `selector: str`, `timeout: float = 30.0` | `None` | Right-clicks target element. |
+| `drag_and_drop` | `source_selector: str`, `target_selector: str`, `timeout: float = 30.0` | `None` | Drags source element and drops onto target element. |
+| `check` | `selector: str`, `timeout: float = 30.0` | `None` | Checks checkbox or radio input element. |
+| `uncheck` | `selector: str`, `timeout: float = 30.0` | `None` | Unchecks checkbox input element. |
+| `export_pdf` | `save_path: str = ""`, `timeout: float = 30.0` | `str` | Exports page as PDF (headless Chromium only). |
+| `wait_for_download` | `timeout: float = 30.0` | `DownloadResult` | Waits for file download event and saves to sandboxed path. |
+| `get_local_storage` | `key: str \| None = None` | `str` | Retrieves LocalStorage content or key. |
+| `set_local_storage` | `key: str`, `value: str` | `None` | Sets LocalStorage key-value pair. |
+| `clear_local_storage` | None | `None` | Clears LocalStorage for active origin. |
+| `get_session_storage` | `key: str \| None = None` | `str` | Retrieves SessionStorage content or key. |
+| `set_session_storage` | `key: str`, `value: str` | `None` | Sets SessionStorage key-value pair. |
+| `clear_session_storage` | None | `None` | Clears SessionStorage for active origin. |
+
+### 27.3 Data Contracts & Types
+
+27.3.1. `BrowserPage` (`dataclass(frozen=True)`): Immutable page snapshot containing `url`, `title`, `content` (extracted plain text), `html`, `status_code`, and `headers`.
+
+27.3.2. `BrowserTab` (`dataclass(frozen=True)`): Metadata representing a browser tab (`id`, `url`, `title`, `created_at`, `last_active_at`).
+
+27.3.3. `DownloadResult` (`dataclass(frozen=True)`): File download outcome (`path`, `suggested_filename`, `size_bytes`, `url`).
+
+### 27.4 Exception Hierarchy
+
+All browser exceptions inherit from `BrowserError` (`NairaError`):
+
+```
+NairaError
+└── BrowserError
+    ├── BrowserNavigationError
+    ├── BrowserSearchError
+    ├── BrowserContentError
+    ├── BrowserTimeoutError
+    ├── BrowserSessionError
+    ├── BrowserNotImplementedError
+    ├── BrowserDownloadError
+    └── BrowserPermissionError
+```
+
+### 27.5 Security Gating & Path Sandboxing
+
+27.5.1. High-risk browser tools (`browser_execute_js`, `browser_download_file`, `browser_set_cookies`, `browser_clear_cookies`, `browser_set_local_storage`, `browser_clear_local_storage`, `browser_set_session_storage`, `browser_clear_session_storage`, `browser_upload_file`) are registered in `_HIGH_RISK_TOOLS` (`_risk_analyzer.py`) and `_SANDBOX_DENIED_ACTIONS` (`_sandbox_manager.py`).
+
+27.5.2. `BrowserManager` routes high-risk tool invocations through `security_manager.check_tool_execution()`. Denied or unconfirmed actions return error `ToolResult` with security policy context.
+
+27.5.3. All file download operations sanitize target paths using `BrowserDownloader` and validate security boundary rules using `PathValidator` (`backend/modules/security/_path_validator.py`).
+
+### 27.6 Engine & Profile Configuration
+
+27.6.1. Supports Chromium, Firefox, and WebKit browser engines via `browser_engine` configuration parameter.
+
+27.6.2. Persistent browser profiles (cookies, cache, sessions across boots) are supported via `user_data_dir` configuration.
+
+---
+
 ## Architecture Version
 
 | Property | Value |
@@ -711,10 +987,10 @@ These rules cannot be overridden, deprecated, or relaxed without a documented ar
 | Property | Value |
 |---|---|
 | Document | 21_System_Contracts.md |
-| Version | 1.0.0 |
+| Version | 1.2.0 |
 | Status | Ratified |
 | Author | Lead Architect |
-| Ratification Date | Phase 0.5 |
+| Ratification Date | Phase 4.2 |
 
 ## Compatibility
 
@@ -728,4 +1004,6 @@ This document is compatible with:
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
+| 1.2.0 | 2026-08-02 | Lead Architect | Added §27 Browser Port & Automation Contracts — documenting full Playwright browser automation, element interactions, storage, PDF export, sandboxed downloads, and security gating. |
+| 1.1.0 | 2026-08-02 | Lead Architect | Added §26 PC Control Port Contracts — documenting system settings, software management, and user account management capability surface. |
 | 1.0.0 | 2026-07-12 | Lead Architect | Initial ratification. Canonical rules consolidated from Phase 0.5 documentation. |

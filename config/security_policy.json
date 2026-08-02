@@ -22,6 +22,54 @@
       "require_approval": true
     },
     {
+      "tool_pattern": "pc_software",
+      "mode": "confirm",
+      "risk_level": "high",
+      "require_approval": true
+    },
+    {
+      "tool_pattern": "pc_account",
+      "mode": "admin",
+      "risk_level": "high",
+      "require_approval": true
+    },
+    {
+      "tool_pattern": "pc_wifi",
+      "mode": "confirm",
+      "risk_level": "high",
+      "require_approval": true
+    },
+    {
+      "tool_pattern": "pc_bluetooth",
+      "mode": "confirm",
+      "risk_level": "high",
+      "require_approval": true
+    },
+    {
+      "tool_pattern": "pc_display",
+      "mode": "confirm",
+      "risk_level": "medium",
+      "require_approval": false
+    },
+    {
+      "tool_pattern": "pc_system_settings",
+      "mode": "confirm",
+      "risk_level": "medium",
+      "require_approval": false
+    },
+    {
+      "tool_pattern": "browser_execute_js",
+      "mode": "confirm",
+      "risk_level": "high",
+      "require_approval": true
+    },
+    {
+      "tool_pattern": "browser_download_file",
+      "mode": "confirm",
+      "risk_level": "high",
+      "require_approval": true
+    },
+    {
       "tool_pattern": "format_drive",
       "mode": "deny",
       "risk_level": "critical",

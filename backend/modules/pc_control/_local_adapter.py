@@ -15,16 +15,21 @@ import logging
 from backend.modules.pc_control._exceptions import PCControlNotImplementedError
 from backend.modules.pc_control._types import (
     ApplicationLaunchResult,
+    BluetoothDevice,
     ClipboardContent,
     DisplayInfo,
     FileEntry,
     FileOpResult,
+    InstalledPackage,
+    PackageOpResult,
     Point,
     ProcessInfo,
     ScreenshotResult,
     ScreenSize,
     SystemMetrics,
+    UserAccount,
     VolumeInfo,
+    WifiNetwork,
     WindowInfo,
 )
 from backend.modules.pc_control.ports.pc_control_port import PCControlPort
@@ -270,6 +275,157 @@ class LocalPCControlAdapter(PCControlPort):
 
     async def get_open_ports(self) -> list[int]:
         raise PCControlNotImplementedError(context={"operation": "get_open_ports"})
+
+    # ------------------------------------------------------------------
+    # System Settings / Software / Accounts
+    # ------------------------------------------------------------------
+
+    async def wifi_set_power(self, enabled: bool) -> None:
+        raise PCControlNotImplementedError(
+            context={"operation": "wifi_set_power", "enabled": enabled}
+        )
+
+    async def wifi_get_power(self) -> bool:
+        raise PCControlNotImplementedError(context={"operation": "wifi_get_power"})
+
+    async def wifi_list_networks(self) -> list[WifiNetwork]:
+        raise PCControlNotImplementedError(context={"operation": "wifi_list_networks"})
+
+    async def wifi_connect(self, ssid: str, password: str | None = None) -> None:
+        raise PCControlNotImplementedError(
+            context={"operation": "wifi_connect", "ssid": ssid}
+        )
+
+    async def bluetooth_set_power(self, enabled: bool) -> None:
+        raise PCControlNotImplementedError(
+            context={"operation": "bluetooth_set_power", "enabled": enabled}
+        )
+
+    async def bluetooth_get_power(self) -> bool:
+        raise PCControlNotImplementedError(context={"operation": "bluetooth_get_power"})
+
+    async def bluetooth_list_devices(self) -> list[BluetoothDevice]:
+        raise PCControlNotImplementedError(
+            context={"operation": "bluetooth_list_devices"}
+        )
+
+    async def bluetooth_pair(self, device_address: str, pin: str | None = None) -> None:
+        raise PCControlNotImplementedError(
+            context={"operation": "bluetooth_pair", "device_address": device_address}
+        )
+
+    async def display_get_brightness(self) -> int:
+        raise PCControlNotImplementedError(
+            context={"operation": "display_get_brightness"}
+        )
+
+    async def display_set_brightness(self, level: int) -> None:
+        raise PCControlNotImplementedError(
+            context={"operation": "display_set_brightness", "level": level}
+        )
+
+    async def display_get_resolution(self) -> tuple[int, int]:
+        raise PCControlNotImplementedError(
+            context={"operation": "display_get_resolution"}
+        )
+
+    async def display_set_resolution(self, width: int, height: int) -> None:
+        raise PCControlNotImplementedError(
+            context={"operation": "display_set_resolution"}
+        )
+
+    async def display_list_resolutions(self) -> list[tuple[int, int]]:
+        raise PCControlNotImplementedError(
+            context={"operation": "display_list_resolutions"}
+        )
+
+    async def display_set_night_light(self, enabled: bool) -> None:
+        raise PCControlNotImplementedError(
+            context={"operation": "display_set_night_light", "enabled": enabled}
+        )
+
+    async def display_get_night_light(self) -> bool:
+        raise PCControlNotImplementedError(
+            context={"operation": "display_get_night_light"}
+        )
+
+    async def display_set_dark_mode(self, enabled: bool) -> None:
+        raise PCControlNotImplementedError(
+            context={"operation": "display_set_dark_mode", "enabled": enabled}
+        )
+
+    async def display_get_dark_mode(self) -> bool:
+        raise PCControlNotImplementedError(
+            context={"operation": "display_get_dark_mode"}
+        )
+
+    async def power_set_airplane_mode(self, enabled: bool) -> None:
+        raise PCControlNotImplementedError(
+            context={"operation": "power_set_airplane_mode", "enabled": enabled}
+        )
+
+    async def power_get_airplane_mode(self) -> bool:
+        raise PCControlNotImplementedError(
+            context={"operation": "power_get_airplane_mode"}
+        )
+
+    async def power_set_do_not_disturb(self, enabled: bool) -> None:
+        raise PCControlNotImplementedError(
+            context={"operation": "power_set_do_not_disturb", "enabled": enabled}
+        )
+
+    async def power_get_do_not_disturb(self) -> bool:
+        raise PCControlNotImplementedError(
+            context={"operation": "power_get_do_not_disturb"}
+        )
+
+    async def software_list_installed(self) -> list[InstalledPackage]:
+        raise PCControlNotImplementedError(
+            context={"operation": "software_list_installed"}
+        )
+
+    async def software_install(self, package: str) -> PackageOpResult:
+        raise PCControlNotImplementedError(
+            context={"operation": "software_install", "package": package}
+        )
+
+    async def software_uninstall(self, package: str) -> PackageOpResult:
+        raise PCControlNotImplementedError(
+            context={"operation": "software_uninstall", "package": package}
+        )
+
+    async def software_check_update(self, package: str) -> bool:
+        raise PCControlNotImplementedError(
+            context={"operation": "software_check_update", "package": package}
+        )
+
+    async def account_list_users(self) -> list[UserAccount]:
+        raise PCControlNotImplementedError(context={"operation": "account_list_users"})
+
+    async def account_get_current_user(self) -> UserAccount:
+        raise PCControlNotImplementedError(
+            context={"operation": "account_get_current_user"}
+        )
+
+    async def account_create_user(self, username: str, password: str | None = None) -> UserAccount:
+        raise PCControlNotImplementedError(
+            context={"operation": "account_create_user", "username": username}
+        )
+
+    async def account_set_enabled(self, username: str, enabled: bool) -> None:
+        raise PCControlNotImplementedError(
+            context={"operation": "account_set_enabled", "username": username}
+        )
+
+    async def account_modify_groups(
+        self,
+        username: str,
+        add: list[str] | None = None,
+        remove: list[str] | None = None,
+    ) -> None:
+        raise PCControlNotImplementedError(
+            context={"operation": "account_modify_groups", "username": username}
+        )
 
     # ------------------------------------------------------------------
     # Lifecycle
