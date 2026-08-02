@@ -11,6 +11,8 @@ val CyberNeonCyan = Color(0xFF00FFD1)
 val CyberNeonCyanDark = Color(0xFF00B392)
 
 val CyberAlertPink = Color(0xFFFF2D55)
+val CyberAlertRed = Color(0xFFFF1744)
+val CyberWarningYellow = Color(0xFFFFB800)
 val CyberSecondaryPurple = Color(0xFF7B2FBE)
 val CyberSecondaryPurpleLight = Color(0xFFA855F7)
 
