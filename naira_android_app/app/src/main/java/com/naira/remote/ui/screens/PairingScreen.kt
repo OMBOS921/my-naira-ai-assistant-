@@ -349,7 +349,7 @@ private fun processPairingQr(rawJson: String): PairingResult {
             else -> null
         }
 
-        if (masterKey.isNull_or_blank() || ngrokUrl.isNull_or_blank() || timestamp == null) {
+        if (masterKey == null || masterKey.isBlank() || ngrokUrl == null || ngrokUrl.isBlank() || timestamp == null) {
             return PairingResult(false, "INVALID QR // Missing required keys in JSON payload")
         }
 

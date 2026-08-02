@@ -58,7 +58,7 @@ class RiskEngine(
             val timestamp = json.optLong("timestamp", 0L)
             val commandId = json.optString("command_id", System.currentTimeMillis().toString())
 
-            val secretKey = CryptoVault.getHmacSecretKey()
+            val secretKey = CryptoVault.getHmacSecretKey() ?: ""
 
             // 1. Verify HMAC signature & nonce replay window
             val payloadToVerify = "$actionType:$nonce:$timestamp"

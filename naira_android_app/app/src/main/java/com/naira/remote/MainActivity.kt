@@ -48,7 +48,7 @@ class MainActivity : FragmentActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate()
+        super.onCreate(savedInstanceState)
 
         // Startup Anti-Tamper Signing Certificate Verification Check
         verifyAppSigningCertificateHash()
