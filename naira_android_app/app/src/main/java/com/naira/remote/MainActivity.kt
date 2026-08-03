@@ -47,6 +47,20 @@ class MainActivity : FragmentActivity() {
             }
         }
 
+    private val requestCameraPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (!isGranted) {
+                Toast.makeText(this, "Camera permission is required for QR pairing", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+    private val requestRecordAudioPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (!isGranted) {
+                Toast.makeText(this, "Microphone permission is required for voice control", Toast.LENGTH_SHORT).show()
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -56,14 +70,18 @@ class MainActivity : FragmentActivity() {
         // Doze Mode Battery Optimization Exemption Check
         requestIgnoreBatteryOptimizations()
 
-        // Check Android 13+ (API 33+) POST_NOTIFICATIONS runtime permission
+        // Request runtime permissions immediately on app open
         requestNotificationPermission()
+        requestCameraPermission()
+        requestRecordAudioPermission()
 
         // Initialize Android Keystore Vault & Encrypted SharedPreferences
         CryptoVault.init(this)
 
-        // Start Naira persistent foreground daemon
-        NairaForegroundService.startService(this)
+        // Start Naira persistent foreground daemon ONLY if paired
+        if (CryptoVault.isPaired()) {
+            NairaForegroundService.startService(this)
+        }
 
         setContent {
             NairaTheme {
@@ -77,6 +95,18 @@ class MainActivity : FragmentActivity() {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
+        }
+    }
+
+    private fun requestCameraPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    private fun requestRecordAudioPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestRecordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
     }
 

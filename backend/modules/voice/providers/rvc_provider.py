@@ -189,10 +189,17 @@ class RVCProvider(TTSPort):
         # Step 2: Check if RVC model file exists
         if not resolved_model.exists():
             self._logger.warning(
-                "RVC model file not found at %s. Returning base EdgeTTS audio.",
+                "RVC model file not found at %s. Returning base EdgeTTS audio "
+                "(used_rvc=False — this is a fallback, NOT the trained voice).",
                 resolved_model,
             )
-            return base_result
+            return SynthesisResult(
+                audio=base_result.audio,
+                text=base_result.text,
+                voice_id=base_result.voice_id,
+                duration_ms=base_result.duration_ms,
+                used_rvc=False,
+            )
 
         # Step 3: Write base audio to temporary file and execute RVC conversion
         input_tmp_path = ""
@@ -237,6 +244,7 @@ class RVCProvider(TTSPort):
                 text=text,
                 voice_id=str(resolved_model),
                 duration_ms=duration_ms,
+                used_rvc=True,
             )
 
         except asyncio.TimeoutError:

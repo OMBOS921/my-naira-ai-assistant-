@@ -106,7 +106,7 @@ fun SecurityOverlayScreen() {
                     ) {
                         Icon(Icons.Default.Fingerprint, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("TRIGGER BIOMETRIC OVERLAY", style = MaterialTheme.typography.labelLarge)
+                        Text("TRIGGER BIOMETRIC OVERLAY", style = MaterialTheme.typography.labelLarge, color = Color.White)
                     }
 
                     if (biometricResultText != null) {

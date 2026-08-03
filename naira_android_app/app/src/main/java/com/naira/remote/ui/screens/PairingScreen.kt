@@ -173,7 +173,7 @@ fun PairingScreen(onPairingComplete: (() -> Unit)? = null) {
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = CyberAlertPink)
                         ) {
-                            Text("UNPAIR DEVICE", style = MaterialTheme.typography.labelLarge)
+                            Text("UNPAIR DEVICE", style = MaterialTheme.typography.labelLarge, color = CyberBackground)
                         }
                     }
                 }
@@ -208,7 +208,7 @@ fun PairingScreen(onPairingComplete: (() -> Unit)? = null) {
                                 contentColor = CyberBackground
                             )
                         ) {
-                            Text("GRANT CAMERA ACCESS", style = MaterialTheme.typography.labelLarge)
+                            Text("GRANT CAMERA ACCESS", style = MaterialTheme.typography.labelLarge, color = Color.White)
                         }
                     }
                 }
@@ -259,6 +259,9 @@ fun PairingScreen(onPairingComplete: (() -> Unit)? = null) {
 
                                         scanner.process(image)
                                             .addOnSuccessListener { barcodes ->
+                                                if (barcodes.isNotEmpty()) {
+                                                    Toast.makeText(context, "QR Scanned! Verifying...", Toast.LENGTH_SHORT).show()
+                                                }
                                                 for (barcode in barcodes) {
                                                     val rawValue = barcode.rawValue ?: continue
                                                     if (rawValue != scannedPayload) {

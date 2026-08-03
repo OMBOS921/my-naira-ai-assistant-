@@ -10,6 +10,9 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!-- Service & Lifecycle Permissions -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -30,6 +33,9 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar"
         tools:targetApi="34">
+
+        <!-- ML Kit Barcode Dependencies -->
+        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode" />
 
         <!-- Entry Point Activity -->
         <activity

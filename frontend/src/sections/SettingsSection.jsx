@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Settings, KeyRound, ShieldCheck, Loader2, Upload, AudioLines, Palette, Check, X } from 'lucide-react'
-import { GlassCard } from '../components/ui.jsx'
+import { Settings, KeyRound, ShieldCheck, Loader2, Upload, AudioLines, Palette, Check, X, Mic } from 'lucide-react'
+import { GlassCard, Toggle } from '../components/ui.jsx'
 import { useApp, ACCENTS } from '../state/AppContext.jsx'
 import { getVaultStatus, saveVaultConfiguration } from '../api/client.js'
 import KeyField from '../components/KeyField.jsx'
@@ -15,6 +15,7 @@ export default function SettingsSection({ onClose, accent }) {
   const [busy, setBusy] = useState(false)
   const [voices, setVoices] = usePersistedState('naira.voices', [])
   const [uploadName, setUploadName] = useState('')
+  const [offlineStt, setOfflineStt] = usePersistedState('naira.settings.offlineStt', false)
 
   useEffect(() => {
     getVaultStatus().then((s) => {
@@ -177,6 +178,23 @@ export default function SettingsSection({ onClose, accent }) {
         </label>
         <div className="tiny" style={{ marginTop: 10, textTransform: 'none', letterSpacing: 0 }}>
           Model path: <b style={{ color: 'var(--text-2)' }}>backend/modules/voice/rvc_model/</b>
+        </div>
+      </GlassCard>
+
+      {/* ---------- Offline STT toggle ---------- */}
+      <GlassCard className="card">
+        <div className="card-title"><Mic size={14} /> Voice Recognition</div>
+        <div className="between" style={{ alignItems: 'center' }}>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 13 }}>Use offline voice recognition (faster-whisper)</div>
+            <div className="tiny" style={{ marginTop: 4, textTransform: 'none', letterSpacing: 0, lineHeight: 1.6 }}>
+              Browser STT ke bajaye backend ka faster-whisper STT use karo. Internet nahi chahiye, lekin backend pe model loaded hona chahiye.
+            </div>
+          </div>
+          <Toggle checked={offlineStt} onChange={(v) => {
+            setOfflineStt(v)
+            toast(v ? 'Offline STT enabled — backend faster-whisper' : 'Browser STT restored', v ? 'success' : 'info')
+          }} />
         </div>
       </GlassCard>
 

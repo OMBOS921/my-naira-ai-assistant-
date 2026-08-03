@@ -83,6 +83,8 @@ class Runtime:
         tool_manager: ToolManager | None = None,
         memory_manager: MemoryManager | None = None,
         pc_control_manager: object | None = None,
+        browser_manager: object | None = None,
+        security_manager: object | None = None,
         settings_manager: object | None = None,
         event_bus: EventBus | None = None,
         max_tool_iterations: int = 10,
@@ -101,12 +103,15 @@ class Runtime:
         self._tool_manager = tool_manager
         self._memory_manager = memory_manager
         self._pc_control_manager = pc_control_manager
+        self._browser_manager = browser_manager
         self._settings_manager = settings_manager
 
         self._fast_command_router = FastCommandRouter(
             pc_control_manager=pc_control_manager,
+            browser_manager=browser_manager,
             logger=logger,
             settings_manager=settings_manager,
+            security_manager=security_manager,
         )
 
         # Pipeline components

@@ -261,6 +261,25 @@ class VoiceManager:
     def active_wake_word_provider_name(self) -> str | None:
         return self._active_wake_word_provider_name
 
+    def set_active_tts_provider(self, name: str) -> None:
+        """Switch the active TTS provider at runtime.
+
+        Parameters
+        ----------
+        name : str
+            Name of a registered TTS provider to activate.
+
+        Raises
+        ------
+        KeyError
+            If the provider name is not registered.
+        """
+        if name not in self._tts_providers:
+            raise KeyError(f"TTS provider not registered: {name}")
+        self._active_tts_provider_name = name
+        self._active_tts_provider = self._tts_providers[name]
+        self._logger.info("Active TTS provider switched to: %s", name)
+
     @property
     def stt_providers(self) -> dict[str, STTPort]:
         return dict(self._stt_providers)

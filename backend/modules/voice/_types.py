@@ -95,12 +95,18 @@ class SynthesisResult:
         Voice identifier used for synthesis.
     duration_ms : float
         Synthesised audio duration in milliseconds.
+    used_rvc : bool
+        ``True`` if the audio was processed through the RVC voice
+        conversion pipeline.  ``False`` when the result is plain
+        base TTS audio (e.g. EdgeTTS fallback because the model
+        file was missing).
     """
 
     audio: AudioData | None = None
     text: str = ""
     voice_id: str = ""
     duration_ms: float = 0.0
+    used_rvc: bool = False
 
 
 @dataclass(frozen=True)

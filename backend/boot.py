@@ -850,12 +850,14 @@ async def boot_core_modules(
             conversation_manager=conversation_mgr,
             context_intelligence_manager=context_intel_mgr,
             pc_control_manager=pc_control_mgr,
+            browser_manager=browser_mgr,
             coding_agent_manager=coding_agent_mgr,
             vision_manager=vision_mgr,
             decision_manager=decision_mgr,
             analytics_manager=analytics_mgr,
             planning_manager=planning_mgr,
             security_manager=security_mgr if 'security_mgr' in locals() else None,
+            capability_manager=capability_mgr,
             event_bus=event_bus,
             max_tool_iterations=config.tools.max_retries + 1,
         )
@@ -977,6 +979,8 @@ def register_system_capabilities(
             deps: tuple[str, ...] = ()
             if cap_name in ("vision", "voice", "browser", "avatar_3d", "coding_agent"):
                 deps = ("llm",)
+            if cap_name in ("pc_control", "browser"):
+                deps = deps + ("security",)
             capability_mgr.register(
                 Capability(name=cap_name, version="0.1.0", dependencies=deps)
             )

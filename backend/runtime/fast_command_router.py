@@ -9,22 +9,18 @@ smart dynamic path resolution, an agentic JSON self-correction loop, and direct 
 from __future__ import annotations
 
 import asyncio
-import datetime
 import json
 import logging
 import os
-import pathlib
 import re
-import shutil
-import subprocess
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-import webbrowser
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Union
+from backend.types import ToolResult
 
 _LOG = logging.getLogger("naira.runtime.fast_command_router")
 
@@ -481,6 +477,7 @@ class FastCommandRouter:
         logger: Optional[logging.Logger] = None,
         api_key: Optional[str] = None,
         settings_manager: Any = None,
+        security_manager: Any = None,
         **kwargs: Any,
     ) -> None:
         self._pc_control_manager = pc_control_manager
@@ -489,6 +486,7 @@ class FastCommandRouter:
         self._coding_agent_manager = coding_agent_manager
         self._logger = logger or _LOG
         self._settings_manager = settings_manager
+        self._security_manager = security_manager
 
         # Dynamic Groq API key resolution
         groq_key = api_key
@@ -645,9 +643,10 @@ class FastCommandRouter:
     # Direct Module Execution & Routing
     # ------------------------------------------------------------------
 
-    async def execute_fast_command(self, text: str) -> str:
+    async def execute_fast_command(self, text: str, intent_data: Optional[Dict[str, Any]] = None) -> str:
         """Main entry point: Classifies intent via Groq and dispatches directly to Naira-OS modules."""
-        intent_data = await self.classify_intent(text)
+        if intent_data is None:
+            intent_data = await self.classify_intent(text)
         return await self._dispatch_module_action(intent_data, text)
 
     async def _dispatch_module_action(self, intent_data: Dict[str, Any], raw_text: str) -> str:
@@ -702,96 +701,145 @@ class FastCommandRouter:
             target = str(op.get("target", "")).strip()
             op_params = op.get("parameters", {}) or {}
 
-            # Volume Control
-            if action in ("set_volume", "volume") or "volume" in actual_raw_text.lower():
-                val = str(op_params.get("value") or target or actual_raw_text).lower()
-                val_display = "50%" if "50" in val else val
-                if os.name == "nt":
-                    if "up" in val or "increase" in val:
-                        subprocess.run(["powershell", "-Command", "(new-object -com wscript.shell).SendKeys([char]175)"], capture_output=True)
-                    elif "down" in val or "decrease" in val:
-                        subprocess.run(["powershell", "-Command", "(new-object -com wscript.shell).SendKeys([char]174)"], capture_output=True)
-                    elif "mute" in val:
-                        subprocess.run(["powershell", "-Command", "(new-object -com wscript.shell).SendKeys([char]173)"], capture_output=True)
-                results.append(f"[SUCCESS] Volume set to {val_display}.")
+            try:
+                # Volume Control
+                if action in ("set_volume", "volume") or "volume" in actual_raw_text.lower():
+                    results.append(await self._handle_volume_action(op_params, target, actual_raw_text))
 
-            # Brightness Control
-            elif action in ("set_brightness", "brightness") or "brightness" in actual_raw_text.lower():
-                val_match = re.search(r"\d+", str(op_params.get("value") or target or actual_raw_text or "50"))
-                level = int(val_match.group(0)) if val_match else 50
-                if os.name == "nt":
-                    ps_cmd = f"(Get-WmiObject -Namespace root/wmi -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,{level})"
-                    subprocess.run(["powershell", "-Command", ps_cmd], capture_output=True)
-                results.append(f"[SUCCESS] Brightness set to {level}%.")
+                # Brightness Control
+                elif action in ("set_brightness", "brightness") or "brightness" in actual_raw_text.lower():
+                    results.append(await self._handle_brightness_action(op_params, target, actual_raw_text))
 
-            # Screenshot
-            elif action in ("screenshot", "take_screenshot", "capture") or "screenshot" in actual_raw_text.lower():
-                desktop = Path.home() / "Desktop"
-                filename = desktop / f"screenshot_{int(time.time())}.png"
-                try:
-                    import mss
-                    with mss.mss() as sct:
-                        sct.shot(output=str(filename))
-                    results.append(f"[SUCCESS] Screenshot saved to Desktop: {filename.name}")
-                except Exception:
-                    results.append("[SUCCESS] Screenshot captured successfully.")
+                # Screenshot
+                elif action in ("screenshot", "take_screenshot", "capture") or "screenshot" in actual_raw_text.lower():
+                    results.append(await self._handle_screenshot_action())
 
-            # Lock PC
-            elif action in ("lock_pc", "lock"):
-                if os.name == "nt":
-                    subprocess.run(["rundll32.exe", "user32.dll,LockWorkStation"])
-                results.append("[SUCCESS] PC locked successfully.")
+                # Lock PC
+                elif action in ("lock_pc", "lock"):
+                    results.append(await self._handle_power_action("power_lock", "PC locked successfully."))
 
-            # Shutdown / Restart
-            elif action in ("shutdown", "turn_off"):
-                if os.name == "nt":
-                    subprocess.run(["shutdown", "/s", "/t", "5"])
-                results.append("[SUCCESS] Initiating PC shutdown in 5 seconds.")
-            elif action in ("restart", "reboot"):
-                if os.name == "nt":
-                    subprocess.run(["shutdown", "/r", "/t", "5"])
-                results.append("[SUCCESS] Initiating PC restart in 5 seconds.")
+                # Shutdown / Restart
+                elif action in ("shutdown", "turn_off"):
+                    results.append(await self._handle_power_action("power_shutdown", "Initiating PC shutdown in 5 seconds."))
+                elif action in ("restart", "reboot"):
+                    results.append(await self._handle_power_action("power_restart", "Initiating PC restart in 5 seconds."))
 
-            # Open App / Launch
-            else:
-                app_name = target or op_params.get("name") or actual_raw_text
-                cleaned_app = app_name.lower().replace("open", "").replace("kholo", "").replace("launch", "").strip()
-                
-                app_commands = {
-                    "notepad": "notepad.exe",
-                    "calc": "calc.exe",
-                    "calculator": "calc.exe",
-                    "cmd": "cmd.exe",
-                    "command prompt": "cmd.exe",
-                    "powershell": "powershell.exe",
-                    "chrome": "chrome.exe",
-                    "browser": "chrome.exe",
-                    "vscode": "code",
-                    "vs code": "code",
-                    "code": "code",
-                    "explorer": "explorer.exe",
-                    "file explorer": "explorer.exe",
-                    "task manager": "taskmgr.exe",
-                    "settings": "start ms-settings:",
-                    "paint": "mspaint.exe",
-                    "word": "winword.exe",
-                    "excel": "excel.exe",
-                }
-
-                cmd_to_run = app_commands.get(cleaned_app, cleaned_app)
-                try:
-                    if os.name == "nt":
-                        if cmd_to_run.startswith("start "):
-                            os.system(cmd_to_run)
-                        else:
-                            subprocess.Popen([cmd_to_run], shell=True)
-                    else:
-                        subprocess.Popen([cmd_to_run])
-                    results.append(f"[SUCCESS] Opened {cleaned_app.capitalize()} successfully.")
-                except Exception as e:
-                    results.append(f"[FAILED] Failed to open application '{cleaned_app}': {e}")
+                # Open App / Launch
+                else:
+                    results.append(await self._handle_open_app_action(target, op_params, actual_raw_text))
+            except Exception as e:
+                self._logger.warning("[SYSTEM_CONTROL] Action '%s' failed: %s", action, e)
+                results.append(f"[FAILED] {action} failed: {e}")
 
         return "\n".join(results) if results else "[SUCCESS] System action executed."
+
+    async def _handle_volume_action(self, op_params: Dict[str, Any], target: str, actual_raw_text: str) -> str:
+        """Route a volume action through PCControlManager."""
+        if self._pc_control_manager is None:
+            return "[FAILED] Volume control unavailable (PCControlManager not wired)."
+        val = str(op_params.get("value") or target or actual_raw_text).lower()
+        val_display = "50%" if "50" in val else val
+        try:
+            if "unmute" in val:
+                res = await self._pc_control_manager.volume_mute(False)
+            elif "mute" in val:
+                res = await self._pc_control_manager.volume_mute(True)
+            elif "up" in val or "increase" in val:
+                current = await self._pc_control_manager.volume_get()
+                level = min(1.0, (getattr(current, "level", 0.5) or 0.5) + 0.1)
+                res = await self._pc_control_manager.volume_set(level)
+            elif "down" in val or "decrease" in val:
+                current = await self._pc_control_manager.volume_get()
+                level = max(0.0, (getattr(current, "level", 0.5) or 0.5) - 0.1)
+                res = await self._pc_control_manager.volume_set(level)
+            else:
+                m = re.search(r"(\d+)", val)
+                level = max(0.0, min(1.0, int(m.group(1)) / 100.0)) if m else 0.5
+                res = await self._pc_control_manager.volume_set(level)
+            return self._format_tool_result(res, f"Volume set to {val_display}.")
+        except Exception as e:
+            return f"[FAILED] Volume control failed: {e}"
+
+    async def _handle_brightness_action(self, op_params: Dict[str, Any], target: str, actual_raw_text: str) -> str:
+        """Route a brightness action through PCControlManager."""
+        if self._pc_control_manager is None:
+            return "[FAILED] Brightness control unavailable (PCControlManager not wired)."
+        val_match = re.search(r"\d+", str(op_params.get("value") or target or actual_raw_text or "50"))
+        level = int(val_match.group(0)) if val_match else 50
+        try:
+            res = await self._pc_control_manager.display_set_brightness(level)
+            return self._format_tool_result(res, f"Brightness set to {level}%.")
+        except Exception as e:
+            return f"[FAILED] Brightness control failed: {e}"
+
+    async def _handle_screenshot_action(self) -> str:
+        """Route a screenshot action through PCControlManager."""
+        if self._pc_control_manager is None:
+            return "[FAILED] Screenshot unavailable (PCControlManager not wired)."
+        desktop = Path.home() / "Desktop"
+        filename = desktop / f"screenshot_{int(time.time())}.png"
+        try:
+            res = await self._pc_control_manager.screen_capture(save_path=str(filename))
+            return self._format_tool_result(res, f"Screenshot saved to Desktop: {filename.name}")
+        except Exception as e:
+            return f"[FAILED] Screenshot capture failed: {e}"
+
+    async def _handle_power_action(self, method_name: str, success_msg: str) -> str:
+        """Route a power action (lock/shutdown/restart) through PCControlManager."""
+        if self._pc_control_manager is None:
+            return f"[FAILED] {success_msg} — PCControlManager not wired."
+        method = getattr(self._pc_control_manager, method_name, None)
+        if method is None:
+            return f"[FAILED] {success_msg} — manager does not support {method_name}."
+        try:
+            res = await method()
+            return self._format_tool_result(res, success_msg)
+        except Exception as e:
+            return f"[FAILED] {success_msg} — {e}"
+
+    async def _handle_open_app_action(self, target: str, op_params: Dict[str, Any], actual_raw_text: str) -> str:
+        """Route an app-launch action through PCControlManager."""
+        app_name = target or op_params.get("name") or actual_raw_text
+        cleaned_app = app_name.lower().replace("open", "").replace("kholo", "").replace("launch", "").strip()
+
+        app_commands = {
+            "notepad": "notepad.exe",
+            "calc": "calc.exe",
+            "calculator": "calc.exe",
+            "cmd": "cmd.exe",
+            "command prompt": "cmd.exe",
+            "powershell": "powershell.exe",
+            "chrome": "chrome.exe",
+            "browser": "chrome.exe",
+            "vscode": "code",
+            "vs code": "code",
+            "code": "code",
+            "explorer": "explorer.exe",
+            "file explorer": "explorer.exe",
+            "task manager": "taskmgr.exe",
+            "settings": "ms-settings:",
+            "paint": "mspaint.exe",
+            "word": "winword.exe",
+            "excel": "excel.exe",
+        }
+
+        cmd_to_run = app_commands.get(cleaned_app, cleaned_app)
+        if self._pc_control_manager is None:
+            return f"[FAILED] Failed to open application '{cleaned_app}' — PCControlManager not wired."
+        try:
+            res = await self._pc_control_manager.launch_application(cmd_to_run)
+            return self._format_tool_result(res, f"Opened {cleaned_app.capitalize()} successfully.")
+        except Exception as e:
+            return f"[FAILED] Failed to open application '{cleaned_app}': {e}"
+
+    @staticmethod
+    def _format_tool_result(res: Any, success_msg: str) -> str:
+        """Format a manager ToolResult into a [SUCCESS]/[FAILED] response string."""
+        status = getattr(res, "status", "success")
+        if status == "success":
+            return f"[SUCCESS] {success_msg}"
+        err = getattr(res, "error", None) or getattr(res, "output", None) or f"status={status}"
+        return f"[FAILED] {success_msg} — {err}"
 
     # ------------------------------------------------------------------
     # 6.2 Browser Control Handler
@@ -822,35 +870,45 @@ class FastCommandRouter:
             op_params = op.get("parameters", {}) or {}
             url = op_params.get("url") or target
 
-            if "youtube" in actual_raw_text.lower() or "youtube" in url.lower():
-                if action in ("search_web", "search") or "search" in actual_raw_text.lower():
-                    query = op_params.get("query") or target
-                    search_url = f"https://www.youtube.com/results?search_query={urllib.parse.quote(query)}"
-                    webbrowser.open(search_url)
-                    results.append(f"[SUCCESS] Opened YouTube search for '{query}'.")
-                else:
-                    webbrowser.open("https://www.youtube.com")
-                    results.append("[SUCCESS] Opened YouTube in browser.")
+            try:
+                if "youtube" in actual_raw_text.lower() or "youtube" in url.lower():
+                    if action in ("search_web", "search") or "search" in actual_raw_text.lower():
+                        query = op_params.get("query") or target
+                        search_url = f"https://www.youtube.com/results?search_query={urllib.parse.quote(query)}"
+                        results.append(await self._handle_browser_navigate(search_url, f"Opened YouTube search for '{query}'."))
+                    else:
+                        results.append(await self._handle_browser_navigate("https://www.youtube.com", "Opened YouTube in browser."))
 
-            elif action in ("search_web", "search", "web_search", "fetch_web_data") or "search" in actual_raw_text.lower():
-                query = op_params.get("query") or target or actual_raw_text
-                # If explicit browser GUI opening is requested, launch browser
-                if op_params.get("open_browser") or any(k in actual_raw_text.lower() for k in ("open browser", "browser kholo", "open chrome")):
-                    search_url = f"https://www.google.com/search?q={urllib.parse.quote(query)}"
-                    webbrowser.open(search_url)
-                    results.append(f"[SUCCESS] Opened Google search for '{query}'.")
-                else:
-                    # Instant web retrieval without browser GUI overhead
-                    res = _fetch_instant_web_search(query)
-                    results.append(res)
+                elif action in ("search_web", "search", "web_search", "fetch_web_data") or "search" in actual_raw_text.lower():
+                    query = op_params.get("query") or target or actual_raw_text
+                    # If explicit browser GUI opening is requested, navigate the browser
+                    if op_params.get("open_browser") or any(k in actual_raw_text.lower() for k in ("open browser", "browser kholo", "open chrome")):
+                        search_url = f"https://www.google.com/search?q={urllib.parse.quote(query)}"
+                        results.append(await self._handle_browser_navigate(search_url, f"Opened Google search for '{query}'."))
+                    else:
+                        # Instant web retrieval without browser GUI overhead
+                        res = _fetch_instant_web_search(query)
+                        results.append(res)
 
-            else:
-                if not url.startswith("http"):
-                    url = f"https://{url}" if "." in url else f"https://www.google.com/search?q={urllib.parse.quote(url)}"
-                webbrowser.open(url)
-                results.append(f"[SUCCESS] Opened URL: {url}")
+                else:
+                    if not url.startswith("http"):
+                        url = f"https://{url}" if "." in url else f"https://www.google.com/search?q={urllib.parse.quote(url)}"
+                    results.append(await self._handle_browser_navigate(url, f"Opened URL: {url}"))
+            except Exception as e:
+                self._logger.warning("[BROWSER_CONTROL] Action '%s' failed: %s", action, e)
+                results.append(f"[FAILED] Browser action failed: {e}")
 
         return "\n".join(results) if results else "[SUCCESS] Browser action executed."
+
+    async def _handle_browser_navigate(self, url: str, success_msg: str) -> str:
+        """Route a browser-navigation action through BrowserManager."""
+        if self._browser_manager is None:
+            return f"[FAILED] {success_msg} — BrowserManager not wired."
+        try:
+            res = await self._browser_manager.navigate(url, extract_content=False)
+            return self._format_tool_result(res, success_msg)
+        except Exception as e:
+            return f"[FAILED] {success_msg} — {e}"
 
     # ------------------------------------------------------------------
     # 6.3 File System Handler
@@ -886,82 +944,89 @@ class FastCommandRouter:
 
             try:
                 if action in ("create_folder", "make_folder", "mkdir"):
-                    if target_path.exists():
-                        errMsg = f"Folder already exists at {target_path}."
-                        self._logger.info("[FILE_SYSTEM FAIL] %s", errMsg)
-                        failure_messages.append(errMsg)
-                    else:
-                        target_path.mkdir(parents=True, exist_ok=True)
-                        self._logger.info("[FILE_SYSTEM SUCCESS] Created folder at %s", target_path)
+                    res = await self._fs_call("filesystem_create_directory", str(target_path), {})
+                    if self._fs_success(res):
                         success_count += 1
+                        self._logger.info("[FILE_SYSTEM SUCCESS] Created folder at %s", target_path)
+                    else:
+                        failure_messages.append(f"Folder creation failed: {self._fs_error(res)}")
 
                 elif action in ("delete_folder", "remove_folder", "rmdir"):
-                    if target_path.exists():
-                        shutil.rmtree(target_path)
-                        self._logger.info("[FILE_SYSTEM SUCCESS] Deleted folder at %s", target_path)
+                    res = await self._fs_call("filesystem_delete_directory", str(target_path), {"recursive": True})
+                    if self._fs_success(res):
                         success_count += 1
+                        self._logger.info("[FILE_SYSTEM SUCCESS] Deleted folder at %s", target_path)
                     else:
-                        errMsg = f"Folder not found: {target_path}."
-                        self._logger.info("[FILE_SYSTEM FAIL] %s", errMsg)
-                        failure_messages.append(errMsg)
+                        failure_messages.append(f"Folder deletion failed: {self._fs_error(res)}")
 
                 elif action in ("create_file", "touch", "make_file"):
-                    if target_path.exists():
-                        errMsg = f"File already exists at {target_path}."
-                        self._logger.info("[FILE_SYSTEM FAIL] %s", errMsg)
-                        failure_messages.append(errMsg)
-                    else:
-                        target_path.parent.mkdir(parents=True, exist_ok=True)
-                        target_path.touch(exist_ok=True)
-                        self._logger.info("[FILE_SYSTEM SUCCESS] Created file at %s", target_path)
+                    res = await self._fs_call("filesystem_write_file", str(target_path), {"content": ""})
+                    if self._fs_success(res):
                         success_count += 1
+                        self._logger.info("[FILE_SYSTEM SUCCESS] Created file at %s", target_path)
+                    else:
+                        failure_messages.append(f"File creation failed: {self._fs_error(res)}")
 
                 elif action in ("delete_file", "remove_file"):
-                    if target_path.exists():
-                        target_path.unlink()
-                        self._logger.info("[FILE_SYSTEM SUCCESS] Deleted file at %s", target_path)
+                    res = await self._fs_call("filesystem_delete_file", str(target_path), {})
+                    if self._fs_success(res):
                         success_count += 1
+                        self._logger.info("[FILE_SYSTEM SUCCESS] Deleted file at %s", target_path)
                     else:
-                        errMsg = f"File not found: {target_path}."
-                        self._logger.info("[FILE_SYSTEM FAIL] %s", errMsg)
-                        failure_messages.append(errMsg)
+                        failure_messages.append(f"File deletion failed: {self._fs_error(res)}")
 
                 elif action in ("rename_file", "rename_folder", "rename"):
                     new_name = op_params.get("new_name") or "renamed_item"
                     new_path = target_path.parent / new_name
-                    if target_path.exists():
-                        target_path.rename(new_path)
-                        self._logger.info("[FILE_SYSTEM SUCCESS] Renamed item to %s", new_path.name)
+                    res = await self._fs_call("filesystem_move_item", str(target_path), {"dest_path": str(new_path)})
+                    if self._fs_success(res):
                         success_count += 1
+                        self._logger.info("[FILE_SYSTEM SUCCESS] Renamed item to %s", new_path.name)
                     else:
-                        errMsg = f"Target item not found: {target_path}."
-                        self._logger.info("[FILE_SYSTEM FAIL] %s", errMsg)
-                        failure_messages.append(errMsg)
+                        failure_messages.append(f"Rename failed: {self._fs_error(res)}")
 
                 elif action in ("open_file", "open"):
-                    if target_path.exists():
-                        if os.name == "nt":
-                            os.startfile(str(target_path))
-                        self._logger.info("[FILE_SYSTEM SUCCESS] Opened file %s", target_path.name)
+                    res = await self._fs_call("launch_application", str(target_path), {})
+                    if self._fs_success(res):
                         success_count += 1
+                        self._logger.info("[FILE_SYSTEM SUCCESS] Opened file %s", target_path.name)
                     else:
-                        errMsg = f"File not found: {target_path}."
-                        self._logger.info("[FILE_SYSTEM FAIL] %s", errMsg)
-                        failure_messages.append(errMsg)
+                        failure_messages.append(f"Failed to open file: {self._fs_error(res)}")
                 else:
-                    errMsg = f"Unsupported file system action: {action}"
-                    self._logger.info("[FILE_SYSTEM FAIL] %s", errMsg)
-                    failure_messages.append(errMsg)
+                    failure_messages.append(f"Unsupported file system action: {action}")
 
             except Exception as e:
-                errMsg = f"File system operation failed: {e}"
-                self._logger.error("[FILE_SYSTEM ERROR] %s", errMsg)
-                failure_messages.append(errMsg)
+                self._logger.error("[FILE_SYSTEM ERROR] %s", e)
+                failure_messages.append(f"File system operation failed: {e}")
 
         if failure_messages and success_count == 0:
             return f"[FAILED] {failure_messages[0]}"
 
         return "[SUCCESS] Done! I have executed the file operations successfully."
+
+    async def _fs_call(self, method_name: str, path_arg: str, extra: Dict[str, Any]) -> Any:
+        """Invoke a PCControlManager filesystem method, applying path sandboxing/risk checks."""
+        if self._pc_control_manager is None:
+            return ToolResult(status="error", error="PCControlManager not wired.")
+        method = getattr(self._pc_control_manager, method_name, None)
+        if method is None:
+            return ToolResult(status="error", error=f"manager does not support {method_name}")
+        return await method(path_arg, **extra)
+
+    @staticmethod
+    def _fs_success(res: Any) -> bool:
+        return getattr(res, "status", "error") == "success"
+
+    @staticmethod
+    def _fs_error(res: Any) -> str:
+        err = getattr(res, "error", None)
+        if err:
+            return str(err)
+        output = getattr(res, "output", None)
+        if output:
+            return str(output)
+        status = getattr(res, "status", "unknown")
+        return f"status={status}"
 
     # ------------------------------------------------------------------
     # 6.4 Coding Agent Handler

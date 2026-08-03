@@ -143,6 +143,15 @@ export default function DashboardScreen() {
   // ---------- Voice (mic) ----------
   const recognitionRef = useRef(null)
   const [micOn, setMicOn] = useState(false)
+  const mediaRecorderRef = useRef(null)
+  const chunksRef = useRef([])
+
+  // Read the offline STT setting from localStorage (set by SettingsSection)
+  const offlineSttEnabled = () => {
+    try {
+      return JSON.parse(localStorage.getItem('naira.settings.offlineStt')) === true
+    } catch { return false }
+  }
 
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
@@ -197,13 +206,76 @@ export default function DashboardScreen() {
     }
   }, [send, toast, setAvatarState])
 
+  // Offline STT: record audio via MediaRecorder and POST to backend
+  const startOfflineRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      mediaRecorderRef.current = mr
+      chunksRef.current = []
+      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop())
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+        chunksRef.current = []
+        setMicOn(false)
+        setAvatarState('thinking')
+        try {
+          const { transcribeAudio } = await import('../api/client.js')
+          const res = await transcribeAudio(blob)
+          const text = (res?.text || '').trim()
+          if (text) {
+            sourceRef.current = 'voice'
+            pendingHistoryRef.current = { user: text }
+            if (!send(text)) {
+              pendingHistoryRef.current = null
+              toast('Connection offline — command send nahi hui', 'error')
+              setAvatarState('idle')
+            }
+          } else {
+            toast('No speech detected in recording', 'info')
+            setAvatarState('idle')
+          }
+        } catch (err) {
+          toast(err.message || 'Backend STT failed', 'error')
+          setAvatarState('idle')
+        }
+      }
+      mr.start()
+      setMicOn(true)
+      setAvatarState('listening')
+    } catch (err) {
+      toast('Microphone access denied', 'error')
+    }
+  }
+
+  const stopOfflineRecording = () => {
+    const mr = mediaRecorderRef.current
+    if (mr && mr.state !== 'inactive') {
+      mr.stop()
+    }
+  }
+
   const toggleMic = () => {
-    const rec = recognitionRef.current
+    // Barge-in handling
     if (avatarState === 'talking') {
       send({ type: 'barge_in' })
       setAvatarState('listening')
       return
     }
+
+    // Offline STT path
+    if (offlineSttEnabled()) {
+      if (micOn) {
+        stopOfflineRecording()
+      } else {
+        startOfflineRecording()
+      }
+      return
+    }
+
+    // Browser STT path (default)
+    const rec = recognitionRef.current
     if (!rec) {
       toast('Voice input is not supported in this browser', 'error')
       return

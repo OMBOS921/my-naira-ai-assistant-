@@ -4,7 +4,7 @@ import { Smartphone, QrCode, RefreshCw, Lock, Trash2, ShieldCheck, ShieldAlert, 
 import { SectionShell, GlassCard, Toggle, Slider, Modal, EmptyState, StatusPill } from '../components/ui.jsx'
 import { useApp } from '../state/AppContext.jsx'
 import { usePersistedState, useInterval, makeId, nowSec, randomHex, formatTime } from '../state/store.js'
-import { getRemoteBridgeStatus } from '../api/client.js'
+import { getRemoteBridgeStatus, getPairingData, toggleCapability } from '../api/client.js'
 
 const COMMANDS = [
   { action: 'GET_BATTERY', risk: 5 },
@@ -47,15 +47,27 @@ export default function RemoteBridgeSection({ onClose }) {
     [setLogs]
   )
 
-  const generateQr = useCallback(() => {
-    setQrPayload({
-      master_key: randomHex(32),
-      ngrok_url: ngrokUrl,
-      timestamp: nowSec(),
-    })
+  // Generate QR with REAL backend data (master_key + ngrok_url) + fresh timestamp
+  const generateQr = useCallback(async () => {
+    try {
+      const data = await getPairingData()
+      const freshTimestamp = Math.floor(Date.now() / 1000)
+      setQrPayload({
+        master_key: data.master_key || randomHex(32),
+        ngrok_url: data.ngrok_url || ngrokUrl,
+        timestamp: freshTimestamp,
+      })
+      setNgrokUrl(data.ngrok_url || ngrokUrl)
+    } catch {
+      setQrPayload({
+        master_key: randomHex(32),
+        ngrok_url: ngrokUrl,
+        timestamp: Math.floor(Date.now() / 1000),
+      })
+    }
     setExpiresIn(60)
     addLog('New pairing QR generated', 'violet')
-  }, [ngrokUrl, addLog])
+  }, [ngrokUrl, addLog, setNgrokUrl])
 
   useEffect(() => {
     if (!showQr) return
@@ -130,26 +142,40 @@ export default function RemoteBridgeSection({ onClose }) {
           <QrCode size={15} /> Generate Pairing QR
         </button>
 
-        {showQr && qrPayload && (
-          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-            <div className="glass-soft" style={{ padding: 14, borderRadius: 16 }}>
-              <QRCodeSVG value={JSON.stringify(qrPayload)} size={190} fgColor="#070b1e" bgColor="#ffffff" level="M" />
-            </div>
-            <div className="between" style={{ width: '100%' }}>
-              <span className={`badge ${expiresIn < 15 ? 'badge-rose' : 'badge-cyan'}`} style={{ textTransform: 'none', letterSpacing: 0 }}>
-                Expires in {expiresIn}s
-              </span>
-              <div className="row" style={{ gap: 6 }}>
-                <button className="btn btn-ghost btn-tiny" onClick={generateQr}><RefreshCw size={12} /> Regenerate</button>
-                <button className="btn btn-ghost btn-tiny" onClick={() => setShowQr(false)}>Close</button>
-              </div>
-            </div>
-            <div className="tiny" style={{ textTransform: 'none', letterSpacing: 0, textAlign: 'center', lineHeight: 1.7 }}>
-              Android app se QR scan karo — master key EncryptedVault mein save hogi. 60s expiry, replay-proof.
+        <Modal open={showQr} onClose={() => setShowQr(false)} title="Device Pairing QR Code">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, padding: 20, maxWidth: 420, margin: '0 auto' }}>
+          <div className="glass-soft" style={{ padding: 20, borderRadius: 20, display: 'flex', justifyContent: 'center' }}>
+            <QRCodeSVG value={JSON.stringify(qrPayload)} size={280} fgColor="#070b1e" bgColor="#ffffff" level="M" />
+          </div>
+
+          <div className="row" style={{ width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className={`badge ${expiresIn < 15 ? 'badge-rose' : 'badge-cyan'}`} style={{ textTransform: 'none', letterSpacing: 0, padding: '6px 12px' }}>
+              Expires in {expiresIn}s
+            </span>
+            <div className="row" style={{ gap: 10 }}>
+              <button className="btn btn-primary btn-sm" onClick={generateQr} style={{ padding: '8px 16px' }}>
+                <RefreshCw size={14} /> Regenerate
+              </button>
             </div>
           </div>
-        )}
-      </GlassCard>
+
+          <div className="tiny" style={{ textTransform: 'none', letterSpacing: 0, textAlign: 'center', lineHeight: 1.7, color: 'var(--text-3)' }}>
+            Android app se QR scan karo — master key EncryptedVault mein save hogi. 60s expiry, replay-proof.
+            <br /><br />
+            <b style={{ color: 'var(--accent-1)' }}>master_key</b>: {qrPayload.master_key.substring(0, 16)}...
+            <br />
+            <b style={{ color: 'var(--accent-2)' }}>ngrok_url</b>: {qrPayload.ngrok_url}
+            <br />
+            <b style={{ color: 'var(--mint)' }}>timestamp</b>: {qrPayload.timestamp}
+          </div>
+        </div>
+      </Modal>
+
+      {showQr && !qrPayload && (
+        <div style={{ marginTop: 16, textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>
+          Loading QR code data...
+        </div>
+      )}
 
       {/* ---------- Devices ---------- */}
       <GlassCard className="card">

@@ -23,6 +23,8 @@ comtypes>=1.4.0
 # Speech-to-Text
 faster-whisper>=0.10.0    # Optimized Whisper (preferred)
 # Text-to-Speech
+edge-tts>=6.1.0              # Microsoft Edge TTS (base voice for RVC pipeline)
+rvc-python>=0.3.0            # RVC voice conversion inference (requires ffmpeg)
 # TTS>=0.22.0               # Coqui TTS
 # elevenlabs>=1.0.0         # ElevenLabs cloud TTS (requires API key)
 # piper-tts>=1.2.0          # Piper offline TTS (when available)

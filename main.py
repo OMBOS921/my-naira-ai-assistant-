@@ -113,6 +113,7 @@ from backend.runtime.proactive_watchdog import ProactiveWatchdog
 from backend.types import UserRequest, UserResponse
 from backend.api.settings import router as settings_router
 from backend.api.capabilities import router as capabilities_router
+from backend.api.voice import router as voice_router
 # --- Naya Remote Bridge Router Import Yahan Hai ---
 from backend.modules.remote_bridge.remote_router import router as remote_bridge_router
 
@@ -170,27 +171,34 @@ async def lifespan(app: FastAPI):
             "tool_execution_result",
             "runtime.tool_execution_start",
             "runtime.tool_execution_result",
+            "capability_blocked",
         ):
-            msg_type = "tool_execution_start" if "start" in event_type else "tool_execution_result"
+            if event_type == "capability_blocked":
+                msg_type = "capability_blocked"
+            else:
+                msg_type = "tool_execution_start" if "start" in event_type else "tool_execution_result"
+
             payload = {
                 "sender": "naira",
                 "type": msg_type,
-                "tool": data.get("tool") or data.get("name", "tool"),
+                "tool": data.get("tool") or data.get("name") or data.get("capability", "tool"),
                 "tool_call_id": data.get("tool_call_id"),
                 "script_code": data.get("script_code"),
                 "output": data.get("output"),
                 "stdout": data.get("stdout"),
                 "stderr": data.get("stderr"),
                 "text": data.get("text", ""),
+                "intent": data.get("intent", ""),
             }
             for ws in list(_active_websockets):
                 try:
                     await ws.send_json(payload)
                 except Exception as ws_exc:
-                    _LOG.debug("Error sending tool WS event: %s", ws_exc)
+                    _LOG.debug("Error sending WS event: %s", ws_exc)
 
     event_bus.subscribe("tool_execution_start", _on_tool_ws_event)
     event_bus.subscribe("tool_execution_result", _on_tool_ws_event)
+    event_bus.subscribe("capability_blocked", _on_tool_ws_event)
 
     _orchestrator = Orchestrator(event_bus=event_bus, config=config, env=env)
     _container.register("orchestrator", _orchestrator)
@@ -205,6 +213,7 @@ async def lifespan(app: FastAPI):
         )
         app.state.llm_manager = _modules.get("llm")
         app.state.capability_manager = _modules.get("capability")
+        app.state.voice_manager = _modules.get("voice")
     except RuntimeError:
         _LOG.critical("[BOOT] Boot aborted — see errors above")
         _modules = {}
@@ -232,6 +241,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.include_router(settings_router)
 app.include_router(capabilities_router)
+app.include_router(voice_router)
 # --- Naya Remote Bridge Router Yahan Mount Hua Hai ---
 app.include_router(remote_bridge_router)
 
@@ -333,6 +343,9 @@ async def websocket_naira_endpoint(websocket: WebSocket) -> None:
                 }
                 if audio_b64:
                     payload["audio"] = audio_b64
+                    # Propagate voice source (rvc vs fallback) to frontend
+                    active_name = getattr(voice_mgr, "active_tts_provider_name", "") or ""
+                    payload["voice_source"] = "rvc" if "rvc" in active_name else "fallback"
 
                 await websocket.send_json(payload)
     finally:

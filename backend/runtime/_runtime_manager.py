@@ -34,6 +34,31 @@ from backend.types import (
 
 _LOG = logging.getLogger("naira.runtime")
 
+_INTENT_CAPABILITY_MAP: dict[str, str] = {
+    "SYSTEM_CONTROL": "pc_control",
+    "OPEN_APP": "pc_control",
+    "SET_VOLUME": "pc_control",
+    "SET_BRIGHTNESS": "pc_control",
+    "LOCK_PC": "pc_control",
+    "SHUTDOWN": "pc_control",
+    "RESTART": "pc_control",
+    "SCREENSHOT": "pc_control",
+    "SYSTEM_INFO": "pc_control",
+    "KILL_PROCESS": "pc_control",
+    "BROWSER_CONTROL": "browser",
+    "OPEN_WEBSITE": "browser",
+    "WEB_SEARCH": "browser",
+    "FILE_SYSTEM": "file_manager",
+    "CREATE_FOLDER": "file_manager",
+    "DELETE_FOLDER": "file_manager",
+    "RENAME_FOLDER": "file_manager",
+    "CREATE_FILE": "file_manager",
+    "DELETE_FILE": "file_manager",
+    "OPEN_FILE": "file_manager",
+    "RENAME_FILE": "file_manager",
+    "CODING_AGENT": "coding_agent",
+}
+
 
 class RuntimeManager:
     """Orchestrates the end-to-end AI execution pipeline.
@@ -66,6 +91,7 @@ class RuntimeManager:
         conversation_manager: object | None = None,
         context_intelligence_manager: object | None = None,
         pc_control_manager: object | None = None,
+        browser_manager: object | None = None,
         coding_agent_manager: object | None = None,
         vision_manager: object | None = None,
         decision_manager: object | None = None,
@@ -74,6 +100,7 @@ class RuntimeManager:
         security_manager: object | None = None,
         reasoning_gateway: object | None = None,
         settings_manager: object | None = None,
+        capability_manager: object | None = None,
         event_bus: object | None = None,
         max_tool_iterations: int = MAX_TOOL_ITERATIONS,
     ) -> None:
@@ -87,6 +114,7 @@ class RuntimeManager:
         self._conversation_manager = conversation_manager
         self._context_intelligence_manager = context_intelligence_manager
         self._pc_control_manager = pc_control_manager
+        self._browser_manager = browser_manager
         self._coding_agent_manager = coding_agent_manager
         self._vision_manager = vision_manager
         self._decision_manager = decision_manager
@@ -94,6 +122,7 @@ class RuntimeManager:
         self._planning_manager = planning_manager
         self._security_manager = security_manager
         self._settings_manager = settings_manager
+        self._capability_manager = capability_manager
         self._reasoning_gateway = reasoning_gateway or ReasoningGateway(
             config=config,
             logger=self._logger,
@@ -108,9 +137,11 @@ class RuntimeManager:
 
         self._fast_command_router = FastCommandRouter(
             pc_control_manager=pc_control_manager,
+            browser_manager=browser_manager,
             vision_manager=vision_manager,
             logger=self._logger,
             settings_manager=settings_manager,
+            security_manager=security_manager,
         )
 
         self._autonomous_task_engine = AutonomousTaskEngine(
@@ -234,10 +265,35 @@ class RuntimeManager:
             # Route 1: FAST_COMMAND_ROUTER
             fcr = self._fast_command_router
             if target_route == RouteTarget.FAST_COMMAND_ROUTER and fcr is not None:
+                fcr_intent_data = await fcr.classify_intent(request.text)
+                intent_name = fcr_intent_data.get("intent", "")
+                
+                # Capability Enforcement Gate
+                req_cap = _INTENT_CAPABILITY_MAP.get(intent_name)
+                if req_cap and self._capability_manager and hasattr(self._capability_manager, "is_enabled"):
+                    if not self._capability_manager.is_enabled(req_cap):
+                        self._logger.warning("[CAPABILITY GATE] Blocked FCR execution: %s requires %s (disabled)", intent_name, req_cap)
+                        duration_ms = (time.time() - ctx.start_time) * 1000
+                        cap_display = req_cap.replace('_', ' ').title()
+                        if cap_display == "Pc Control": cap_display = "PC Control"
+                        msg = f"[Capability Disabled]: {cap_display} is currently turned off. Enable it in Plugins to use this."
+                        await self._emit_event("capability_blocked", {
+                            "session_id": ctx.session_id,
+                            "request_id": str(ctx.request_id),
+                            "capability": req_cap,
+                            "intent": intent_name,
+                        })
+                        return UserResponse(
+                            request_id=request.id,
+                            text=msg,
+                            source=request.source,
+                            duration_ms=duration_ms,
+                        )
+
                 self._logger.info(
                     "[ROUTING] [MATCH] Fast Command Router MATCHED: '%s'", request.text
                 )
-                fast_result = await fcr.execute_fast_command(request.text)
+                fast_result = await fcr.execute_fast_command(request.text, fcr_intent_data)
                 duration_ms = (time.time() - ctx.start_time) * 1000
 
                 if self._analytics_manager is not None:
@@ -335,6 +391,25 @@ class RuntimeManager:
                 and self._coding_agent_manager is not None
                 and hasattr(self._coding_agent_manager, "execute_task")
             ):
+                # Capability Enforcement Gate for Coding Agent
+                if self._capability_manager and hasattr(self._capability_manager, "is_enabled"):
+                    if not self._capability_manager.is_enabled("coding_agent"):
+                        self._logger.warning("[CAPABILITY GATE] Blocked Coding Agent execution (disabled)")
+                        duration_ms = (time.time() - ctx.start_time) * 1000
+                        msg = f"[Capability Disabled]: Coding Agent is currently turned off. Enable it in Plugins to use this."
+                        await self._emit_event("capability_blocked", {
+                            "session_id": ctx.session_id,
+                            "request_id": str(ctx.request_id),
+                            "capability": "coding_agent",
+                            "intent": "CODING",
+                        })
+                        return UserResponse(
+                            request_id=request.id,
+                            text=msg,
+                            source=request.source,
+                            duration_ms=duration_ms,
+                        )
+
                 self._logger.info("[ROUTING] [MATCH] Routing coding request to CodingAgentManager TDD engine: '%s'", request.text)
                 try:
                     res = await self._coding_agent_manager.execute_task(
