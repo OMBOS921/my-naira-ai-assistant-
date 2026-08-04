@@ -1,0 +1,7 @@
+
+{
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash-free",
+  "api_key": "sk-CgTlzHd4oQoQD2mritxH70kqA06h08QqCwTPnSMSeLnL24Si2JXAi439TbrYbS08",
+  "groq_api_key": "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"
+}
