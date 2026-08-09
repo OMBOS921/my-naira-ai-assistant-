@@ -176,6 +176,7 @@ export default function RemoteBridgeSection({ onClose }) {
           Loading QR code data...
         </div>
       )}
+      </GlassCard>
 
       {/* ---------- Devices ---------- */}
       <GlassCard className="card">

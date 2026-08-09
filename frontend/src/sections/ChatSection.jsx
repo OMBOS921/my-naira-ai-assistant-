@@ -51,9 +51,16 @@ export default function ChatSection({ onClose, chatMessages, setChatMessages, sp
             </div>
           )}
           {chatMessages.map((m) => (
-            <div key={m.id} className={`chat-msg ${m.sender === 'user' ? 'user' : 'naira'}`}>
-              <div className="chat-bubble">{m.text}</div>
-              <div className="chat-meta">{m.sender === 'user' ? 'You' : 'Naira'} · {formatTime(m.ts)}</div>
+            <div key={m.id} className={`chat-msg ${m.sender === 'user' ? 'user' : 'naira'}${m.proactive ? ' proactive' : ''}`}>
+              <div className={`chat-bubble${m.streaming ? ' streaming' : ''}`}>
+                {m.text}
+                {m.streaming && <span className="stream-cursor">▌</span>}
+              </div>
+              <div className="chat-meta">
+                {m.sender === 'user' ? 'You' : 'Naira'}
+                {m.proactive && ' · 🔔 Proactive'}
+                {' · '}{formatTime(m.ts)}
+              </div>
             </div>
           ))}
           <div ref={bottomRef} />

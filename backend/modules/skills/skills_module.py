@@ -106,10 +106,15 @@ class SkillManager:
         """Async initialization alias for system boot sequence."""
         await self.initialize()
 
-    async def shutdown(self) -> None:
+    async def async_shutdown(self) -> None:
         """Clean up module resources."""
         self._logger.info("Shutting down SkillManager...")
         self._initialized = False
+
+    def degrade(self) -> None:
+        """Mark the module as degraded after a non-fatal failure."""
+        self._degraded = True
+        self._logger.warning("SkillManager marked degraded")
 
     # ------------------------------------------------------------------
     # Public Facade APIs

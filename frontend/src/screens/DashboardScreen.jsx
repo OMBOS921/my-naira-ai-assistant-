@@ -12,6 +12,7 @@ import RemoteBridgeSection from '../sections/RemoteBridgeSection.jsx'
 import PluginsSection from '../sections/PluginsSection.jsx'
 import VoiceSection from '../sections/VoiceSection.jsx'
 import SettingsSection from '../sections/SettingsSection.jsx'
+import { useSpatialAudio } from '../hooks/useSpatialAudio.js'
 
 const NAV = [
   { id: 'home', icon: Home, label: 'Home', Comp: HomeSection },
@@ -59,22 +60,32 @@ export default function DashboardScreen() {
     localStorage.setItem('naira.tools', JSON.stringify(toolLogs.slice(-200)))
   }, [toolLogs])
 
+  const { playSpatial } = useSpatialAudio()
+
   const playAudio = useCallback(
-    (b64, format = 'mp3') => {
+    (b64, data = null) => {
       try {
-        const audio = new Audio(`data:audio/${format};base64,${b64}`)
-        audioRef.current?.pause()
-        audioRef.current = audio
-        audio.onplay = () => setAvatarState('talking')
-        audio.onended = () => setAvatarState('idle')
-        audio.onerror = () => setAvatarState('idle')
-        audio.play().catch(() => setAvatarState('idle'))
+        setAvatarState('talking')
+        let panX = 0
+        
+        // Pan audio based on context
+        if (data) {
+           if (data.proactive) panX = 1.0 // Proactive from the right
+           else if (data.text?.toLowerCase().includes('error')) panX = -1.0 // Errors from the left
+        }
+
+        playSpatial(b64, { panX, volume: 1.0 }).finally(() => {
+          // Reset avatar state after an approximate duration (would be better with an onended callback)
+          setTimeout(() => setAvatarState('idle'), 2000)
+        })
       } catch {
         setAvatarState('idle')
       }
     },
-    [setAvatarState]
+    [setAvatarState, playSpatial]
   )
+
+  const streamingRef = useRef({ active: false, id: null, accumulated: '' })
 
   useEffect(() => {
     connect()
@@ -103,8 +114,61 @@ export default function DashboardScreen() {
         setAvatarState('listening')
         return
       }
+
+      // --- Proactive notification from JARVIS-style system ---
+      if (data.type === 'proactive_notification') {
+        setChatMessages((m) => [...m.slice(-199), {
+          id: `p_${Date.now()}`, ts: Date.now(), sender: 'naira',
+          text: data.text, proactive: true, priority: data.priority || 'normal',
+        }])
+        setAvatarState('talking')
+        setTimeout(() => setAvatarState('idle'), 2000)
+        return
+      }
+
+      // --- Streaming chunks: accumulate into a live chat bubble ---
+      if (data.type === 'stream_chunk') {
+        setAvatarState('talking')
+        const stream = streamingRef.current
+        if (!stream.active) {
+          // Start a new streaming bubble
+          stream.active = true
+          stream.id = `s_${Date.now()}`
+          stream.accumulated = data.text || ''
+          setChatMessages((m) => [...m.slice(-199), {
+            id: stream.id, ts: Date.now(), sender: 'naira',
+            text: stream.accumulated, streaming: true,
+          }])
+        } else {
+          // Update the existing streaming bubble
+          stream.accumulated += (data.text || '')
+          const sid = stream.id
+          const txt = stream.accumulated
+          setChatMessages((m) =>
+            m.map((msg) => msg.id === sid ? { ...msg, text: txt } : msg)
+          )
+        }
+        return
+      }
+
+      // --- Stream end: finalize the bubble, play TTS ---
+      if (data.type === 'stream_end') {
+        const stream = streamingRef.current
+        if (stream.active && stream.id) {
+          const sid = stream.id
+          const finalText = data.text || stream.accumulated
+          setChatMessages((m) =>
+            m.map((msg) => msg.id === sid ? { ...msg, text: finalText, streaming: false } : msg)
+          )
+        }
+        streamingRef.current = { active: false, id: null, accumulated: '' }
+        // Don't set idle yet — wait for final payload with audio
+        return
+      }
+
       if (!data.text) return
 
+      // --- Final response (with optional audio) ---
       if (sourceRef.current === 'voice') {
         const pending = pendingHistoryRef.current
         setHistoryItems((h) => {
@@ -117,7 +181,7 @@ export default function DashboardScreen() {
           return h
         })
         pendingHistoryRef.current = null
-        playAudio(data.audio)
+        if (data.audio) playAudio(data.audio, data)
       } else if (sourceRef.current === 'coding') {
         sourceRef.current = 'chat'
         setToolLogs((logs) => [
@@ -132,8 +196,19 @@ export default function DashboardScreen() {
         ])
         setAvatarState('idle')
       } else {
-        setChatMessages((m) => [...m.slice(-199), { id: `c_${Date.now()}`, ts: Date.now(), sender: 'naira', text: data.text }])
-        if (speakRef.current && data.audio) playAudio(data.audio)
+        // Final payload after streaming — update bubble if stream was active, else add new
+        if (!streamingRef.current.active) {
+          // Non-streaming fallback or final message
+          setChatMessages((m) => {
+            // Check if the last message already has this text from streaming
+            const last = m[m.length - 1]
+            if (last && last.sender === 'naira' && last.text === data.text) {
+              return m // Already shown via streaming
+            }
+            return [...m.slice(-199), { id: `c_${Date.now()}`, ts: Date.now(), sender: 'naira', text: data.text }]
+          })
+        }
+        if (speakRef.current && data.audio) playAudio(data.audio, data)
         else setAvatarState('idle')
       }
     })

@@ -427,6 +427,40 @@ class AutonomousTaskEngine:
         self._background_tasks: Dict[str, asyncio.Task[Any]] = {}
         self._node_events: Dict[str, asyncio.Event] = {}
         self._event_listeners: List[Callable[[TaskProgressEvent], None]] = []
+        self._degraded: bool = False
+        self._initialized: bool = False
+
+    # ------------------------------------------------------------------
+    # ModuleInterface Protocol
+    # ------------------------------------------------------------------
+
+    async def async_init(self) -> None:
+        """Initialize the autonomous task engine."""
+        self._initialized = True
+        self._logger.info("AutonomousTaskEngine initialized")
+
+    async def async_shutdown(self) -> None:
+        """Shutdown the autonomous task engine."""
+        self._logger.info("Shutting down AutonomousTaskEngine...")
+        # Cancel any running background tasks
+        for task in self._background_tasks.values():
+            task.cancel()
+        self._background_tasks.clear()
+        self._active_graphs.clear()
+        self._initialized = False
+
+    def degrade(self) -> None:
+        """Mark the engine as degraded."""
+        self._degraded = True
+        self._logger.warning("AutonomousTaskEngine marked degraded")
+
+    @property
+    def degraded(self) -> bool:
+        return self._degraded
+
+    @property
+    def initialized(self) -> bool:
+        return self._initialized
 
     # ------------------------------------------------------------------
     # Public Event / Observer API

@@ -18,6 +18,14 @@ from backend.modules.vision._types import ImageData
 _LOG = logging.getLogger("naira.vision.screen_capture")
 
 
+def _create_mss():
+    """Create an mss instance using the modern API, falling back to legacy."""
+    import mss
+    # mss >= 10.0 deprecates mss.mss(); prefer mss.MSS() if available
+    factory = getattr(mss, "MSS", None) or mss.mss
+    return factory()
+
+
 class ScreenCapture:
     """Real screen capture provider using mss and win32gui."""
 
@@ -41,7 +49,7 @@ class ScreenCapture:
             import mss
             from PIL import Image as PILImage
 
-            with mss.mss() as sct:
+            with _create_mss() as sct:
                 if region:
                     left, top, width, height = region
                     monitor = {"left": left, "top": top, "width": width, "height": height}
@@ -113,7 +121,7 @@ class ScreenCapture:
             left, top, right, bottom = rect
             width, height = right - left, bottom - top
 
-            with mss.mss() as sct:
+            with _create_mss() as sct:
                 monitor = {"left": left, "top": top, "width": width, "height": height}
                 screenshot = sct.grab(monitor)
                 img = PILImage.frombytes("RGB", screenshot.size, screenshot.bgra, "raw", "BGRX")
@@ -145,7 +153,7 @@ class ScreenCapture:
     @property
     def is_available(self) -> bool:
         try:
-            import mss
+            import mss  # noqa: F401
             return True
         except ImportError:
             return False

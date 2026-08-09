@@ -8,6 +8,9 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from backend.platform.resolver import get_port
+from backend.platform.ports.filesystem_port import FilesystemPort
+
 if TYPE_CHECKING:
     from backend.modules.pc_control._types import FileEntry, FileOpResult
     from backend.modules.pc_control.ports.pc_control_port import PCControlPort
@@ -32,34 +35,35 @@ class PCFilesystem:
         logger: logging.Logger | None = None,
     ) -> None:
         self._port = port
+        self._fs_port = get_port(FilesystemPort)
         self._logger = logger or _LOG
 
     async def list_directory(self, path: str) -> list[FileEntry]:
-        return await self._port.filesystem_list_directory(path)
+        return await self._fs_port.filesystem_list_directory(path)
 
     async def read_file(self, path: str, encoding: str = "utf-8") -> str:
-        return await self._port.filesystem_read_file(path, encoding=encoding)
+        return await self._fs_port.filesystem_read_file(path, encoding=encoding)
 
     async def write_file(self, path: str, content: str, encoding: str = "utf-8") -> FileOpResult:
-        return await self._port.filesystem_write_file(path, content, encoding=encoding)
+        return await self._fs_port.filesystem_write_file(path, content, encoding=encoding)
 
     async def delete_file(self, path: str) -> None:
-        await self._port.filesystem_delete_file(path)
+        await self._fs_port.filesystem_delete_file(path)
 
     async def create_directory(self, path: str) -> FileOpResult:
-        return await self._port.filesystem_create_directory(path)
+        return await self._fs_port.filesystem_create_directory(path)
 
     async def delete_directory(self, path: str, recursive: bool = False) -> None:
-        await self._port.filesystem_delete_directory(path, recursive=recursive)
+        await self._fs_port.filesystem_delete_directory(path, recursive=recursive)
 
     async def zip_directory(self, source_dir: str, output_zip_path: str) -> FileOpResult:
-        return await self._port.filesystem_zip_directory(source_dir, output_zip_path)
+        return await self._fs_port.filesystem_zip_directory(source_dir, output_zip_path)
 
     async def extract_archive(self, zip_path: str, extract_to_dir: str) -> FileOpResult:
-        return await self._port.filesystem_extract_archive(zip_path, extract_to_dir)
+        return await self._fs_port.filesystem_extract_archive(zip_path, extract_to_dir)
 
     async def copy_item(self, source_path: str, dest_path: str) -> FileOpResult:
-        return await self._port.filesystem_copy_item(source_path, dest_path)
+        return await self._fs_port.filesystem_copy_item(source_path, dest_path)
 
     async def move_item(self, source_path: str, dest_path: str) -> FileOpResult:
-        return await self._port.filesystem_move_item(source_path, dest_path)
+        return await self._fs_port.filesystem_move_item(source_path, dest_path)

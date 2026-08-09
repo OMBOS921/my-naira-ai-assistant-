@@ -20,7 +20,7 @@ from backend.modules.decision import RouteTarget
 from backend.runtime._request_context import RequestContext
 from backend.runtime._tool_loop import MAX_TOOL_ITERATIONS, run_tool_loop
 from backend.runtime.autonomous_task_engine import AutonomousTaskEngine
-from backend.runtime.fast_command_router import FastCommandRouter
+from backend.runtime.fast_command_router import CommandIntent, FastCommandRouter
 from backend.runtime.multi_agent.multi_agent_orchestrator import MultiAgentOrchestrator
 from backend.modules.reasoning_gateway import IntentCategory, ReasoningGateway
 from backend.types import (
@@ -153,6 +153,7 @@ class RuntimeManager:
             runtime_manager=self,
             tool_manager=self._tool_manager,
             logger=self._logger,
+            event_bus=self._event_bus,
         )
 
         # Wire FastCommandRouter into DecisionManager if decision manager is supplied
@@ -262,68 +263,77 @@ class RuntimeManager:
             ):
                 target_route = RouteTarget.FAST_COMMAND_ROUTER
 
-            # Route 1: FAST_COMMAND_ROUTER
             fcr = self._fast_command_router
             if target_route == RouteTarget.FAST_COMMAND_ROUTER and fcr is not None:
                 fcr_intent_data = await fcr.classify_intent(request.text)
                 intent_name = fcr_intent_data.get("intent", "")
                 
-                # Capability Enforcement Gate
-                req_cap = _INTENT_CAPABILITY_MAP.get(intent_name)
-                if req_cap and self._capability_manager and hasattr(self._capability_manager, "is_enabled"):
-                    if not self._capability_manager.is_enabled(req_cap):
-                        self._logger.warning("[CAPABILITY GATE] Blocked FCR execution: %s requires %s (disabled)", intent_name, req_cap)
-                        duration_ms = (time.time() - ctx.start_time) * 1000
-                        cap_display = req_cap.replace('_', ' ').title()
-                        if cap_display == "Pc Control": cap_display = "PC Control"
-                        msg = f"[Capability Disabled]: {cap_display} is currently turned off. Enable it in Plugins to use this."
-                        await self._emit_event("capability_blocked", {
-                            "session_id": ctx.session_id,
-                            "request_id": str(ctx.request_id),
-                            "capability": req_cap,
-                            "intent": intent_name,
-                        })
-                        return UserResponse(
-                            request_id=request.id,
-                            text=msg,
-                            source=request.source,
-                            duration_ms=duration_ms,
-                        )
-
-                self._logger.info(
-                    "[ROUTING] [MATCH] Fast Command Router MATCHED: '%s'", request.text
-                )
-                fast_result = await fcr.execute_fast_command(request.text, fcr_intent_data)
-                duration_ms = (time.time() - ctx.start_time) * 1000
-
-                if self._analytics_manager is not None:
-                    rec_fn: Any = getattr(self._analytics_manager, "record", None)
-                    if callable(rec_fn):
-                        rec_fn(
-                            AnalyticsEvent(
-                                event_type=EventType.FCR_HIT,
+                # If the classifier determined this is plain conversation,
+                # skip FCR execution and fall through to the LLM conversation
+                # pipeline (Route 3) so the user gets a real AI-generated reply.
+                if intent_name == CommandIntent.CONVERSATION.value:
+                    self._logger.info(
+                        "[ROUTING] FCR classified as CONVERSATION — falling through to LLM pipeline for text=%r",
+                        request.text,
+                    )
+                    target_route = RouteTarget.LLM_CONVERSATION
+                else:
+                    # Capability Enforcement Gate
+                    req_cap = _INTENT_CAPABILITY_MAP.get(intent_name)
+                    if req_cap and self._capability_manager and hasattr(self._capability_manager, "is_enabled"):
+                        if not self._capability_manager.is_enabled(req_cap):
+                            self._logger.warning("[CAPABILITY GATE] Blocked FCR execution: %s requires %s (disabled)", intent_name, req_cap)
+                            duration_ms = (time.time() - ctx.start_time) * 1000
+                            cap_display = req_cap.replace('_', ' ').title()
+                            if cap_display == "Pc Control": cap_display = "PC Control"
+                            msg = f"[Capability Disabled]: {cap_display} is currently turned off. Enable it in Plugins to use this."
+                            await self._emit_event("capability_blocked", {
+                                "session_id": ctx.session_id,
+                                "request_id": str(ctx.request_id),
+                                "capability": req_cap,
+                                "intent": intent_name,
+                            })
+                            return UserResponse(
+                                request_id=request.id,
+                                text=msg,
+                                source=request.source,
                                 duration_ms=duration_ms,
-                                success=True,
-                                payload={"request": request.text, "target": "fcr"},
                             )
-                        )
 
-                token_usage = self._estimate_token_usage("", fast_result)
-                final_response = LLMResponse(
-                    text=fast_result,
-                    tool_calls=None,
-                    finish_reason="stop",
-                    token_usage=token_usage,
-                    provider="fast_command_router",
-                    duration_ms=duration_ms,
-                )
-                await self._store_turn(ctx, final_response)
-                return UserResponse(
-                    request_id=request.id,
-                    text=fast_result,
-                    source=request.source,
-                    duration_ms=duration_ms,
-                )
+                    self._logger.info(
+                        "[ROUTING] [MATCH] Fast Command Router MATCHED: '%s'", request.text
+                    )
+                    fast_result = await fcr.execute_fast_command(request.text, fcr_intent_data)
+                    duration_ms = (time.time() - ctx.start_time) * 1000
+
+                    if self._analytics_manager is not None:
+                        rec_fn: Any = getattr(self._analytics_manager, "record", None)
+                        if callable(rec_fn):
+                            rec_fn(
+                                AnalyticsEvent(
+                                    event_type=EventType.FCR_HIT,
+                                    duration_ms=duration_ms,
+                                    success=True,
+                                    payload={"request": request.text, "target": "fcr"},
+                                )
+                            )
+
+                    token_usage = self._estimate_token_usage("", fast_result)
+                    final_response = LLMResponse(
+                        text=fast_result,
+                        tool_calls=None,
+                        finish_reason="stop",
+                        token_usage=token_usage,
+                        provider="fast_command_router",
+                        duration_ms=duration_ms,
+                    )
+                    await self._store_turn(ctx, final_response)
+                    return UserResponse(
+                        request_id=request.id,
+                        text=fast_result,
+                        source=request.source,
+                        duration_ms=duration_ms,
+                    )
 
             # Route 2: PLANNING_ENGINE
             if target_route == RouteTarget.PLANNING_ENGINE and self._planning_manager is not None:
@@ -502,6 +512,9 @@ class RuntimeManager:
 
             ctx.current_stage = "context"
             ctx.system_prompt = self._compile_prompt()
+            if ctx.metadata and "personality_context" in ctx.metadata:
+                ctx.system_prompt += "\n\n" + ctx.metadata["personality_context"]
+            
             ctx.messages = self._build_context(ctx).messages[:]
 
             ctx.current_stage = "llm"
@@ -600,25 +613,37 @@ class RuntimeManager:
 
             fcr = self._fast_command_router
             if target_route == RouteTarget.FAST_COMMAND_ROUTER and fcr is not None:
-                self._logger.info(
-                    "[ROUTING] [MATCH] Fast Command Router MATCHED (stream): '%s'", request.text
-                )
-                fast_result = await fcr.execute_fast_command(request.text)
-                duration_ms = (time.time() - ctx.start_time) * 1000
+                fcr_intent_data = await fcr.classify_intent(request.text)
+                intent_name = fcr_intent_data.get("intent", "")
 
-                yield fast_result
+                # If the classifier determined this is plain conversation,
+                # skip FCR execution and fall through to the streaming LLM
+                # pipeline so the user gets a real AI-generated reply.
+                if intent_name == CommandIntent.CONVERSATION.value:
+                    self._logger.info(
+                        "[ROUTING] FCR classified as CONVERSATION (stream) — falling through to LLM pipeline for text=%r",
+                        request.text,
+                    )
+                else:
+                    self._logger.info(
+                        "[ROUTING] [MATCH] Fast Command Router MATCHED (stream): '%s'", request.text
+                    )
+                    fast_result = await fcr.execute_fast_command(request.text, fcr_intent_data)
+                    duration_ms = (time.time() - ctx.start_time) * 1000
 
-                token_usage = self._estimate_token_usage("", fast_result)
-                final_response = LLMResponse(
-                    text=fast_result,
-                    tool_calls=None,
-                    finish_reason="stop",
-                    token_usage=token_usage,
-                    provider="fast_command_router",
-                    duration_ms=duration_ms,
-                )
-                await self._store_turn(ctx, final_response)
-                return
+                    yield fast_result
+
+                    token_usage = self._estimate_token_usage("", fast_result)
+                    final_response = LLMResponse(
+                        text=fast_result,
+                        tool_calls=None,
+                        finish_reason="stop",
+                        token_usage=token_usage,
+                        provider="fast_command_router",
+                        duration_ms=duration_ms,
+                    )
+                    await self._store_turn(ctx, final_response)
+                    return
 
             # Reasoning Gateway Evaluation (stream)
             gw_decision = self._reasoning_gateway.evaluate(request.text, request.metadata)
@@ -663,6 +688,9 @@ class RuntimeManager:
 
             ctx.current_stage = "context"
             ctx.system_prompt = self._compile_prompt()
+            if ctx.metadata and "personality_context" in ctx.metadata:
+                ctx.system_prompt += "\n\n" + ctx.metadata["personality_context"]
+            
             ctx.messages = self._build_context(ctx).messages[:]
             tool_defs = self._get_tool_defs()
 

@@ -48,6 +48,7 @@ venv/
 
 # Credentials & Integrations
 data/credentials/
+firebase_credentials.json
 memory/user_vault.json
 config/google_client_secret.json
 *.naira_backup

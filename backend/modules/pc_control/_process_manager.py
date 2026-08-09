@@ -7,7 +7,10 @@ the port adapter.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from backend.platform.resolver import get_port
+from backend.platform.ports.process_port import ProcessPort
 
 if TYPE_CHECKING:
     from backend.modules.pc_control._types import ProcessInfo
@@ -39,22 +42,23 @@ class PCProcessManager:
         logger: logging.Logger | None = None,
     ) -> None:
         self._port = port
+        self._proc_port = get_port(ProcessPort)
         self._logger = logger or _LOG
 
     async def list_processes(self) -> list[ProcessInfo]:
-        return await self._port.process_list()
+        return await self._proc_port.process_list()
 
     async def kill_process(self, pid: int, force: bool = False) -> None:
         if pid in CRITICAL_SYSTEM_PIDS:
             raise PermissionError(f"Termination of critical system process PID {pid} is blocked by safety layer.")
-        await self._port.process_kill(pid, force=force)
+        await self._proc_port.process_kill(pid, force=force)
 
     async def safe_kill_process(self, pid: int | None = None, name: str | None = None, force: bool = False) -> str:
         """Safely terminate a background process by PID or name, protecting system processes."""
         if pid is not None:
             if pid in CRITICAL_SYSTEM_PIDS:
                 raise PermissionError(f"Termination of critical system process PID {pid} is blocked by safety layer.")
-            await self._port.process_kill(pid, force=force)
+            await self._proc_port.process_kill(pid, force=force)
             return f"Successfully terminated process PID {pid}."
 
         if name:
@@ -71,7 +75,7 @@ class PCProcessManager:
             for p in matched:
                 if p.pid not in CRITICAL_SYSTEM_PIDS:
                     try:
-                        await self._port.process_kill(p.pid, force=force)
+                        await self._proc_port.process_kill(p.pid, force=force)
                         killed_count += 1
                     except Exception as e:
                         self._logger.warning("Failed to kill process PID %d: %s", p.pid, e)
@@ -80,7 +84,7 @@ class PCProcessManager:
         return "Please specify a PID or process name to terminate."
 
     async def get_system_metrics(self) -> Any:
-        return await self._port.get_system_metrics()
+        return await self._proc_port.get_system_metrics()
 
     async def get_open_ports(self) -> list[int]:
-        return await self._port.get_open_ports()
+        return await self._proc_port.get_open_ports()

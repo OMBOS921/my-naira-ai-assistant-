@@ -29,13 +29,44 @@ class MultiAgentOrchestrator:
         runtime_manager: Any,
         tool_manager: Any | None = None,
         logger: logging.Logger | None = None,
+        event_bus: Any | None = None,
         max_agents_per_request: int = 4,
     ) -> None:
         self._runtime_manager = runtime_manager
         self._tool_manager = tool_manager
         self._logger = logger or _LOG
+        self._event_bus = event_bus
         self._max_agents_per_request = max_agents_per_request
         self._agents: dict[str, AgentPersona] = dict(BUILTIN_AGENTS)
+        self._degraded: bool = False
+        self._initialized: bool = False
+
+    # ------------------------------------------------------------------
+    # ModuleInterface Protocol
+    # ------------------------------------------------------------------
+
+    async def async_init(self) -> None:
+        """Initialize the multi-agent orchestrator."""
+        self._initialized = True
+        self._logger.info("MultiAgentOrchestrator initialized")
+
+    async def async_shutdown(self) -> None:
+        """Shutdown the multi-agent orchestrator."""
+        self._logger.info("Shutting down MultiAgentOrchestrator...")
+        self._initialized = False
+
+    def degrade(self) -> None:
+        """Mark the orchestrator as degraded."""
+        self._degraded = True
+        self._logger.warning("MultiAgentOrchestrator marked degraded")
+
+    @property
+    def degraded(self) -> bool:
+        return self._degraded
+
+    @property
+    def initialized(self) -> bool:
+        return self._initialized
 
     def register_custom_agent(self, agent: AgentPersona) -> None:
         """Register a custom agent persona."""

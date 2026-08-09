@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import AsyncIterator
 from enum import Enum, StrEnum, auto
 from typing import TYPE_CHECKING
 
@@ -157,6 +158,31 @@ class Orchestrator:
                 text=f"[System Error]: Failed to process request ({exc}).",
                 source=request.source,
             )
+        finally:
+            if self._state != FSMState.SHUTDOWN:
+                self.state = FSMState.IDLE
+
+    async def process_request_stream(self, request: UserRequest) -> AsyncIterator[str]:
+        """Stream response chunks for a user request via the Runtime pipeline."""
+        if self._state == FSMState.SHUTDOWN:
+            yield "[System Error]: Orchestrator is shut down."
+            return
+
+        self.state = FSMState.PROCESSING
+
+        try:
+            runtime_mgr = self._module_registry.get("runtime")
+            if runtime_mgr is not None and hasattr(runtime_mgr, "process_request_stream"):
+                async for chunk in runtime_mgr.process_request_stream(request):
+                    yield chunk
+            else:
+                self._logger.warning("Runtime stream not available — falling back to non-streaming")
+                response = await self.process_user_request(request)
+                yield response.text
+                return
+        except Exception as exc:
+            self._logger.error("Error during streaming orchestration: %s", exc)
+            yield f"\n[System Error]: {exc}"
         finally:
             if self._state != FSMState.SHUTDOWN:
                 self.state = FSMState.IDLE

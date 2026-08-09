@@ -517,30 +517,88 @@ class FastCommandRouter:
         self.intent_engine = IntentEngine(router=self)
 
     def is_fast_command(self, text: str) -> bool:
-        """Determines whether text should be handled by FastCommandRouter."""
+        """Determines whether text should be handled by FastCommandRouter.
+
+        Uses an allow-list approach: returns False by default (treat as normal
+        conversation) and only returns True when the text plausibly matches an
+        actionable command category.
+        """
         if not text or not text.strip():
             return False
 
         lowered = text.lower().strip()
-        lowered_check = re.sub(r"\b(?:visual\s+studio\s+code|vs\s*code|vscode|code\s*editor)\b", "app_editor", lowered)
 
-        # Web search & internet retrieval queries are always permitted in FCR
-        if any(k in lowered for k in ("search", "search_web", "google", "youtube", "web search", "online", "latest news")):
+        # --- Browser control / web search keywords ---
+        if any(k in lowered for k in (
+            "search", "search_web", "google", "youtube", "web search",
+            "online", "latest news",
+        )):
             return True
 
-        non_fast_triggers = (
-            "script likho", "run karo", "banao script", "code likho", "script banao",
-            "script", "code", "python", "execute_local_python", "local_python", "execute_script",
-            "run script", "write script", "write a script", "write code", "write a python script",
-            "create function", "fix bug", "debug", "error", "nameerror", "typeerror", "syntaxerror",
-            "valueerror", "exception", "stack trace", "traceback", "read the error", "read error",
-            "fix it", "fix error", "solve error", "self-correct", "run again", "run via",
-            "read_file", "write_file"
-        )
-        if any(trigger in lowered_check for trigger in non_fast_triggers):
-            return False
+        # URL patterns
+        if any(k in lowered for k in ("http://", "https://", "www.", ".com", ".org", ".net")):
+            return True
 
-        return True
+        # --- System control keywords ---
+        system_keywords = (
+            "open", "close", "launch", "start", "kholo", "khol", "chalao", "shuru",
+            "खोलो", "खोल", "चलाओ", "शुरू",
+            "volume", "brightness", "awaaz", "roshni", "आवाज़", "वॉल्यूम",
+            "वोल्यूम", "ब्राइटनेस",
+            "mute", "unmute",
+            "lock", "लॉक",
+            "shutdown", "shut down", "turn off", "band karo", "बंद",
+            "restart", "reboot", "रीस्टार्ट",
+            "screenshot", "capture", "स्क्रीनशॉट",
+            "kill process", "task manager", "taskmgr",
+            "settings", "system info",
+            "notepad", "calc", "calculator", "chrome", "cmd",
+            "powershell", "explorer", "vscode", "vs code", "paint",
+        )
+        if any(k in lowered for k in system_keywords):
+            return True
+
+        # --- File system keywords ---
+        file_keywords = (
+            "create folder", "delete folder", "rename folder",
+            "make folder", "remove folder",
+            "create file", "delete file", "rename file",
+            "make file", "remove file", "open file",
+            "mkdir", "rmdir", "touch",
+            "banao folder", "folder banao",
+            "banao file", "file banao",
+        )
+        if any(k in lowered for k in file_keywords):
+            return True
+        # Broader match: verb + noun anywhere in the text (handles articles like "delete the folder")
+        fs_verbs = ("create", "delete", "remove", "rename", "make", "banao")
+        fs_nouns = ("folder", "file", "directory")
+        if any(v in lowered for v in fs_verbs) and any(n in lowered for n in fs_nouns):
+            return True
+
+        # --- Coding agent keywords ---
+        coding_keywords = (
+            "script likho", "run karo", "banao script", "code likho", "script banao",
+            "script", "code", "python", "execute_local_python", "local_python",
+            "execute_script", "run script", "write script", "write a script",
+            "write code", "write a python script",
+            "create function", "fix bug", "debug", "error",
+            "nameerror", "typeerror", "syntaxerror", "valueerror",
+            "exception", "stack trace", "traceback",
+            "read the error", "read error",
+            "fix it", "fix error", "solve error", "self-correct",
+            "run again", "run via", "read_file", "write_file",
+        )
+        # Normalize VS Code references so "code" doesn't false-positive on them
+        lowered_check = re.sub(
+            r"\b(?:visual\s+studio\s+code|vs\s*code|vscode|code\s*editor)\b",
+            "app_editor", lowered,
+        )
+        if any(k in lowered_check for k in coding_keywords):
+            return True
+
+        # Default: not a fast command — route to normal conversation
+        return False
 
     # ------------------------------------------------------------------
     # Intent Classification with AI Self-Correction Loop
@@ -1054,9 +1112,9 @@ class FastCommandRouter:
     # ------------------------------------------------------------------
 
     def _execute_conversation(self, intent_data: Dict[str, Any], raw_text: str) -> str:
-        reasoning = intent_data.get("reasoning")
-        if reasoning:
-            return f"[CONVERSATION] {reasoning}"
+        # Defense-in-depth: never leak internal classifier fields (reasoning, etc.)
+        # to the user.  After the RuntimeManager fix this path is effectively
+        # unreachable for normal chat, but we keep a safe generic fallback.
         return f"Hello! How can I assist you further with '{raw_text}'?"
 
     # ------------------------------------------------------------------

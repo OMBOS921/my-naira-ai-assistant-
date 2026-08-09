@@ -184,10 +184,17 @@ class LLMManager:
     @property
     def fallback_chain(self) -> tuple[str, ...]:
         """Return the ordered fallback chain."""
+        return self._fallback_chain
+
     @property
     def orchestrator(self) -> LLMProviderOrchestrator:
         """Return the underlying provider orchestrator."""
         return self._orchestrator
+
+    @property
+    def registered_providers(self) -> list[str]:
+        """Return the names of all registered providers."""
+        return list(self._providers.keys())
 
     async def register_provider(self, name: str, provider: LLMPort) -> None:
         """Register a new provider at runtime.

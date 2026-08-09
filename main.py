@@ -53,8 +53,7 @@ def load_groq_api_key_from_vault(root_dir: Path, logger: logging.Logger | None =
 
     try:
         import json
-        with open(vault_path, "r", encoding="utf-8") as f:
-            vault_data = json.load(f)
+        vault_data = json.loads(vault_path.read_text(encoding="utf-8"))
 
         if not isinstance(vault_data, dict):
             if logger:
@@ -110,6 +109,8 @@ from backend.modules.utils.log import install_excepthook, setup_logging
 from backend.eventbus import EventBus
 from backend.orchestrator import FSMState, Orchestrator
 from backend.runtime.proactive_watchdog import ProactiveWatchdog
+from backend.runtime.proactive_event_engine import ProactiveEventEngine
+from backend.modules.personality import PersonalityEngine
 from backend.types import UserRequest, UserResponse
 from backend.api.settings import router as settings_router
 from backend.api.capabilities import router as capabilities_router
@@ -125,11 +126,18 @@ _orchestrator: Orchestrator | None = None
 _container: DIContainer | None = None
 _active_websockets: set[WebSocket] = set()
 _watchdog: ProactiveWatchdog | None = None
+_proactive_engine: ProactiveEventEngine | None = None
+_personality_engine: PersonalityEngine | None = None
 
 async def process_user_input(user_text: str, session_id: str = "default", modality: str = "text") -> str:
     if _orchestrator is None:
         _LOG.error("[MAIN] Orchestrator is not initialized — request rejected.")
         return "[System Error]: Orchestrator is not initialized."
+
+    metadata = {}
+    if _personality_engine:
+        _personality_engine.process_message(user_text)
+        metadata["personality_context"] = _personality_engine.get_personality_context()
 
     request = UserRequest(
         id=uuid.uuid4(),
@@ -137,13 +145,14 @@ async def process_user_input(user_text: str, session_id: str = "default", modali
         text=user_text,
         session_id=session_id,
         timestamp=time.time(),
+        metadata=metadata,
     )
     response = await _orchestrator.process_user_request(request)
     return response.text
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _modules, _orchestrator, _container, _watchdog, _LOG
+    global _modules, _orchestrator, _container, _watchdog, _LOG, _proactive_engine, _personality_engine
 
     try:
         env = EnvironmentSnapshot.load()
@@ -155,7 +164,7 @@ async def lifespan(app: FastAPI):
     _LOG = setup_logging(ROOT_DIR / config.log.directory, config.log.level)
     install_excepthook(_LOG)
     _LOG.info("[BOOT] Naira-OS v%s booting ...", __version__)
-    load_groq_api_key_from_vault(ROOT_DIR, _LOG)
+    await asyncio.to_thread(load_groq_api_key_from_vault, ROOT_DIR, _LOG)
 
     event_bus = EventBus()
     _container = DIContainer()
@@ -224,12 +233,46 @@ async def lifespan(app: FastAPI):
     _LOG.info("[BOOT] System ready — %d modules booted.", len(_modules))
     await _orchestrator.start_autonomous_loop()
 
+    # --- PersonalityEngine ---
+    personality_dir = ROOT_DIR / "memory" / "personality"
+    _personality_engine = PersonalityEngine(personality_dir=personality_dir, event_bus=event_bus)
+    await _personality_engine.async_init()
+    _LOG.info("[BOOT] PersonalityEngine initialized.")
+
+    # --- Proactive Event Engine (JARVIS interruptions) ---
+    async def _push_proactive_to_ws(event: Any) -> None:
+        """Push proactive events to all active WebSocket clients."""
+        payload = {
+            "sender": "naira",
+            "type": "proactive_notification",
+            "text": event.message,
+            "priority": event.priority.value if hasattr(event.priority, 'value') else str(event.priority),
+            "source": event.source,
+        }
+        for ws in list(_active_websockets):
+            try:
+                await ws.send_json(payload)
+            except Exception:
+                pass
+
+    _proactive_engine = ProactiveEventEngine(
+        push_callback=_push_proactive_to_ws,
+        check_interval=30.0,
+        event_bus=event_bus,
+    )
+    await _proactive_engine.start()
+    _LOG.info("[BOOT] ProactiveEventEngine started.")
+
     _watchdog = ProactiveWatchdog(active_websockets=_active_websockets, check_interval=60.0, logger=_LOG)
     await _watchdog.start()
 
     yield
 
     _LOG.info("[BOOT] Shutdown sequence started ...")
+    if _proactive_engine:
+        await _proactive_engine.stop()
+    if _personality_engine:
+        await _personality_engine.async_shutdown()
     if _watchdog:
         await _watchdog.stop()
     await _orchestrator.stop_autonomous_loop()
@@ -245,9 +288,18 @@ app.include_router(voice_router)
 # --- Naya Remote Bridge Router Yahan Mount Hua Hai ---
 app.include_router(remote_bridge_router)
 
+_CORS_ORIGINS: list[str] = [
+    origin.strip()
+    for origin in os.getenv(
+        "NAIRA_CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000",
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -315,8 +367,49 @@ async def websocket_naira_endpoint(websocket: WebSocket) -> None:
                 from backend.modules.voice._audio_player import audio_interrupt_event
                 audio_interrupt_event.set()
                 _LOG.info("[WS-NAIRA] Received command: %s", user_text)
-                response_text = await process_user_input(user_text)
 
+                # --- Streaming response pipeline ---
+                if _orchestrator is not None:
+                    metadata = {}
+                    if _personality_engine:
+                        _personality_engine.process_message(user_text)
+                        metadata["personality_context"] = _personality_engine.get_personality_context()
+
+                    request = UserRequest(
+                        id=uuid.uuid4(),
+                        source="websocket",
+                        text=user_text,
+                        session_id="default",
+                        timestamp=time.time(),
+                        metadata=metadata,
+                    )
+                    accumulated_text = ""
+                    try:
+                        async for chunk in _orchestrator.process_request_stream(request):
+                            accumulated_text += chunk
+                            # Send each chunk to frontend for real-time display
+                            await websocket.send_json({
+                                "sender": "naira",
+                                "type": "stream_chunk",
+                                "text": chunk,
+                            })
+                    except Exception as stream_exc:
+                        _LOG.error("[WS-NAIRA] Streaming error: %s", stream_exc)
+                        if not accumulated_text:
+                            accumulated_text = f"[System Error]: {stream_exc}"
+
+                    response_text = accumulated_text or "[No response generated]"
+                else:
+                    response_text = "[System Error]: Orchestrator is not initialized."
+
+                # Send stream_end marker
+                await websocket.send_json({
+                    "sender": "naira",
+                    "type": "stream_end",
+                    "text": response_text,
+                })
+
+                # TTS synthesis on the final complete response
                 audio_b64 = None
                 voice_mgr = _modules.get("voice")
                 if voice_mgr and response_text:
@@ -337,13 +430,13 @@ async def websocket_naira_endpoint(websocket: WebSocket) -> None:
                     except Exception as tts_exc:
                         _LOG.error("[WS-NAIRA] TTS synthesis failed: %s", tts_exc)
 
+                # Send final payload with full text + optional audio
                 payload: dict[str, Any] = {
                     "sender": "naira",
                     "text": response_text,
                 }
                 if audio_b64:
                     payload["audio"] = audio_b64
-                    # Propagate voice source (rvc vs fallback) to frontend
                     active_name = getattr(voice_mgr, "active_tts_provider_name", "") or ""
                     payload["voice_source"] = "rvc" if "rvc" in active_name else "fallback"
 

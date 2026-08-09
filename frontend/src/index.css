@@ -893,3 +893,38 @@ input[type='range']::-webkit-slider-thumb {
     height: 230px;
   }
 }
+
+/* ============================================================
+   Streaming & Proactive Notification Styles
+   ============================================================ */
+
+/* Blinking cursor during streaming */
+.stream-cursor {
+  display: inline;
+  animation: cursorBlink 0.7s step-end infinite;
+  color: var(--accent-1);
+  font-weight: 300;
+  margin-left: 1px;
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Streaming bubble — glowing left border */
+.chat-bubble.streaming {
+  border-left: 2px solid var(--accent-1);
+  box-shadow: inset 3px 0 12px -4px var(--accent-glow);
+}
+
+/* Proactive notification message */
+.chat-msg.proactive .chat-bubble {
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  background: rgba(251, 191, 36, 0.06);
+  box-shadow: 0 0 20px -6px rgba(251, 191, 36, 0.15);
+}
+
+.chat-msg.proactive .chat-meta {
+  color: var(--amber);
+}
