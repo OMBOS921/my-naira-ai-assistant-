@@ -1,0 +1,7 @@
+
+{
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash-free",
+  "api_key": "",
+  "groq_api_key": ""
+}
