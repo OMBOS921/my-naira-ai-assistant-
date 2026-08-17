@@ -1,0 +1,41 @@
+{
+  "title": "NairaLLM Final V1 — Stage 2 Domain Training Readiness Report",
+  "timestamp": "2026-08-17 14:52:02 UTC",
+  "stage": "domain",
+  "status": "APPROVED_FOR_STAGE_2_TRAINING",
+  "git_commit_sha": "a1e9e79c51fd88c34544ce37fb2907aa7577826d",
+  "preflight_verdict": "STAGE_0_PREFLIGHT_PASSED",
+  "blocker_a_lineage_resolution": {
+    "issue": "WARNING — Stage 'domain' requires valid parent checkpoint from 'semantic', but none was found",
+    "root_cause": "train_final_v1.py did not implement auto-discovery of predecessor checkpoints when --parent-checkpoint was omitted from the command line.",
+    "fix": "Implemented find_latest_checkpoint() in CheckpointChainManager to automatically discover the verified semantic / foundation checkpoint and metadata, with strict error abort if missing.",
+    "discovered_parent_weights": "NairaLLM\\training\\checkpoints\\foundation\\naira_semantic_105k_numpy.npz",
+    "discovered_parent_metadata": "NairaLLM\\training\\checkpoints\\foundation\\foundation_checkpoint_metadata.json",
+    "lineage_validation_status": "PASSED"
+  },
+  "blocker_b_data_batching_resolution": {
+    "issue": "RuntimeError: stack expects each tensor to be equal size, but got [118] at entry 0 and [74] at entry 1",
+    "root_cause": "MaskedInstructionDataset returns variable-length conversation tensors. PyTorch DataLoader's default_collate attempted torch.stack() across unequal sequence lengths.",
+    "fix": "Implemented InstructionDataCollator that dynamically pads input sequences with pad_token_id and pads target sequences with ignore_index=-100. Padded positions are completely ignored during cross-entropy loss computation and gradient backpropagation.",
+    "padding_policy": "pad_token_id=0, target_ignore_index=-100, max_seq_len=1024",
+    "loss_masking_verified": true
+  },
+  "dataset_b_validation": {
+    "dataset_name": "dataset_b_domain.jsonl",
+    "records": 80,
+    "tokens": 5713,
+    "sha256": "c191394b76e884b84fd39f90f1d1fd7eb8e7b428c3be6233e8604fe952144a4a",
+    "format": "Structured Conversations with Target Masking",
+    "status": "LOCKED_AND_VERIFIED"
+  },
+  "test_results": {
+    "test_variable_length_collation": "PASSED",
+    "test_truncation_at_max_seq_len": "PASSED",
+    "test_loss_masking_on_padding": "PASSED",
+    "test_empty_batch_safeguard": "PASSED",
+    "test_stage_2_parent_discovery": "PASSED",
+    "test_stage_2_foundation_fallback_discovery": "PASSED",
+    "test_checkpoint_chain_all": "PASSED"
+  },
+  "exact_colab_stage_2_command": "!python NairaLLM/training/scripts/train_final_v1.py \\\n    --stage domain \\\n    --config NairaLLM/configs/final_nairallm_v1.json"
+}

@@ -40,9 +40,11 @@ from NairaLLM.model.tokenizer.naira_tokenizer import NairaTokenizer
 from NairaLLM.training.checkpoints.checkpoint_chain import (
     CheckpointChainManager,
     CheckpointMetadata,
+    STAGE_PREDECESSORS,
     TrainingStage,
     compute_file_sha256,
     get_current_git_commit,
+    normalize_stage,
 )
 
 _LOG = logging.getLogger("nairallm.train_final_v1")
@@ -153,6 +155,46 @@ if _HAS_TORCH:
             return self.samples[idx]
 
 
+class InstructionDataCollator:
+    """
+    Pads variable-length (input_ids, target_ids) sequences within each batch.
+    Pads inputs with pad_token_id.
+    Pads targets with ignore_index=-100 so loss is ignored on padding tokens.
+    """
+
+    def __init__(self, pad_token_id: int = 0, ignore_index: int = -100, max_seq_len: int = 1024) -> None:
+        self.pad_token_id = pad_token_id
+        self.ignore_index = ignore_index
+        self.max_seq_len = max_seq_len
+
+    def __call__(self, batch: list[Any]) -> tuple[Any, Any]:
+        if not batch:
+            raise ValueError("Cannot collate empty batch.")
+
+        batch_max_len = min(max(len(inp) for inp, _ in batch), self.max_seq_len)
+        batch_size = len(batch)
+
+        if _HAS_TORCH:
+            padded_inputs = torch.full((batch_size, batch_max_len), self.pad_token_id, dtype=torch.long)
+            padded_targets = torch.full((batch_size, batch_max_len), self.ignore_index, dtype=torch.long)
+
+            for i, (inp, tgt) in enumerate(batch):
+                seq_len = min(len(inp), batch_max_len)
+                padded_inputs[i, :seq_len] = inp[:seq_len]
+                padded_targets[i, :seq_len] = tgt[:seq_len]
+
+            return padded_inputs, padded_targets
+        else:
+            padded_inputs = [[self.pad_token_id] * batch_max_len for _ in range(batch_size)]
+            padded_targets = [[self.ignore_index] * batch_max_len for _ in range(batch_size)]
+            for i, (inp, tgt) in enumerate(batch):
+                seq_len = min(len(inp), batch_max_len)
+                for j in range(seq_len):
+                    padded_inputs[i][j] = inp[j]
+                    padded_targets[i][j] = tgt[j]
+            return padded_inputs, padded_targets
+
+
 def get_cosine_schedule_with_warmup(
     optimizer: torch.optim.Optimizer,
     num_warmup_steps: int,
@@ -219,18 +261,57 @@ def train_stage(
 
     _LOG.info("Initializing stage [%s] -> epochs=%d, lr=%.2e, dataset=%s", stage, epochs, learning_rate, dataset_path.name)
 
-    # 3. Lineage Validation
+    # 3. Lineage Validation & Automatic Parent Checkpoint Resolution
     chain_mgr = CheckpointChainManager(workspace_root / "NairaLLM" / "training" / "checkpoints")
-    is_valid, reason = chain_mgr.validate_parent(stage, parent_checkpoint)
-    _LOG.info("Lineage check: %s (%s)", "PASSED" if is_valid else "WARNING", reason)
+    st_enum = normalize_stage(stage)
+    expected_parent_stage = STAGE_PREDECESSORS.get(st_enum)
+
+    actual_parent_meta_path = parent_checkpoint
+    actual_parent_weights_path = None
+
+    if expected_parent_stage is not None:
+        if actual_parent_meta_path is None:
+            # Auto-discover predecessor checkpoint
+            w_path, m_path = chain_mgr.find_latest_checkpoint(expected_parent_stage)
+            if m_path is not None and w_path is not None:
+                actual_parent_meta_path = m_path
+                actual_parent_weights_path = w_path
+                _LOG.info("Auto-discovered predecessor checkpoint for stage [%s]: %s (weights: %s)", stage, m_path.name, w_path.name)
+            else:
+                raise RuntimeError(
+                    f"Stage [{stage}] requires a verified predecessor checkpoint from [{expected_parent_stage.value}], "
+                    f"but none was found in checkpoints/{expected_parent_stage.value}/. "
+                    f"Cannot proceed without valid lineage. DO NOT train from uninitialized scratch."
+                )
+        else:
+            p = Path(actual_parent_meta_path)
+            if p.suffix == ".json":
+                meta = CheckpointMetadata.load(p)
+                w_path = Path(meta.weights_path)
+                if not w_path.exists():
+                    for cand in [p.parent / w_path.name, workspace_root / meta.weights_path]:
+                        if cand.exists():
+                            w_path = cand
+                            break
+                actual_parent_weights_path = w_path
+            else:
+                actual_parent_weights_path = p
+
+        is_valid, reason = chain_mgr.validate_parent(stage, actual_parent_meta_path)
+        if not is_valid:
+            raise RuntimeError(f"Lineage validation FAILED for stage [{stage}]: {reason}")
+        _LOG.info("Lineage check PASSED: %s", reason)
+    else:
+        _LOG.info("Initial stage [%s] requires no predecessor checkpoint.", stage)
 
     # 4. Model Initialization & Parent Weights Loading
     model = NairaTransformer(model_config).to(device)
     param_count = model.count_parameters()
     _LOG.info("Instantiated NairaTransformer (%d trainable parameters)", param_count)
 
-    if parent_checkpoint and Path(parent_checkpoint).exists():
-        p = Path(parent_checkpoint)
+    weights_to_load = actual_parent_weights_path or (Path(parent_checkpoint) if parent_checkpoint else None)
+    if weights_to_load and Path(weights_to_load).exists():
+        p = Path(weights_to_load)
         if p.suffix == ".pt":
             ckpt_data = torch.load(p, map_location=device)
             state_dict = ckpt_data.get("model_state_dict", ckpt_data)
@@ -246,16 +327,18 @@ def train_stage(
                     model.tok_embeddings.weight.data.copy_(w)
                     _LOG.info("Loaded embedding weights from numpy checkpoint %s", p.name)
 
-    # 5. Dataset & DataLoader
+    # 5. Dataset & DataLoader with Variable-Length Padding Support
     if stage == "semantic":
         dataset = PackedPretrainingDataset(dataset_path, tokenizer, max_seq_len=min(max_seq_len, 512))
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=False)
     else:
         dataset = MaskedInstructionDataset(dataset_path, tokenizer, max_seq_len=max_seq_len)
+        collator = InstructionDataCollator(pad_token_id=tokenizer.pad_token_id or 0, ignore_index=-100, max_seq_len=max_seq_len)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=False, collate_fn=collator)
 
     if len(dataset) == 0:
         raise ValueError(f"Dataset {dataset_path.name} produced 0 usable training samples.")
 
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=False)
     total_steps = (len(dataloader) // grad_accum) * epochs
 
     optimizer = torch.optim.AdamW(

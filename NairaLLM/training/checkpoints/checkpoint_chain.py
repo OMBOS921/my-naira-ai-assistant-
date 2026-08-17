@@ -170,6 +170,72 @@ class CheckpointChainManager:
         p.mkdir(parents=True, exist_ok=True)
         return p
 
+    def find_latest_checkpoint(self, stage: TrainingStage | str) -> tuple[Path | None, Path | None]:
+        """
+        Finds the latest weights and metadata for a stage.
+        Returns (weights_path, metadata_path) or (None, None) if not found.
+        """
+        st = normalize_stage(stage)
+        workspace_root = self.checkpoints_dir.parent.parent.parent
+
+        # 1. Search direct stage directory: checkpoints/{stage}/
+        stage_dir = self.get_stage_checkpoint_dir(st)
+        meta_candidates = list(stage_dir.glob("*_metadata.json"))
+        if meta_candidates:
+            meta_candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            for meta_path in meta_candidates:
+                try:
+                    meta = CheckpointMetadata.load(meta_path)
+                    w_path = Path(meta.weights_path)
+                    if not w_path.exists():
+                        for cand in [stage_dir / w_path.name, workspace_root / meta.weights_path]:
+                            if cand.exists():
+                                w_path = cand
+                                break
+                    if w_path.exists():
+                        return w_path, meta_path
+                except Exception:
+                    continue
+
+        # 2. Check for .pt / .npz weights directly in stage directory
+        weight_candidates = list(stage_dir.glob("*.pt")) + list(stage_dir.glob("*.npz"))
+        if weight_candidates:
+            weight_candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            w_path = weight_candidates[0]
+            # Look for matching metadata
+            m_path = stage_dir / f"{w_path.stem}_metadata.json"
+            return w_path, m_path if m_path.exists() else None
+
+        # 3. For SEMANTIC stage, fallback to foundation directory
+        if st == TrainingStage.SEMANTIC:
+            foundation_dir = self.checkpoints_dir / "foundation"
+            if foundation_dir.exists():
+                meta_candidates = list(foundation_dir.glob("*_metadata.json"))
+                if meta_candidates:
+                    meta_candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+                    for meta_path in meta_candidates:
+                        try:
+                            meta = CheckpointMetadata.load(meta_path)
+                            w_path = Path(meta.weights_path)
+                            if not w_path.exists():
+                                for cand in [foundation_dir / w_path.name, workspace_root / meta.weights_path]:
+                                    if cand.exists():
+                                        w_path = cand
+                                        break
+                            if w_path.exists():
+                                return w_path, meta_path
+                        except Exception:
+                            continue
+
+                weight_candidates = list(foundation_dir.glob("*.npz")) + list(foundation_dir.glob("*.pt"))
+                if weight_candidates:
+                    weight_candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+                    w_path = weight_candidates[0]
+                    m_path = foundation_dir / f"{w_path.stem}_metadata.json"
+                    return w_path, m_path if m_path.exists() else None
+
+        return None, None
+
     def validate_parent(
         self,
         current_stage: TrainingStage | str,
