@@ -1,0 +1,9 @@
+# Auto-detect text files and perform LF normalization
+* text=auto eol=lf
+
+# Force exact LF endings for data and code files
+*.jsonl text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.ipynb text eol=lf

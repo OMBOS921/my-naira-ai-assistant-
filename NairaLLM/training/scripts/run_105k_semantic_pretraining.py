@@ -63,11 +63,21 @@ except ImportError:
     _HAS_TORCH = False
 
 
-# Expected Verified Dataset A Constants
-EXPECTED_DATASET_SHA256 = "c52e7f4b15a18a3cbf25fd0e6611bc2c042a765cd699055ec23bb1990225718f"
+# Expected Verified Dataset A Locked Canonical Constants
+EXPECTED_DATASET_SHA256 = "015b4655bde092005b31195025e96df6e80702e7975f05ebf0c6072c1b29ff8f"
 EXPECTED_RECORDS_COUNT = 337
 EXPECTED_RAW_TOKENS = 105141
 EXPECTED_PACKED_TOKENS = 105478
+
+
+def compute_dataset_sha256(file_path: Path) -> tuple[str, str]:
+    """Computes both raw byte SHA-256 and LF-normalized SHA-256."""
+    if not file_path.exists():
+        return "not_found", "not_found"
+    raw = file_path.read_bytes()
+    raw_sha = hashlib.sha256(raw).hexdigest()
+    lf_sha = hashlib.sha256(raw.replace(b"\r\n", b"\n")).hexdigest()
+    return raw_sha, lf_sha
 
 
 def get_git_commit_sha() -> str:
@@ -302,15 +312,25 @@ def launch_105k_semantic_pretraining(
         / "NairaLLM"
         / "dataset"
         / "semantic_corpus"
-        / "semantic_pretrain_v1_5_expanded.jsonl"
+        / "semantic_pretrain_v1_5_final.jsonl"
     )
+    if not ds_path.exists():
+        ds_path = (
+            workspace_root
+            / "NairaLLM"
+            / "dataset"
+            / "semantic_corpus"
+            / "semantic_pretrain_v1_5_expanded.jsonl"
+        )
     if not ds_path.exists():
         raise FileNotFoundError(f"Dataset A not found at: {ds_path}")
 
-    actual_ds_sha256 = compute_file_sha256(ds_path)
+    raw_sha, lf_sha = compute_dataset_sha256(ds_path)
+    actual_ds_sha256 = lf_sha
     print(f"\n[GIT] Commit SHA:           {git_sha} ({git_branch})")
     print(f"[DATASET] Path:             {ds_path.name}")
-    print(f"[DATASET] SHA-256:          {actual_ds_sha256}")
+    print(f"[DATASET] SHA-256 (LF):     {actual_ds_sha256}")
+    print(f"[DATASET] SHA-256 (Raw):    {raw_sha}")
 
     if actual_ds_sha256 != EXPECTED_DATASET_SHA256:
         raise ValueError(

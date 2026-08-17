@@ -1,0 +1,57 @@
+{
+  "timestamp": "2026-08-17 15:39:45",
+  "lock_status": "LOCKED_AND_VERIFIED",
+  "dataset_filename": "semantic_pretrain_v1_5_final.jsonl",
+  "dataset_path": "NairaLLM/dataset/semantic_corpus/semantic_pretrain_v1_5_final.jsonl",
+  "sha256": "015b4655bde092005b31195025e96df6e80702e7975f05ebf0c6072c1b29ff8f",
+  "file_size_bytes": 329013,
+  "total_records": 337,
+  "total_characters": 182750,
+  "total_raw_bpe_tokens": 105141,
+  "total_packed_tokens_with_eos": 105478,
+  "git_commit_sha": "b9c64ea9e193008426aa56075492c91135944d61",
+  "git_branch": "main",
+  "tokenizer": {
+    "filename": "naira_tokenizer.json",
+    "path": "NairaLLM/model/tokenizer/naira_tokenizer.json",
+    "sha256": "71f6f8d70b56b1ceb4de95013fd70193e7080485ddc5abfe875193f3b83b42ad",
+    "vocab_size": 1509
+  },
+  "provenance_summary": {
+    "hash_discrepancy_root_cause": "Newline encoding difference: Windows CRLF (\\r\\n, 329,350 bytes, c52e7f4b...) vs Linux/POSIX LF (\\n, 329,013 bytes, 015b4655...). Record content, character count, and token count are 100% identical.",
+    "line_ending": "LF (POSIX standard)",
+    "synthetic_leakage": 0,
+    "duplicates": 0,
+    "domains_count": 22,
+    "languages_count": 3,
+    "domain_distribution": {
+      "natural_language": 38,
+      "hindi_linguistics": 48,
+      "hinglish_discourse": 45,
+      "operating_systems": 24,
+      "programming_python": 4,
+      "documentation_apis": 2,
+      "structured_data": 12,
+      "naira_architecture": 7,
+      "computer_architecture": 13,
+      "networking": 14,
+      "databases": 17,
+      "algorithms": 15,
+      "data_structures": 10,
+      "programming": 29,
+      "software_engineering": 15,
+      "apis_http": 8,
+      "security": 14,
+      "linux_cli": 6,
+      "documentation": 5,
+      "technical_explanations": 5,
+      "error_messages_diagnostics": 5,
+      "web_development": 1
+    },
+    "language_distribution": {
+      "en": 236,
+      "hi": 52,
+      "hinglish": 49
+    }
+  }
+}

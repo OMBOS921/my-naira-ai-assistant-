@@ -65,9 +65,10 @@ def setup_colab_environment(dry_run: bool = False, mount_drive: bool = True) -> 
         os.makedirs(local_dir, exist_ok=True)
         paths["checkpoint_dir"] = local_dir
 
-    paths["dataset_path"] = str(
-        workspace_root / "NairaLLM" / "dataset" / "semantic_corpus" / "semantic_pretrain_v1_5_expanded.jsonl"
-    )
+    final_ds = workspace_root / "NairaLLM" / "dataset" / "semantic_corpus" / "semantic_pretrain_v1_5_final.jsonl"
+    if not final_ds.exists():
+        final_ds = workspace_root / "NairaLLM" / "dataset" / "semantic_corpus" / "semantic_pretrain_v1_5_expanded.jsonl"
+    paths["dataset_path"] = str(final_ds)
     paths["tokenizer_path"] = str(
         workspace_root / "NairaLLM" / "model" / "tokenizer" / "naira_tokenizer.json"
     )

@@ -216,7 +216,9 @@ def train_gpu(
     tokenizer = NairaTokenizer(tok_path)
     print(f"[TOKENIZER] Loaded NairaTokenizer (Vocab Size = {tokenizer.vocab_size})")
 
-    ds_path = Path(dataset_path or os.environ.get("NAIRA_DATASET_PATH", "NairaLLM/dataset/semantic_corpus/semantic_pretrain_v1_5_expanded.jsonl"))
+    ds_path = Path(dataset_path or os.environ.get("NAIRA_DATASET_PATH", "NairaLLM/dataset/semantic_corpus/semantic_pretrain_v1_5_final.jsonl"))
+    if not ds_path.exists():
+        ds_path = Path("NairaLLM/dataset/semantic_corpus/semantic_pretrain_v1_5_expanded.jsonl")
     if not ds_path.exists():
         ds_path = Path("NairaLLM/dataset/semantic_corpus/semantic_pretrain_v1_5.jsonl")
     samples = load_dataset_samples(ds_path)

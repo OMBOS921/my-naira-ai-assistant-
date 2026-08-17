@@ -380,8 +380,16 @@ def run_semantic_pilot(
         / "NairaLLM"
         / "dataset"
         / "semantic_corpus"
-        / "semantic_pretrain_v1_5_expanded.jsonl"
+        / "semantic_pretrain_v1_5_final.jsonl"
     )
+    if not ds_path.exists():
+        ds_path = (
+            workspace_root
+            / "NairaLLM"
+            / "dataset"
+            / "semantic_corpus"
+            / "semantic_pretrain_v1_5_expanded.jsonl"
+        )
     if not ds_path.exists():
         ds_path = (
             workspace_root

@@ -1,0 +1,53 @@
+{
+  "audit_timestamp": "2026-08-17 15:23:00",
+  "audit_title": "NairaLLM — 105K Pretraining Compute Provenance & Execution Device Audit",
+  "actual_compute_classification": "LOCAL_CPU",
+  "audit_verdict": {
+    "ACTUAL_COMPUTE": "[LOCAL_CPU]",
+    "was_colab_t4_used": false,
+    "was_local_cpu_used": true,
+    "is_provenance_ambiguous": false
+  },
+  "executive_summary": "Rigorous inspection of the execution telemetry, runtime task logs, serialized checkpoint files, and pretraining metadata proves unequivocally that the 25-epoch run was executed locally on the Windows workstation using the Pure-NumPy CPU Fallback Engine, and NOT on a Google Colab Tesla T4 cloud GPU. Although the code, notebook, and architecture for Colab T4 were prepared, the actual invocation was executed on the local host with '--allow-cpu-fallback'. No GPU was active.",
+  "concrete_evidence": {
+    "1_host_platform": {
+      "os": "Windows 10 (10.0.19045-SP0)",
+      "processor": "Intel64 Family 6 Model 78 Stepping 3, GenuineIntel (4 threads)",
+      "interpreter": "C:\\Python314\\python.exe (Python 3.14.6)",
+      "is_cloud_environment": false
+    },
+    "2_pytorch_cuda_status": {
+      "torch_installed": false,
+      "torch_import_status": "ImportError: No module named 'torch'",
+      "cuda_available": false,
+      "device_name": "Host CPU (NumPy Engine / Fallback)",
+      "vram_total_gb": 0.0,
+      "precision_mode": "FP32 (NumPy)"
+    },
+    "3_execution_command_and_logs": {
+      "command": "C:\\Python314\\python.exe NairaLLM/training/scripts/run_105k_semantic_pretraining.py --epochs 25 --allow-cpu-fallback",
+      "task_id": "task-152",
+      "log_hardware_gate": "[HARDWARE GATE] RUNNING IN LOCAL CPU FALLBACK MODE: Host CPU (NumPy Engine / Fallback)",
+      "log_pytorch_status": "PyTorch Status: Not Installed (NumPy Engine Active)",
+      "log_vram_peak": "0MB"
+    },
+    "4_checkpoint_artifacts": {
+      "checkpoint_directory": "C:/Users/user/Desktop/naira os/NairaLLM/training/checkpoints/semantic_pretraining",
+      "serialized_weights_file": "naira_semantic_105k_numpy.npz",
+      "weights_format": "NumPy Compressed Archive (.npz)",
+      "pytorch_checkpoint_present": false,
+      "metadata_file": "pre_training_metadata.json",
+      "metadata_device_field": "Host CPU (NumPy Engine / Fallback)",
+      "metadata_vram_field": 0.0,
+      "metadata_total_parameters": 1436032
+    },
+    "5_parameter_count_evidence": {
+      "recorded_parameters": 1436032,
+      "significance": "1,436,032 corresponds strictly to the Pure-NumPy untied embedding/output matrix allocation (193,152 * 2). If executed in PyTorch with CUDA, the tied parameter count would be 1,242,880."
+    }
+  },
+  "provenance_reconciliation": {
+    "status": "PROVENANCE_CONFIRMED_LOCAL_CPU",
+    "recommendation": "The local CPU run serves as a functional pipeline and weight convergence test. To perform the actual accelerated Tesla T4 cloud pretraining, open 'NairaLLM/training/cloud/nairallm_v1_5_free_gpu_pilot.ipynb' inside Google Colab with the T4 GPU runtime enabled."
+  }
+}

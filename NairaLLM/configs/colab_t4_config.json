@@ -32,7 +32,8 @@
     "checkpoint_dir": "/content/drive/MyDrive/Naira-Training/checkpoints/semantic_pretrain_pilot"
   },
   "dataset": {
-    "dataset_a_path": "NairaLLM/dataset/semantic_corpus/semantic_pretrain_v1_5_expanded.jsonl",
+    "dataset_a_path": "NairaLLM/dataset/semantic_corpus/semantic_pretrain_v1_5_final.jsonl",
+    "dataset_sha256": "015b4655bde092005b31195025e96df6e80702e7975f05ebf0c6072c1b29ff8f",
     "expected_records": 337,
     "expected_tokens": 105141
   }
