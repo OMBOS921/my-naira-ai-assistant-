@@ -1,8 +1,8 @@
 # NairaLLM Final V1 — Stage 0 Pre-Flight Run Manifest
 
-- **Audit Date**: `2026-08-17 13:08:29 UTC`
+- **Audit Date**: `2026-08-17 13:48:58 UTC`
 - **Pre-Flight Verdict**: **`STAGE_0_PREFLIGHT_PASSED`**
-- **Git Commit SHA**: `b90dfaea8b36fc0e0cd3553051b8e8113fd9f02e` (Branch: `main`)
+- **Git Commit SHA**: `b7dbd0a9108877d7dd019ffe7af2c70cd285cfdc` (Branch: `main`)
 - **Canonical Model**: `NairaTransformer` (1,242,880 tied parameters, vocab=1509)
 - **Cost Policy**: Free Cloud GPU Only ($0.00)
 
