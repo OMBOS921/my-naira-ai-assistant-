@@ -154,15 +154,34 @@ class CheckpointMetadata:
         return cls.from_dict(data)
 
 
-class CheckpointChainManager:
-    """Manages the canonical checkpoint chain and lineage validation."""
+import shutil
 
-    def __init__(self, checkpoints_dir: str | Path | None = None) -> None:
+DEFAULT_GDRIVE_PERSISTENT_DIR = "/content/drive/MyDrive/Naira-Training/checkpoints/final_v1"
+
+
+class CheckpointChainManager:
+    """Manages the canonical checkpoint chain, lineage validation, and persistent storage synchronization."""
+
+    def __init__(
+        self,
+        checkpoints_dir: str | Path | None = None,
+        persistent_dir: str | Path | None = None,
+    ) -> None:
         if checkpoints_dir is None:
             self.checkpoints_dir = Path(__file__).resolve().parent
         else:
             self.checkpoints_dir = Path(checkpoints_dir)
         self.checkpoints_dir.mkdir(parents=True, exist_ok=True)
+
+        env_persistent = os.environ.get("NAIRA_GDRIVE_CHECKPOINT_DIR")
+        if persistent_dir is not None:
+            self.persistent_dir = Path(persistent_dir)
+        elif env_persistent:
+            self.persistent_dir = Path(env_persistent)
+        elif Path("/content/drive/MyDrive").exists():
+            self.persistent_dir = Path(DEFAULT_GDRIVE_PERSISTENT_DIR)
+        else:
+            self.persistent_dir = None
 
     def get_stage_checkpoint_dir(self, stage: TrainingStage | str) -> Path:
         st = normalize_stage(stage)
@@ -170,9 +189,122 @@ class CheckpointChainManager:
         p.mkdir(parents=True, exist_ok=True)
         return p
 
+    def backup_checkpoint_to_persistent(
+        self,
+        stage: TrainingStage | str,
+        weights_path: str | Path,
+        metadata_path: str | Path,
+        stage_manifest: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """
+        Copies .pt weights, metadata.json, and stage_manifest.json to persistent storage
+        (e.g., Google Drive /content/drive/MyDrive/Naira-Training/checkpoints/final_v1/<stage>/).
+        """
+        st = normalize_stage(stage)
+        w_path = Path(weights_path)
+        m_path = Path(metadata_path)
+
+        result: dict[str, Any] = {
+            "stage": st.value,
+            "backed_up": False,
+            "persistent_dir": None,
+            "files_copied": [],
+            "error": None,
+        }
+
+        if self.persistent_dir is None:
+            _LOG.info("Persistent storage directory not configured or Google Drive not mounted. Skipping persistent copy.")
+            return result
+
+        try:
+            stage_persistent_dir = self.persistent_dir / st.value
+            stage_persistent_dir.mkdir(parents=True, exist_ok=True)
+
+            # Copy weights .pt
+            if w_path.exists():
+                dst_w = stage_persistent_dir / w_path.name
+                shutil.copy2(w_path, dst_w)
+                if not dst_w.exists() or dst_w.stat().st_size != w_path.stat().st_size:
+                    raise IOError(f"Weights copy verification failed: {dst_w}")
+                result["files_copied"].append(str(dst_w))
+
+            # Copy metadata .json
+            if m_path.exists():
+                dst_m = stage_persistent_dir / m_path.name
+                shutil.copy2(m_path, dst_m)
+                if not dst_m.exists() or dst_m.stat().st_size != m_path.stat().st_size:
+                    raise IOError(f"Metadata copy verification failed: {dst_m}")
+                result["files_copied"].append(str(dst_m))
+
+            # Write stage manifest
+            manifest_file = stage_persistent_dir / f"nairallm_v1_{st.value}_manifest.json"
+            manifest_payload = stage_manifest or {
+                "stage": st.value,
+                "weights_filename": w_path.name,
+                "weights_bytes": w_path.stat().st_size if w_path.exists() else 0,
+                "metadata_filename": m_path.name,
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+                "git_commit": get_current_git_commit(self.checkpoints_dir.parent.parent.parent),
+            }
+            with open(manifest_file, "w", encoding="utf-8") as f:
+                json.dump(manifest_payload, f, indent=2, ensure_ascii=False)
+            result["files_copied"].append(str(manifest_file))
+
+            result["backed_up"] = True
+            result["persistent_dir"] = str(stage_persistent_dir)
+            _LOG.info("Successfully backed up stage [%s] checkpoint to persistent directory: %s", st.value, stage_persistent_dir)
+        except Exception as exc:
+            _LOG.error("Failed to backup checkpoint to persistent storage: %s", exc)
+            result["error"] = str(exc)
+
+        return result
+
+    def restore_checkpoint_from_persistent(self, stage: TrainingStage | str) -> tuple[Path | None, Path | None]:
+        """
+        Attempts to restore missing .pt weights and metadata from persistent storage
+        (e.g., Google Drive) into the local workspace checkpoints directory.
+        """
+        st = normalize_stage(stage)
+        if self.persistent_dir is None or not self.persistent_dir.exists():
+            return None, None
+
+        stage_persistent_dir = self.persistent_dir / st.value
+        if not stage_persistent_dir.exists():
+            return None, None
+
+        local_stage_dir = self.get_stage_checkpoint_dir(st)
+
+        # Look for .pt weights in persistent dir
+        pt_candidates = list(stage_persistent_dir.glob("*.pt")) + list(stage_persistent_dir.glob("*.npz"))
+        if not pt_candidates:
+            return None, None
+
+        src_w = pt_candidates[0]
+        dst_w = local_stage_dir / src_w.name
+
+        # Copy weights if not present locally or size differs
+        if not dst_w.exists() or dst_w.stat().st_size != src_w.stat().st_size:
+            _LOG.info("Auto-restoring [%s] weights from persistent storage: %s -> %s", st.value, src_w, dst_w)
+            shutil.copy2(src_w, dst_w)
+
+        # Copy metadata if present in persistent dir
+        meta_candidates = list(stage_persistent_dir.glob("*_metadata.json"))
+        dst_m = None
+        if meta_candidates:
+            src_m = meta_candidates[0]
+            dst_m = local_stage_dir / src_m.name
+            if not dst_m.exists() or dst_m.stat().st_size != src_m.stat().st_size:
+                _LOG.info("Auto-restoring [%s] metadata from persistent storage: %s -> %s", st.value, src_m, dst_m)
+                shutil.copy2(src_m, dst_m)
+        else:
+            dst_m = local_stage_dir / f"{src_w.stem}_metadata.json"
+
+        return (dst_w if dst_w.exists() else None, dst_m if (dst_m and dst_m.exists()) else None)
+
     def find_latest_checkpoint(self, stage: TrainingStage | str) -> tuple[Path | None, Path | None]:
         """
         Finds the latest weights and metadata for a stage.
+        First checks local directory, then checks persistent Google Drive and auto-restores.
         Returns (weights_path, metadata_path) or (None, None) if not found.
         """
         st = normalize_stage(stage)
@@ -206,7 +338,12 @@ class CheckpointChainManager:
             m_path = stage_dir / f"{w_path.stem}_metadata.json"
             return w_path, m_path if m_path.exists() else None
 
-        # 3. For SEMANTIC stage, fallback to foundation directory
+        # 3. If missing locally, try auto-restoring from persistent storage (Google Drive)
+        restored_w, restored_m = self.restore_checkpoint_from_persistent(st)
+        if restored_w is not None and restored_w.exists():
+            return restored_w, restored_m
+
+        # 4. For SEMANTIC stage, fallback to foundation directory
         if st == TrainingStage.SEMANTIC:
             foundation_dir = self.checkpoints_dir / "foundation"
             if foundation_dir.exists():

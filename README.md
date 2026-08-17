@@ -99,6 +99,22 @@ AI_Assistant/
 
 ---
 
+## NairaLLM V1 — Canonical Cognitive Brain
+
+Naira OS features an integrated 1.24M-parameter tied-weight Transformer (`NairaTransformer`) with SwiGLU, RoPE, RMSNorm, and ByteLevelBPE tokenization designed for cognitive reasoning, tool calling, and autonomous execution.
+
+### Cloud Training & Checkpoint Persistence
+Training runs across 5 sequential stages on Google Colab (Tesla T4 GPU):
+1. **Stage 1 (Semantic)**: Foundational language modeling.
+2. **Stage 2 (Domain)**: Naira OS subsystem architecture grounding.
+3. **Stage 3 (Cognition)**: Planning, reasoning, and intent decomposition.
+4. **Stage 4 (Tools)**: Tool calling across 102 verified Naira contracts.
+5. **Stage 5 (Behavior)**: Autonomy levels 0–5 and safety boundaries.
+
+All checkpoint weights (`.pt`) and metadata automatically synchronize with Google Drive (`/content/drive/MyDrive/Naira-Training/checkpoints/final_v1/`) to prevent loss across session resets. See [`NairaLLM/docs/COLAB_CHECKPOINT_PERSISTENCE_GUIDE.md`](NairaLLM/docs/COLAB_CHECKPOINT_PERSISTENCE_GUIDE.md) for details.
+
+---
+
 ## License
 
 Distributed under the **MIT License**. See [LICENSE](LICENSE) for details.

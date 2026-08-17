@@ -219,6 +219,7 @@ def train_stage(
     allow_cpu_smoke_test: bool = False,
     override_epochs: int | None = None,
     max_steps: int | None = None,
+    gdrive_checkpoint_dir: str | Path | None = None,
 ) -> Path:
     if not _HAS_TORCH:
         raise RuntimeError("PyTorch is required for NairaLLM training pipeline.")
@@ -262,7 +263,10 @@ def train_stage(
     _LOG.info("Initializing stage [%s] -> epochs=%d, lr=%.2e, dataset=%s", stage, epochs, learning_rate, dataset_path.name)
 
     # 3. Lineage Validation & Automatic Parent Checkpoint Resolution
-    chain_mgr = CheckpointChainManager(workspace_root / "NairaLLM" / "training" / "checkpoints")
+    chain_mgr = CheckpointChainManager(
+        workspace_root / "NairaLLM" / "training" / "checkpoints",
+        persistent_dir=gdrive_checkpoint_dir,
+    )
     st_enum = normalize_stage(stage)
     expected_parent_stage = STAGE_PREDECESSORS.get(st_enum)
 
@@ -271,17 +275,17 @@ def train_stage(
 
     if expected_parent_stage is not None:
         if actual_parent_meta_path is None:
-            # Auto-discover predecessor checkpoint
+            # Auto-discover predecessor checkpoint from local disk or Google Drive
             w_path, m_path = chain_mgr.find_latest_checkpoint(expected_parent_stage)
-            if m_path is not None and w_path is not None:
+            if m_path is not None and w_path is not None and w_path.exists():
                 actual_parent_meta_path = m_path
                 actual_parent_weights_path = w_path
                 _LOG.info("Auto-discovered predecessor checkpoint for stage [%s]: %s (weights: %s)", stage, m_path.name, w_path.name)
             else:
-                raise RuntimeError(
+                raise FileNotFoundError(
                     f"Stage [{stage}] requires a verified predecessor checkpoint from [{expected_parent_stage.value}], "
-                    f"but none was found in checkpoints/{expected_parent_stage.value}/. "
-                    f"Cannot proceed without valid lineage. DO NOT train from uninitialized scratch."
+                    f"but real .pt weights were NOT found in local checkpoints/ or Google Drive persistent directory. "
+                    f"Lineage validation requires real trained weights. NEVER initialize from uninitialized scratch."
                 )
         else:
             p = Path(actual_parent_meta_path)
@@ -409,6 +413,11 @@ def train_stage(
         "final_loss": epoch_losses[-1] if epoch_losses else 0.0,
     }, ckpt_path)
 
+    # Verify local file integrity
+    if not ckpt_path.exists() or ckpt_path.stat().st_size == 0:
+        raise IOError(f"Local checkpoint verification FAILED: {ckpt_path} was not created or is empty.")
+    _LOG.info("Verified local checkpoint integrity: %s (%d bytes)", ckpt_path.name, ckpt_path.stat().st_size)
+
     metrics = {
         "final_loss": round(epoch_losses[-1] if epoch_losses else 0.0, 4),
         "perplexity": round(math.exp(min(epoch_losses[-1] if epoch_losses else 0.0, 20.0)), 2),
@@ -426,13 +435,32 @@ def train_stage(
         stage=stage,
         checkpoint_name=f"nairallm_v1_{stage}_checkpoint",
         weights_path=ckpt_path,
-        parent_metadata_path=parent_checkpoint,
+        parent_metadata_path=actual_parent_meta_path,
         dataset_path=dataset_path,
         tokenizer_path=workspace_root / "NairaLLM" / "model" / "tokenizer" / "naira_tokenizer.json",
         config_path=config_file,
         metrics=metrics,
         hardware_info=hardware_info,
     )
+    meta_path = stage_dir / f"nairallm_v1_{stage}_checkpoint_metadata.json"
+
+    # Persistent Backup to Google Drive
+    stage_manifest = {
+        "stage": stage,
+        "checkpoint_name": f"nairallm_v1_{stage}_checkpoint",
+        "weights_path": str(ckpt_path),
+        "weights_bytes": ckpt_path.stat().st_size,
+        "metrics": metrics,
+        "hardware_info": hardware_info,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+        "git_commit": get_current_git_commit(workspace_root),
+    }
+    backup_res = chain_mgr.backup_checkpoint_to_persistent(stage, ckpt_path, meta_path, stage_manifest=stage_manifest)
+    if backup_res.get("backed_up"):
+        _LOG.info("Persistent backup CONFIRMED at: %s", backup_res.get("persistent_dir"))
+    else:
+        _LOG.info("Persistent storage note: %s", backup_res.get("error") or "Drive not mounted")
+
     _LOG.info("Stage [%s] successfully completed. Checkpoint saved to %s", stage, ckpt_path.name)
     return ckpt_path
 
@@ -446,6 +474,7 @@ def main() -> None:
     parser.add_argument("--allow-cpu-smoke-test", action="store_true", help="Allow CPU execution strictly for local smoke testing / validation")
     parser.add_argument("--epochs", type=int, default=None, help="Override number of epochs")
     parser.add_argument("--max-steps", type=int, default=None, help="Limit step count for dry-run verification")
+    parser.add_argument("--gdrive-checkpoint-dir", type=str, default=None, help="Path to Google Drive persistent checkpoint directory")
     args = parser.parse_args()
 
     train_stage(
@@ -456,6 +485,7 @@ def main() -> None:
         allow_cpu_smoke_test=args.allow_cpu_smoke_test,
         override_epochs=args.epochs,
         max_steps=args.max_steps,
+        gdrive_checkpoint_dir=args.gdrive_checkpoint_dir,
     )
 
 
