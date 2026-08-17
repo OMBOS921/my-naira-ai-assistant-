@@ -13,12 +13,12 @@ from pathlib import Path
 class NairaModelConfig:
     """Hyperparameters for the Naira Transformer model."""
 
-    vocab_size: int = 2048
-    d_model: int = 256
-    num_layers: int = 6
-    num_heads: int = 8
-    num_kv_heads: int = 8
-    d_ff: int = 684
+    vocab_size: int = 1509
+    d_model: int = 128
+    num_layers: int = 4
+    num_heads: int = 4
+    num_kv_heads: int = 4
+    d_ff: int = 512
     max_seq_len: int = 1024
     norm_eps: float = 1e-5
     rope_theta: float = 10000.0
@@ -34,7 +34,18 @@ class NairaModelConfig:
 
     @classmethod
     def from_dict(cls, data: dict) -> NairaModelConfig:
-        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
+        # Handle nested architecture/model dict if present
+        source = data
+        if "architecture" in data and isinstance(data["architecture"], dict):
+            source = {**data, **data["architecture"]}
+        elif "model" in data and isinstance(data["model"], dict):
+            source = {**data, **data["model"]}
+        
+        # Pull vocab_size from tokenizer config if present
+        if "tokenizer" in data and isinstance(data["tokenizer"], dict) and "vocab_size" in data["tokenizer"]:
+            source.setdefault("vocab_size", data["tokenizer"]["vocab_size"])
+
+        return cls(**{k: v for k, v in source.items() if k in cls.__dataclass_fields__})
 
     def save(self, file_path: str | Path) -> None:
         path = Path(file_path)
@@ -47,3 +58,8 @@ class NairaModelConfig:
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
         return cls.from_dict(data)
+
+    @classmethod
+    def load_canonical_v1(cls) -> NairaModelConfig:
+        canonical_path = Path(__file__).resolve().parent.parent.parent / "configs" / "final_nairallm_v1.json"
+        return cls.load(canonical_path)

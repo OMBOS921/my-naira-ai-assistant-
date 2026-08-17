@@ -1,0 +1,122 @@
+{
+  "model_name": "NairaLLM-V1",
+  "version": "1.0.0-final",
+  "architecture": {
+    "type": "CausalDecoderOnlyTransformer",
+    "d_model": 128,
+    "num_layers": 4,
+    "num_heads": 4,
+    "num_kv_heads": 4,
+    "d_head": 32,
+    "d_ff": 512,
+    "max_seq_len": 1024,
+    "norm_type": "RMSNorm",
+    "norm_eps": 1e-5,
+    "activation": "SwiGLU",
+    "position_embeddings": "RoPE",
+    "rope_theta": 10000.0,
+    "tie_embeddings": true,
+    "dropout": 0.0,
+    "parameter_count_tied": 1242880,
+    "parameter_count_untied": 1436032
+  },
+  "tokenizer": {
+    "type": "ByteLevelBPE",
+    "tokenizer_path": "NairaLLM/model/tokenizer/naira_tokenizer.json",
+    "vocab_size": 1509,
+    "special_tokens": [
+      "<|pad|>",
+      "<|endoftext|>",
+      "<|system|>",
+      "<|user|>",
+      "<|assistant|>",
+      "<|tool_call|>",
+      "<|tool_result|>",
+      "<|thought|>",
+      "<|plan|>",
+      "<|verify|>",
+      "<|unk|>",
+      "<|intent|>",
+      "<|final|>"
+    ]
+  },
+  "training": {
+    "precision": "fp16_amp",
+    "optimizer": {
+      "name": "AdamW",
+      "learning_rate": 4e-4,
+      "min_learning_rate": 1e-5,
+      "betas": [0.9, 0.95],
+      "weight_decay": 0.01,
+      "grad_clip": 1.0
+    },
+    "scheduler": {
+      "name": "CosineAnnealingLR",
+      "warmup_steps": 50,
+      "min_lr_ratio": 0.025
+    },
+    "batching": {
+      "micro_batch_size": 4,
+      "gradient_accumulation_steps": 4,
+      "effective_batch_size": 16,
+      "max_seq_len": 1024
+    },
+    "checkpoint_policy": {
+      "save_every_epochs": 1,
+      "eval_every_epochs": 1,
+      "keep_best_metric": "val_loss",
+      "enforce_parent_lineage": true,
+      "checkpoint_dir": "NairaLLM/training/checkpoints"
+    }
+  },
+  "stages": [
+    {
+      "stage": "semantic",
+      "order": 1,
+      "description": "Foundation language modeling and semantic representations over balanced text corpus",
+      "dataset_path": "NairaLLM/dataset/final/A_semantic/dataset_a_semantic.jsonl",
+      "learning_rate": 4e-4,
+      "epochs": 20
+    },
+    {
+      "stage": "domain",
+      "order": 2,
+      "description": "Naira OS domain terminology, conversational tone, Hindi/Hinglish alignment, and basic intent understanding",
+      "dataset_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_domain.jsonl",
+      "learning_rate": 2e-4,
+      "epochs": 15
+    },
+    {
+      "stage": "cognition",
+      "order": 3,
+      "description": "Structured reasoning, planning, multi-step decomposition, and context resolution",
+      "dataset_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_cognition.jsonl",
+      "learning_rate": 1.5e-4,
+      "epochs": 15
+    },
+    {
+      "stage": "tools",
+      "order": 4,
+      "description": "Naira OS tool selection, argument generation, tool result interpretation, error recovery, and verification",
+      "dataset_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_tools.jsonl",
+      "learning_rate": 1e-4,
+      "epochs": 15
+    },
+    {
+      "stage": "behavior",
+      "order": 5,
+      "description": "Proactive behaviors, bounded autonomy levels 0-5, inactivity awareness, quiet mode, and safety escalation",
+      "dataset_path": "NairaLLM/dataset/final/C_behavior/dataset_c_behavior.jsonl",
+      "learning_rate": 8e-5,
+      "epochs": 10
+    }
+  ],
+  "hardware_constraints": {
+    "target_platform": "free_cloud_gpu",
+    "accelerator": "Tesla T4 / V100 / A100 (Free Tier)",
+    "cuda_required_for_training": true,
+    "allow_cpu_training": false,
+    "free_compute_only": true,
+    "max_cost_usd": 0.0
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "version": "1.0.0-final",
+  "created_at": "2026-08-17",
+  "datasets": {
+    "Dataset A (Semantic Foundation)": {
+      "file_path": "NairaLLM/dataset/final/A_semantic/dataset_a_semantic.jsonl",
+      "description": "Balanced scientific, systems, engineering, and linguistic knowledge",
+      "sha256": "015b4655bde092005b31195025e96df6e80702e7975f05ebf0c6072c1b29ff8f",
+      "records": 337,
+      "tokens": 105141,
+      "size_bytes": 329013
+    },
+    "Dataset B (All Capabilities)": {
+      "file_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_all_capabilities.jsonl",
+      "description": "Complete 18-family capability corpus in En, Hi, Hinglish targeting real Naira OS schemas",
+      "sha256": "d2414fcfcde5787df5fced501ca72aed3c877e4390d152f0113b51f18d96ec90",
+      "records": 706,
+      "tokens": 71280,
+      "size_bytes": 739964
+    },
+    "Dataset B (Domain Stage)": {
+      "file_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_domain.jsonl",
+      "description": "Naira OS terminology, conversation, tone, and intent alignment",
+      "sha256": "d70630929524fdeb46c098d55d49e46d2151e98ac91231bf0c915725dd4100ea",
+      "records": 80,
+      "tokens": 5713,
+      "size_bytes": 65943
+    },
+    "Dataset B (Cognition Stage)": {
+      "file_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_cognition.jsonl",
+      "description": "Structured reasoning, planning, multi-step chaining, context resolution, and safety",
+      "sha256": "794d5e1bac940673039c7c522cdf0cbe949f4291ae4801bb60dc99439c1aa180",
+      "records": 91,
+      "tokens": 14162,
+      "size_bytes": 104136
+    },
+    "Dataset B (Tools Stage)": {
+      "file_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_tools.jsonl",
+      "description": "Real Naira OS tool selection, argument generation, and verification",
+      "sha256": "64c67d462c6cad623435502552655e7bf60cbf92946419d9ccaceb96974555ad",
+      "records": 535,
+      "tokens": 51405,
+      "size_bytes": 569885
+    },
+    "Dataset C (Behavior & Autonomy)": {
+      "file_path": "NairaLLM/dataset/final/C_behavior/dataset_c_behavior.jsonl",
+      "description": "All 18 behavioral patterns: proactivity, quiet mode, inactivity, Autonomy Levels 0-5",
+      "sha256": "acdf86086df9a4d1d56aa837036accb38eedbfd72f02a5eb8307641c8b007ebb",
+      "records": 68,
+      "tokens": 8911,
+      "size_bytes": 54348
+    }
+  }
+}

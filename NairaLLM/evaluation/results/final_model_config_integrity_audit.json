@@ -1,0 +1,63 @@
+{
+  "audit_name": "Final NairaLLM V1 Model Configuration & Parameter Integrity Audit",
+  "audit_date": "2026-08-17",
+  "status": "VERIFIED_CONSISTENT",
+  "canonical_architecture": {
+    "model_type": "CausalDecoderOnlyTransformer",
+    "vocab_size": 1509,
+    "d_model": 128,
+    "num_layers": 4,
+    "num_heads": 4,
+    "num_kv_heads": 4,
+    "d_head": 32,
+    "d_ff": 512,
+    "activation": "SwiGLU",
+    "position_embeddings": "RoPE (theta=10000.0)",
+    "norm_type": "RMSNorm (eps=1e-5)",
+    "tie_embeddings": true,
+    "context_window": 1024
+  },
+  "parameter_breakdown": {
+    "tok_embeddings": {
+      "dimensions": [1509, 128],
+      "parameters": 193152
+    },
+    "per_layer": {
+      "attn_norm": 128,
+      "causal_attention": {
+        "q_proj": 16384,
+        "k_proj": 16384,
+        "v_proj": 16384,
+        "out_proj": 16384,
+        "total": 65536
+      },
+      "ffn_norm": 128,
+      "swiglu_ffn": {
+        "w1": 65536,
+        "w2": 65536,
+        "w3": 65536,
+        "total": 196608
+      },
+      "total_per_layer": 262400
+    },
+    "all_4_layers_total": 1049600,
+    "final_norm": 128,
+    "output_projection_tied": 0,
+    "output_projection_untied": 193152,
+    "total_trainable_parameters_tied": 1242880,
+    "total_parameters_untied_storage": 1436032
+  },
+  "reconciliation_analysis": {
+    "prior_1_44m_claim": "The ~1.44M figure (1,436,032) corresponded to counting the output projection matrix separately without memory weight tying, as saved in raw NumPy .npz arrays.",
+    "prior_1_24m_pytorch": "The 1,242,880 figure is the exact, canonical count of unique trainable parameters in PyTorch when tie_embeddings=True (output.weight = tok_embeddings.weight).",
+    "prior_2048_vocab_placeholder": "The 2048 vocab placeholder in preliminary prototype JSONs has been reconciled to the locked tokenizer vocabulary size of 1509.",
+    "resolution": "All configuration files, model definitions, training scripts, and documentation have been strictly aligned to the canonical 1,242,880 tied parameter representation."
+  },
+  "verified_files": [
+    "NairaLLM/configs/final_nairallm_v1.json",
+    "NairaLLM/model/config/model_config.py",
+    "NairaLLM/model/architecture/naira_transformer.py",
+    "NairaLLM/training/scripts/train_final_v1.py",
+    "NairaLLM/docs/FINAL_NAIRALLM_V1_SPEC.md"
+  ]
+}

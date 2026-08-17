@@ -1,0 +1,118 @@
+{
+  "timestamp": "2026-08-17 13:08:29 UTC",
+  "verdict": "STAGE_0_PREFLIGHT_PASSED",
+  "checks": {
+    "model_config": {
+      "file_path": "NairaLLM/configs/final_nairallm_v1.json",
+      "sha256": "c6b9895a99de8b832a6cdd847462fb6d70f693318365eae59a7be5ce854a5a7c",
+      "vocab_size": 1509,
+      "d_model": 128,
+      "num_layers": 4,
+      "num_heads": 4,
+      "d_ff": 512,
+      "calculated_tied_parameters": 1242880,
+      "calculated_untied_parameters": 1436032,
+      "tie_embeddings": true,
+      "status": "PASS"
+    },
+    "tokenizer": {
+      "file_path": "NairaLLM/model/tokenizer/naira_tokenizer.json",
+      "sha256": "71f6f8d70b56b1ceb4de95013fd70193e7080485ddc5abfe875193f3b83b42ad",
+      "vocab_size": 1509,
+      "special_tokens_count": 13,
+      "status": "PASS"
+    },
+    "datasets": {
+      "Dataset A (Semantic Foundation)": {
+        "file_path": "NairaLLM/dataset/final/A_semantic/dataset_a_semantic.jsonl",
+        "manifest_sha256": "015b4655bde092005b31195025e96df6e80702e7975f05ebf0c6072c1b29ff8f",
+        "actual_sha256": "015b4655bde092005b31195025e96df6e80702e7975f05ebf0c6072c1b29ff8f",
+        "records": 337,
+        "tokens": 105141,
+        "sha_match": true,
+        "status": "PASS"
+      },
+      "Dataset B (All Capabilities)": {
+        "file_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_all_capabilities.jsonl",
+        "manifest_sha256": "d2414fcfcde5787df5fced501ca72aed3c877e4390d152f0113b51f18d96ec90",
+        "actual_sha256": "d2414fcfcde5787df5fced501ca72aed3c877e4390d152f0113b51f18d96ec90",
+        "records": 706,
+        "tokens": 71280,
+        "sha_match": true,
+        "status": "PASS"
+      },
+      "Dataset B (Domain Stage)": {
+        "file_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_domain.jsonl",
+        "manifest_sha256": "d70630929524fdeb46c098d55d49e46d2151e98ac91231bf0c915725dd4100ea",
+        "actual_sha256": "d70630929524fdeb46c098d55d49e46d2151e98ac91231bf0c915725dd4100ea",
+        "records": 80,
+        "tokens": 5713,
+        "sha_match": true,
+        "status": "PASS"
+      },
+      "Dataset B (Cognition Stage)": {
+        "file_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_cognition.jsonl",
+        "manifest_sha256": "794d5e1bac940673039c7c522cdf0cbe949f4291ae4801bb60dc99439c1aa180",
+        "actual_sha256": "794d5e1bac940673039c7c522cdf0cbe949f4291ae4801bb60dc99439c1aa180",
+        "records": 91,
+        "tokens": 14162,
+        "sha_match": true,
+        "status": "PASS"
+      },
+      "Dataset B (Tools Stage)": {
+        "file_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_tools.jsonl",
+        "manifest_sha256": "64c67d462c6cad623435502552655e7bf60cbf92946419d9ccaceb96974555ad",
+        "actual_sha256": "64c67d462c6cad623435502552655e7bf60cbf92946419d9ccaceb96974555ad",
+        "records": 535,
+        "tokens": 51405,
+        "sha_match": true,
+        "status": "PASS"
+      },
+      "Dataset C (Behavior & Autonomy)": {
+        "file_path": "NairaLLM/dataset/final/C_behavior/dataset_c_behavior.jsonl",
+        "manifest_sha256": "acdf86086df9a4d1d56aa837036accb38eedbfd72f02a5eb8307641c8b007ebb",
+        "actual_sha256": "acdf86086df9a4d1d56aa837036accb38eedbfd72f02a5eb8307641c8b007ebb",
+        "records": 68,
+        "tokens": 8911,
+        "sha_match": true,
+        "status": "PASS"
+      }
+    },
+    "hardware": {
+      "python_version": "3.14.6",
+      "platform": "Windows-10-10.0.19045-SP0",
+      "processor": "Intel64 Family 6 Model 78 Stepping 3, GenuineIntel",
+      "cpu_count": 4,
+      "torch_version": "NOT_INSTALLED_LOCALLY",
+      "cuda_available": false,
+      "status": "HOST_CPU_PRE_FLIGHT_CLEARED"
+    },
+    "checkpoint_chain": {
+      "directory": "NairaLLM/training/checkpoints/",
+      "required_subdirectories_present": [
+        "foundation",
+        "domain",
+        "cognition",
+        "tools",
+        "behavior",
+        "final_v1"
+      ],
+      "foundation_weights_sha256": "7bc1fb85644e84a0d2d2f3e46509c4aa5ec203949eeec7c130e94e9fe4667b60",
+      "foundation_metadata_present": true,
+      "status": "PASS"
+    },
+    "benchmark_scaffolding": {
+      "prompts_file": "NairaLLM/evaluation/benchmarks/final_v1_eval_prompts.json",
+      "total_prompts": 360,
+      "sections_count": 18,
+      "prompts_per_section": 20,
+      "status": "PASS"
+    }
+  },
+  "mismatches": [],
+  "git_info": {
+    "commit_sha": "b90dfaea8b36fc0e0cd3553051b8e8113fd9f02e",
+    "branch": "main",
+    "status": "CLEAN"
+  }
+}

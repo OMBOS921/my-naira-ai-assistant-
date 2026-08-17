@@ -295,6 +295,11 @@ class NairaTokenizer:
         self._tokenizer: Any = None
         self._pure_bpe: PurePythonBpeTokenizer | None = None
 
+        if tokenizer_file is None:
+            default_path = Path(__file__).resolve().parent / "naira_tokenizer.json"
+            if default_path.exists():
+                tokenizer_file = default_path
+
         if tokenizer_file is not None and Path(tokenizer_file).exists():
             self.load(tokenizer_file)
         else:
