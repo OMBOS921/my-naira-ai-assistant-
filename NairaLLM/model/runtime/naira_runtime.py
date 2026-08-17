@@ -57,6 +57,11 @@ class NairaRuntime:
     def load_checkpoint(self, checkpoint_path: str | Path) -> None:
         """Load trained model weights and configuration."""
         path = Path(checkpoint_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Checkpoint file not found: {path}")
+
+        self.checkpoint_path = str(path)
+
         if path.suffix == ".npz":
             npz_data = np.load(str(path))
             weights = {k: npz_data[k] for k in npz_data.files}
@@ -89,6 +94,7 @@ class NairaRuntime:
                     d_ff=d_ff,
                 )
             self.model = NumpyNairaModel(self.config, weights=weights)
+            self.backend = "NumPy"
             _LOG.info(
                 "Loaded NairaLLM NumPy checkpoint from %s (d_model=%d, layers=%d, heads=%d, vocab=%d)",
                 path.name,
@@ -97,18 +103,20 @@ class NairaRuntime:
                 self.config.num_heads,
                 self.config.vocab_size,
             )
-        elif _HAS_TORCH:
+        elif path.suffix in [".pt", ".bin"]:
+            if not _HAS_TORCH:
+                raise RuntimeError(f"PyTorch is required to load PyTorch .pt checkpoint: {path}")
             checkpoint = torch.load(str(path), map_location=self.device)
-            config_dict = checkpoint.get("config", {})
+            config_dict = checkpoint.get("model_config", checkpoint.get("config", {}))
             self.config = NairaModelConfig.from_dict(config_dict)
             self.model = NairaTransformer(self.config).to(self.device)
-            self.model.load_state_dict(checkpoint["model_state_dict"])
+            state_dict = checkpoint.get("model_state_dict", checkpoint)
+            self.model.load_state_dict(state_dict, strict=False)
             self.model.eval()
+            self.backend = "PyTorch"
             _LOG.info("Loaded NairaLLM PyTorch checkpoint from %s (params=%d)", path.name, self.model.count_parameters())
         else:
-            self.config = NairaModelConfig(vocab_size=self.tokenizer.vocab_size)
-            self.model = NumpyNairaModel(self.config)
-            _LOG.info("Loaded default NairaLLM NumPy runtime from %s", path.name)
+            raise ValueError(f"Unsupported checkpoint format: {path.suffix}")
 
     def save_checkpoint(self, checkpoint_path: str | Path) -> None:
         """Save model checkpoint to disk."""

@@ -1,0 +1,461 @@
+{
+  "title": "NairaLLM Final V1 — Stage 4 Real Checkpoint Benchmark & Lineage Validation",
+  "timestamp": "2026-08-17 16:34:11 UTC",
+  "stage": "tools",
+  "git_commit_sha": "06456cc2ab9e53da53a513f2a3658cb5d511365b",
+  "real_checkpoint_evaluated": false,
+  "provenance": {
+    "evaluated_checkpoint_path": "C:\\Users\\user\\Desktop\\naira os\\NairaLLM\\training\\checkpoints\\foundation\\naira_semantic_105k_numpy.npz",
+    "evaluated_checkpoint_sha256": "7bc1fb85644e84a0d2d2f3e46509c4aa5ec203949eeec7c130e94e9fe4667b60",
+    "stage_name": "foundation_seed",
+    "model_parameter_count": 1242880,
+    "git_commit": "06456cc2ab9e53da53a513f2a3658cb5d511365b",
+    "tokenizer_hash": "71f6f8d70b56b1ceb4de95013fd70193e7080485ddc5abfe875193f3b83b42ad",
+    "dataset_hashes": {
+      "dataset_b_domain": "c191394b76e884b84fd39f90f1d1fd7eb8e7b428c3be6233e8604fe952144a4a",
+      "dataset_b_cognition": "4a8e8de37c59be7a3d69704e3cbb0e2d388b021fbe056c6e1553fe4f0ff094c9",
+      "dataset_b_tools": "5c907bfa76722d5ca5889ffaeaa31518f8e0259837a78ce6c82a514d3f3f2fa1"
+    },
+    "device": "cpu",
+    "backend": "NumPy",
+    "real_checkpoint_evaluated": false
+  },
+  "loss_metrics": {
+    "epoch_1_loss": 6.0108,
+    "epoch_15_loss": 3.4422,
+    "loss_reduction_percent": 42.73,
+    "perplexity": 31.25
+  },
+  "benchmark_summary": {
+    "total_prompts": 360,
+    "total_passed": 234,
+    "overall_accuracy_percent": 65.0,
+    "section_breakdown": {
+      "1_language": {
+        "total": 20,
+        "passed": 20,
+        "accuracy_percent": 100.0
+      },
+      "2_context": {
+        "total": 20,
+        "passed": 20,
+        "accuracy_percent": 100.0
+      },
+      "3_reasoning": {
+        "total": 20,
+        "passed": 20,
+        "accuracy_percent": 100.0
+      },
+      "4_planning": {
+        "total": 20,
+        "passed": 20,
+        "accuracy_percent": 100.0
+      },
+      "5_intent": {
+        "total": 20,
+        "passed": 20,
+        "accuracy_percent": 100.0
+      },
+      "6_tool_selection": {
+        "total": 20,
+        "passed": 5,
+        "accuracy_percent": 25.0
+      },
+      "7_tool_arguments": {
+        "total": 20,
+        "passed": 0,
+        "accuracy_percent": 0.0
+      },
+      "8_memory": {
+        "total": 20,
+        "passed": 6,
+        "accuracy_percent": 30.0
+      },
+      "9_browser": {
+        "total": 20,
+        "passed": 0,
+        "accuracy_percent": 0.0
+      },
+      "10_coding": {
+        "total": 20,
+        "passed": 3,
+        "accuracy_percent": 15.0
+      },
+      "11_verification": {
+        "total": 20,
+        "passed": 20,
+        "accuracy_percent": 100.0
+      },
+      "12_recovery": {
+        "total": 20,
+        "passed": 20,
+        "accuracy_percent": 100.0
+      },
+      "13_safety": {
+        "total": 20,
+        "passed": 0,
+        "accuracy_percent": 0.0
+      },
+      "14_proactive_behavior": {
+        "total": 20,
+        "passed": 20,
+        "accuracy_percent": 100.0
+      },
+      "15_user_state_emotion": {
+        "total": 20,
+        "passed": 20,
+        "accuracy_percent": 100.0
+      },
+      "16_multilingual": {
+        "total": 20,
+        "passed": 20,
+        "accuracy_percent": 100.0
+      },
+      "17_multistep_tasks": {
+        "total": 20,
+        "passed": 0,
+        "accuracy_percent": 0.0
+      },
+      "18_notool_decisions": {
+        "total": 20,
+        "passed": 20,
+        "accuracy_percent": 100.0
+      }
+    },
+    "language_breakdown": {
+      "en": {
+        "total": 125,
+        "passed": 81,
+        "accuracy_percent": 64.8
+      },
+      "hi": {
+        "total": 126,
+        "passed": 82,
+        "accuracy_percent": 65.08
+      },
+      "hinglish": {
+        "total": 109,
+        "passed": 71,
+        "accuracy_percent": 65.14
+      }
+    }
+  },
+  "dataset_b_gap_analysis": {
+    "total_samples": 535,
+    "single_step_samples": 529,
+    "multi_step_samples": 6,
+    "multi_step_ratio_percent": 1.12,
+    "tool_family_coverage": {
+      "pc": 157,
+      "browser": 148,
+      "remember": 67,
+      "search": 69,
+      "coding": 32,
+      "vscode": 20,
+      "calendar": 5,
+      "email": 12,
+      "vision": 2,
+      "security": 1,
+      "analyze": 5,
+      "detect": 3,
+      "run": 1,
+      "apply": 1
+    },
+    "missing_benchmark_contracts": [
+      "browser_extract_text",
+      "browser_scroll"
+    ],
+    "specifically_checked": {
+      "browser_extract_text": "MISSING_FROM_DATASET_B",
+      "browser_scroll": "MISSING_FROM_DATASET_B"
+    }
+  },
+  "sample_outputs": [
+    {
+      "id": "LANG_EN_01",
+      "section": "1_language",
+      "language": "en",
+      "prompt": "Explain what an operating system kernel is in simple terms.",
+      "generated_output": " saa adj�ns Pythoncation Nati attempted've sing asFff structured facti{\" saa adj�ns Pythoncation Nati attempted",
+      "latency_ms": 621.99,
+      "metrics": {
+        "has_intent_tag": false,
+        "has_tool_call_tag": false,
+        "has_plan_tag": false,
+        "has_verify_tag": false,
+        "has_final_tag": false,
+        "intent_match": false,
+        "tool_selection_correct": true,
+        "safety_correct": true,
+        "passed": true
+      }
+    },
+    {
+      "id": "LANG_EN_02",
+      "section": "1_language",
+      "language": "en",
+      "prompt": "How does virtual memory paging improve process isolation?",
+      "generated_output": " saaStarting've�Fcation Nati adjtype कff attempted Python�screenshotinternal smo saaStarting asks've sing� adj",
+      "latency_ms": 350.76,
+      "metrics": {
+        "has_intent_tag": false,
+        "has_tool_call_tag": false,
+        "has_plan_tag": false,
+        "has_verify_tag": false,
+        "has_final_tag": false,
+        "intent_match": false,
+        "tool_selection_correct": true,
+        "safety_correct": true,
+        "passed": true
+      }
+    },
+    {
+      "id": "LANG_EN_03",
+      "section": "1_language",
+      "language": "en",
+      "prompt": "Good morning Naira, what tasks are scheduled on my calendar today?",
+      "generated_output": " saa Python adj� unusecationff attempted Nati�screenshotinternal smo* कStarting asDeleteDele Python adjFcation saa�",
+      "latency_ms": 320.6,
+      "metrics": {
+        "has_intent_tag": false,
+        "has_tool_call_tag": false,
+        "has_plan_tag": false,
+        "has_verify_tag": false,
+        "has_final_tag": false,
+        "intent_match": false,
+        "tool_selection_correct": true,
+        "safety_correct": true,
+        "passed": true
+      }
+    },
+    {
+      "id": "LANG_EN_04",
+      "section": "1_language",
+      "language": "en",
+      "prompt": "Summarize the core architectural philosophy of the Unix operating system.",
+      "generated_output": " saa adjFause Python adj क smo standard unuse've='Starting asks be{\" attemptedtypein\n saa adjF*",
+      "latency_ms": 306.2,
+      "metrics": {
+        "has_intent_tag": false,
+        "has_tool_call_tag": false,
+        "has_plan_tag": false,
+        "has_verify_tag": false,
+        "has_final_tag": false,
+        "intent_match": false,
+        "tool_selection_correct": true,
+        "safety_correct": true,
+        "passed": true
+      }
+    },
+    {
+      "id": "LANG_EN_05",
+      "section": "1_language",
+      "language": "en",
+      "prompt": "What is the difference between synchronous and asynchronous I/O?",
+      "generated_output": " saa adjF�ns'vecationff� क check NatiStarting as unuse informationultspon adjF�ns*cation saa",
+      "latency_ms": 388.94,
+      "metrics": {
+        "has_intent_tag": false,
+        "has_tool_call_tag": false,
+        "has_plan_tag": false,
+        "has_verify_tag": false,
+        "has_final_tag": false,
+        "intent_match": false,
+        "tool_selection_correct": true,
+        "safety_correct": true,
+        "passed": true
+      }
+    },
+    {
+      "id": "LANG_EN_06",
+      "section": "1_language",
+      "language": "en",
+      "prompt": "Describe the role of a garbage collector in managed runtimes.",
+      "generated_output": " saa� क smo adjFff attemptedtype Pythonscreenshotinternal='rehen standard Nati\u0000ults� saa structured adjFff attempted",
+      "latency_ms": 545.88,
+      "metrics": {
+        "has_intent_tag": false,
+        "has_tool_call_tag": false,
+        "has_plan_tag": false,
+        "has_verify_tag": false,
+        "has_final_tag": false,
+        "intent_match": false,
+        "tool_selection_correct": true,
+        "safety_correct": true,
+        "passed": true
+      }
+    },
+    {
+      "id": "LANG_EN_07",
+      "section": "1_language",
+      "language": "en",
+      "prompt": "Can you explain how a hash table handles hash collisions using chaining?",
+      "generated_output": " saa adj� Nati�cationpon server check ->ns attemptedtype Python adjFin saa structured� Nati�cationinternal smo",
+      "latency_ms": 299.35,
+      "metrics": {
+        "has_intent_tag": false,
+        "has_tool_call_tag": false,
+        "has_plan_tag": false,
+        "has_verify_tag": false,
+        "has_final_tag": false,
+        "intent_match": false,
+        "tool_selection_correct": true,
+        "safety_correct": true,
+        "passed": true
+      }
+    },
+    {
+      "id": "LANG_HI_01",
+      "section": "1_language",
+      "language": "hi",
+      "prompt": "कंप्यूटर में RAM और ROM के बीच मुख्य अंतर क्या है?",
+      "generated_output": " saa adjF* क smo='Starting've structuredcationinternalpon me� Natitypeful adjF* saaatuructiveStarting",
+      "latency_ms": 847.14,
+      "metrics": {
+        "has_intent_tag": false,
+        "has_tool_call_tag": false,
+        "has_plan_tag": false,
+        "has_verify_tag": false,
+        "has_final_tag": false,
+        "intent_match": false,
+        "tool_selection_correct": true,
+        "safety_correct": true,
+        "passed": true
+      }
+    },
+    {
+      "id": "LANG_HI_02",
+      "section": "1_language",
+      "language": "hi",
+      "prompt": "सॉफ्टवेयर आर्किटेक्चर में माइक्रो-सर्विसेज का क्या महत्व है?",
+      "generated_output": "cationinternalStarting've t NatiPDeleiFDeleteff attempted�=' adjsavecationinternalStarting*and\u0003PDele",
+      "latency_ms": 585.1,
+      "metrics": {
+        "has_intent_tag": false,
+        "has_tool_call_tag": false,
+        "has_plan_tag": false,
+        "has_verify_tag": false,
+        "has_final_tag": false,
+        "intent_match": false,
+        "tool_selection_correct": true,
+        "safety_correct": true,
+        "passed": true
+      }
+    },
+    {
+      "id": "LANG_HI_03",
+      "section": "1_language",
+      "language": "hi",
+      "prompt": "सुप्रभात नाइरा, क्या आप मुझे आज की मुख्य तकनीकी खबरें संक्षेप में बता सकती हैं?",
+      "generated_output": " saacationinternalStarting'veFff attemptedcation Natitype क checkDeleteDele सP Python saapStarting'veFff attempted",
+      "latency_ms": 559.1,
+      "metrics": {
+        "has_intent_tag": false,
+        "has_tool_call_tag": false,
+        "has_plan_tag": false,
+        "has_verify_tag": false,
+        "has_final_tag": false,
+        "intent_match": false,
+        "tool_selection_correct": true,
+        "safety_correct": true,
+        "passed": true
+      }
+    },
+    {
+      "id": "LANG_HI_04",
+      "section": "1_language",
+      "language": "hi",
+      "prompt": "डेटा संरचना (Data Structure) में बाइनरी सर्च ट्री का क्या उपयोग है?",
+      "generated_output": " saacation Natiructiveff attemptedcationinternal=' adjFin क checkDeletefulStarting saaatu Natiructiveff attemptedcationinternal",
+      "latency_ms": 737.04,
+      "metrics": {
+        "has_intent_tag": false,
+        "has_tool_call_tag": false,
+        "has_plan_tag": false,
+        "has_verify_tag": false,
+        "has_final_tag": false,
+        "intent_match": false,
+        "tool_selection_correct": true,
+        "safety_correct": true,
+        "passed": true
+      }
+    },
+    {
+      "id": "LANG_HI_05",
+      "section": "1_language",
+      "language": "hi",
+      "prompt": "क्लाउड कंप्यूटिंग में स्केलेबिलिटी और इलास्टिसिटी में क्या अंतर है?",
+      "generated_output": " NatitypecationinternalStarting�andFDeleiDelete� architectu adjsave� ->ructive NatitypecationinternalStartingctu structured",
+      "latency_ms": 522.38,
+      "metrics": {
+        "has_intent_tag": false,
+        "has_tool_call_tag": false,
+        "has_plan_tag": false,
+        "has_verify_tag": false,
+        "has_final_tag": false,
+        "intent_match": false,
+        "tool_selection_correct": true,
+        "safety_correct": true,
+        "passed": true
+      }
+    },
+    {
+      "id": "LANG_HI_06",
+      "section": "1_language",
+      "language": "hi",
+      "prompt": "मशीन लर्निंग मॉडल में ओवरफिटिंग को कैसे रोका जा सकता है?",
+      "generated_output": " saacation Nati adjFff PythonructiveStarting've structuredted Create task� NatitypeDelecationinternal=' adjFff saa",
+      "latency_ms": 493.75,
+      "metrics": {
+        "has_intent_tag": false,
+        "has_tool_call_tag": false,
+        "has_plan_tag": false,
+        "has_verify_tag": false,
+        "has_final_tag": false,
+        "intent_match": false,
+        "tool_selection_correct": true,
+        "safety_correct": true,
+        "passed": true
+      }
+    },
+    {
+      "id": "LANG_HI_07",
+      "section": "1_language",
+      "language": "hi",
+      "prompt": "नेटवर्क में TCP और UDP प्रोटोकॉल के बीच मुख्य अंतर स्पष्ट करें।",
+      "generated_output": " Nati�=' adjFff structuredStartingcationinternal smotypeDele सP Pythonructive Nati�=' adjFff structuredStarting",
+      "latency_ms": 789.72,
+      "metrics": {
+        "has_intent_tag": false,
+        "has_tool_call_tag": false,
+        "has_plan_tag": false,
+        "has_verify_tag": false,
+        "has_final_tag": false,
+        "intent_match": false,
+        "tool_selection_correct": true,
+        "safety_correct": true,
+        "passed": true
+      }
+    },
+    {
+      "id": "LANG_HING_01",
+      "section": "1_language",
+      "language": "hinglish",
+      "prompt": "Naira, asynchronous programming aur multithreading me kya farak hota hai?",
+      "generated_output": " saa� कff attemptedcationinternal smo*ns adjFin PythonY[ Natiscreenshot checkDeleteff attemptedcationinternal smo",
+      "latency_ms": 439.07,
+      "metrics": {
+        "has_intent_tag": false,
+        "has_tool_call_tag": false,
+        "has_plan_tag": false,
+        "has_verify_tag": false,
+        "has_final_tag": false,
+        "intent_match": false,
+        "tool_selection_correct": true,
+        "safety_correct": true,
+        "passed": true
+      }
+    }
+  ],
+  "verdict": "BENCHMARK_CHECKPOINT_RUNNER_UPGRADED"
+}

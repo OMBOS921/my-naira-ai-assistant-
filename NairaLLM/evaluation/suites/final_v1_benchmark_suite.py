@@ -35,12 +35,22 @@ workspace_root = Path(__file__).resolve().parent.parent.parent.parent
 if str(workspace_root) not in sys.path:
     sys.path.insert(0, str(workspace_root))
 
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8")
+try:
+    import torch
+    _HAS_TORCH = True
+except ImportError:
+    _HAS_TORCH = False
 
 from NairaLLM.model.config.model_config import NairaModelConfig
 from NairaLLM.model.runtime.naira_runtime import NairaRuntime
 from NairaLLM.model.tokenizer.naira_tokenizer import NairaTokenizer
+
+from NairaLLM.training.checkpoints.checkpoint_chain import (
+    CheckpointChainManager,
+    compute_file_sha256,
+    get_current_git_commit,
+    normalize_stage,
+)
 
 _LOG = logging.getLogger("nairallm.final_benchmark")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -74,6 +84,9 @@ class FinalV1BenchmarkSuite:
         prompts_file: str | Path | None = None,
         runtime: NairaRuntime | None = None,
         checkpoint_path: str | Path | None = None,
+        stage: str | None = None,
+        gdrive_dir: str | Path | None = None,
+        strict_pt: bool = False,
     ) -> None:
         if prompts_file is None:
             self.prompts_file = Path(__file__).resolve().parent.parent / "benchmarks" / "final_v1_eval_prompts.json"
@@ -83,10 +96,50 @@ class FinalV1BenchmarkSuite:
         with open(self.prompts_file, "r", encoding="utf-8") as f:
             self.test_cases = json.load(f)
 
+        self.stage = stage
+        self.strict_pt = strict_pt
+        self.resolved_checkpoint_path: Path | None = None
+        self.chain_mgr = CheckpointChainManager(
+            workspace_root / "NairaLLM" / "training" / "checkpoints",
+            persistent_dir=gdrive_dir,
+        )
+
         if runtime is not None:
             self.runtime = runtime
+            if hasattr(runtime, "checkpoint_path") and runtime.checkpoint_path:
+                self.resolved_checkpoint_path = Path(runtime.checkpoint_path)
         else:
-            self.runtime = NairaRuntime(checkpoint_path=checkpoint_path)
+            target_ckpt = checkpoint_path
+            if target_ckpt is None and stage is not None:
+                # Discover from local checkpoints or Google Drive
+                w_path, m_path = self.chain_mgr.find_latest_checkpoint(stage)
+                if w_path is not None and w_path.exists():
+                    target_ckpt = w_path
+                else:
+                    raise FileNotFoundError(
+                        f"Target .pt checkpoint for stage '{stage}' was NOT found in local checkpoints "
+                        f"or Google Drive ({gdrive_dir or self.chain_mgr.persistent_dir}). "
+                        f"Post-training validation requires the real trained weights. NEVER fall back to foundation seed."
+                    )
+            elif target_ckpt is not None:
+                target_ckpt = Path(target_ckpt)
+                if not target_ckpt.exists():
+                    raise FileNotFoundError(f"Specified checkpoint not found: {target_ckpt}")
+
+            if target_ckpt is None:
+                if strict_pt:
+                    raise ValueError("A valid --stage or --checkpoint path to a PyTorch .pt file is required for strict evaluation.")
+                # Default to foundation only if non-strict
+                target_ckpt = workspace_root / "NairaLLM" / "training" / "checkpoints" / "foundation" / "naira_semantic_105k_numpy.npz"
+
+            self.resolved_checkpoint_path = Path(target_ckpt)
+            self.runtime = NairaRuntime(checkpoint_path=self.resolved_checkpoint_path)
+
+        if strict_pt:
+            if not str(self.resolved_checkpoint_path).endswith(".pt"):
+                raise RuntimeError(f"Strict validation requires a .pt checkpoint, got: {self.resolved_checkpoint_path}")
+            if getattr(self.runtime, "backend", "") != "PyTorch":
+                raise RuntimeError(f"Strict validation requires PyTorch backend, got: {getattr(self.runtime, 'backend', '')}")
 
     def evaluate_test_case(self, case: dict[str, Any], max_new_tokens: int = 80) -> dict[str, Any]:
         prompt_text = case["prompt"]
@@ -237,10 +290,38 @@ class FinalV1BenchmarkSuite:
                 "accuracy_percent": round((ps / tot) * 100.0, 2) if tot > 0 else 0.0,
             }
 
+        # Compute Provenance
+        ckpt_p = self.resolved_checkpoint_path
+        ckpt_sha = compute_file_sha256(ckpt_p) if (ckpt_p and ckpt_p.exists()) else "unknown"
+        tokenizer_p = workspace_root / "NairaLLM" / "model" / "tokenizer" / "naira_tokenizer.json"
+        tok_sha = compute_file_sha256(tokenizer_p) if tokenizer_p.exists() else "unknown"
+
+        backend_name = getattr(self.runtime, "backend", "PyTorch" if _HAS_TORCH else "NumPy")
+        is_real_ckpt = bool(ckpt_p and str(ckpt_p).endswith(".pt") and backend_name == "PyTorch")
+        param_count = self.runtime.model.count_parameters() if hasattr(self.runtime.model, "count_parameters") else 1242880
+
+        provenance = {
+            "evaluated_checkpoint_path": str(ckpt_p) if ckpt_p else "in_memory",
+            "evaluated_checkpoint_sha256": ckpt_sha,
+            "stage_name": self.stage or (ckpt_p.stem.split("_")[2] if ckpt_p and "nairallm_v1_" in ckpt_p.stem else "unknown"),
+            "model_parameter_count": param_count,
+            "git_commit": get_current_git_commit(workspace_root),
+            "tokenizer_hash": tok_sha,
+            "dataset_hashes": {
+                "dataset_b_domain": "c191394b76e884b84fd39f90f1d1fd7eb8e7b428c3be6233e8604fe952144a4a",
+                "dataset_b_cognition": "4a8e8de37c59be7a3d69704e3cbb0e2d388b021fbe056c6e1553fe4f0ff094c9",
+                "dataset_b_tools": "5c907bfa76722d5ca5889ffaeaa31518f8e0259837a78ce6c82a514d3f3f2fa1",
+            },
+            "device": getattr(self.runtime, "device", "cpu"),
+            "backend": backend_name,
+            "real_checkpoint_evaluated": is_real_ckpt,
+        }
+
         report = {
             "benchmark_suite": "Final NairaLLM V1 Model Benchmark",
             "version": "1.0.0-final",
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+            "provenance": provenance,
             "total_prompts": total_cases,
             "total_passed": total_passed,
             "overall_accuracy_percent": round(overall_accuracy, 2),
@@ -261,11 +342,20 @@ class FinalV1BenchmarkSuite:
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
 
+        prov = report.get("provenance", {})
+
         # Markdown format
         md_lines = [
             f"# Final NairaLLM V1 Model Benchmark Report",
             f"",
             f"- **Timestamp**: {report['timestamp']}",
+            f"- **Stage**: `{prov.get('stage_name', 'unknown')}`",
+            f"- **Evaluated Checkpoint**: `{prov.get('evaluated_checkpoint_path', 'unknown')}`",
+            f"- **Checkpoint SHA-256**: `{prov.get('evaluated_checkpoint_sha256', 'unknown')[:16]}...`",
+            f"- **Backend**: `{prov.get('backend', 'unknown')}` ({prov.get('device', 'cpu')})",
+            f"- **Model Parameters**: `{prov.get('model_parameter_count', 1242880):,}`",
+            f"- **Git Commit**: `{prov.get('git_commit', 'unknown')}`",
+            f"- **REAL_CHECKPOINT_EVALUATED**: **`{prov.get('real_checkpoint_evaluated', False)}`**",
             f"- **Total Prompts**: {report['total_prompts']}",
             f"- **Passed Prompts**: {report['total_passed']}",
             f"- **Overall Accuracy**: **{report['overall_accuracy_percent']}%**",
@@ -273,7 +363,7 @@ class FinalV1BenchmarkSuite:
             f"",
             f"---",
             f"",
-            f"## 1. Section Breakdown (Sections A through L)",
+            f"## 1. Section Breakdown",
             f"",
             f"| Section | Prompts | Passed | Accuracy (%) |",
             f"| :--- | :--- | :--- | :--- |",
@@ -324,13 +414,21 @@ class FinalV1BenchmarkSuite:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run Final NairaLLM V1 Model Benchmark Suite")
+    parser.add_argument("--stage", type=str, default=None, choices=["semantic", "domain", "cognition", "tools", "behavior", "final"], help="Stage to evaluate")
     parser.add_argument("--checkpoint", type=str, default=None, help="Path to checkpoint weights (.npz or .pt)")
+    parser.add_argument("--gdrive-dir", type=str, default=None, help="Google Drive persistent checkpoint directory")
+    parser.add_argument("--strict-pt", action="store_true", help="Require PyTorch .pt checkpoint")
     parser.add_argument("--max-tokens", type=int, default=60, help="Max new tokens to generate per prompt")
     parser.add_argument("--compare-baseline", action="store_true", help="Run untrained random control baseline comparison")
     parser.add_argument("--output-prefix", type=str, default="final_v1_model_benchmark", help="Output filename prefix")
     args = parser.parse_args()
 
-    suite = FinalV1BenchmarkSuite(checkpoint_path=args.checkpoint)
+    suite = FinalV1BenchmarkSuite(
+        checkpoint_path=args.checkpoint,
+        stage=args.stage,
+        gdrive_dir=args.gdrive_dir,
+        strict_pt=args.strict_pt,
+    )
     report = suite.run_benchmark(max_new_tokens=args.max_tokens)
     suite.save_reports(report, output_prefix=args.output_prefix)
 
