@@ -1,0 +1,26 @@
+{
+  "checkpoint_name": "foundation_checkpoint",
+  "stage": "foundation",
+  "parent_checkpoint": null,
+  "parent_checkpoint_sha256": null,
+  "weights_path": "NairaLLM\\training\\checkpoints\\foundation\\naira_semantic_105k_numpy.npz",
+  "weights_sha256": "7bc1fb85644e84a0d2d2f3e46509c4aa5ec203949eeec7c130e94e9fe4667b60",
+  "git_commit": "b90dfaea8b36fc0e0cd3553051b8e8113fd9f02e",
+  "dataset_name": "semantic_pretrain_v1_5_final.jsonl",
+  "dataset_version": "1.0.0",
+  "dataset_sha256": "015b4655bde092005b31195025e96df6e80702e7975f05ebf0c6072c1b29ff8f",
+  "tokenizer_name": "NairaTokenizer",
+  "tokenizer_version": "1.0.0",
+  "tokenizer_sha256": "71f6f8d70b56b1ceb4de95013fd70193e7080485ddc5abfe875193f3b83b42ad",
+  "model_config_sha256": "e3543cef35c762c06930d7536b02750b6b55985e8670c82523a9bf7a6fed48f6",
+  "training_metrics": {
+    "final_loss": 4.29,
+    "tokens_trained": 105141,
+    "epochs": 25
+  },
+  "training_hardware": {
+    "device": "Tesla T4 / NumPy Pretrain",
+    "precision": "FP32"
+  },
+  "timestamp": "2026-08-17 12:20:24 UTC"
+}

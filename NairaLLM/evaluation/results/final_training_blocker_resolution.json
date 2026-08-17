@@ -1,0 +1,93 @@
+{
+  "title": "NairaLLM Final V1 — Stage 0 Blocker Resolution Report",
+  "timestamp": "2026-08-17 14:06:17 UTC",
+  "status": "ALL_BLOCKERS_RESOLVED",
+  "git_commit_sha": "8739d0c077627b67b49bc2334ec23dfc7a02f60e",
+  "preflight_verdict": "STAGE_0_PREFLIGHT_PASSED",
+  "blocker_resolutions": [
+    {
+      "issue_id": 1,
+      "component": "Dataset B (All Capabilities)",
+      "old_manifest_hash_crlf": "d2414fcfcde5787df5fced501ca72aed3c877e4390d152f0113b51f18d96ec90",
+      "canonical_hash_lf": "93fe24aef07873fa2fb5a76b5a17da775fe6296ba5b3b6e30823f8ab1c289095",
+      "records": 706,
+      "tokens": 71280,
+      "bytes": 739258,
+      "root_cause": "Windows CRLF output in builder vs Linux/Git LF checkout normalization.",
+      "resolution": "Re-saved with explicit newline='\\n', locked canonical LF hash in dataset_manifest.json, enforced eol=lf in .gitattributes.",
+      "status": "RESOLVED_MATCHED"
+    },
+    {
+      "issue_id": 2,
+      "component": "Dataset B (Domain Stage)",
+      "old_manifest_hash_crlf": "d70630929524fdeb46c098d55d49e46d2151e98ac91231bf0c915725dd4100ea",
+      "canonical_hash_lf": "c191394b76e884b84fd39f90f1d1fd7eb8e7b428c3be6233e8604fe952144a4a",
+      "records": 80,
+      "tokens": 5713,
+      "bytes": 65863,
+      "root_cause": "Windows CRLF output in builder vs Linux/Git LF checkout normalization.",
+      "resolution": "Re-saved with explicit newline='\\n', locked canonical LF hash in dataset_manifest.json.",
+      "status": "RESOLVED_MATCHED"
+    },
+    {
+      "issue_id": 3,
+      "component": "Dataset B (Cognition Stage)",
+      "old_manifest_hash_crlf": "794d5e1bac940673039c7c522cdf0cbe949f4291ae4801bb60dc99439c1aa180",
+      "canonical_hash_lf": "4a8e8de37c59be7a3d69704e3cbb0e2d388b021fbe056c6e1553fe4f0ff094c9",
+      "records": 91,
+      "tokens": 14162,
+      "bytes": 104045,
+      "root_cause": "Windows CRLF output in builder vs Linux/Git LF checkout normalization.",
+      "resolution": "Re-saved with explicit newline='\\n', locked canonical LF hash in dataset_manifest.json.",
+      "status": "RESOLVED_MATCHED"
+    },
+    {
+      "issue_id": 4,
+      "component": "Dataset B (Tools Stage)",
+      "old_manifest_hash_crlf": "64c67d462c6cad623435502552655e7bf60cbf92946419d9ccaceb96974555ad",
+      "canonical_hash_lf": "583d88d0d2e2d1ca3c2e5f44635c7f7183d786d870dad646d1d577fc4d7bcdee",
+      "records": 535,
+      "tokens": 51405,
+      "bytes": 569350,
+      "root_cause": "Windows CRLF output in builder vs Linux/Git LF checkout normalization.",
+      "resolution": "Re-saved with explicit newline='\\n', locked canonical LF hash in dataset_manifest.json.",
+      "status": "RESOLVED_MATCHED"
+    },
+    {
+      "issue_id": 5,
+      "component": "Dataset C (Behavior & Autonomy)",
+      "old_manifest_hash_crlf": "acdf86086df9a4d1d56aa837036accb38eedbfd72f02a5eb8307641c8b007ebb",
+      "canonical_hash_lf": "aff52170796c80b1ae84ed7f1eb68393b8ef1c9b42869b2de8c8642910e66fc7",
+      "records": 68,
+      "tokens": 8911,
+      "bytes": 54280,
+      "root_cause": "Windows CRLF output in builder vs Linux/Git LF checkout normalization.",
+      "resolution": "Re-saved with explicit newline='\\n', locked canonical LF hash in dataset_manifest.json.",
+      "status": "RESOLVED_MATCHED"
+    },
+    {
+      "issue_id": 6,
+      "component": "Foundation Checkpoint Availability",
+      "path": "NairaLLM/training/checkpoints/foundation/naira_semantic_105k_numpy.npz",
+      "weights_sha256": "7bc1fb85644e84a0d2d2f3e46509c4aa5ec203949eeec7c130e94e9fe4667b60",
+      "size_bytes": 5318096,
+      "root_cause": "Wildcard **/checkpoints/ in .gitignore ignored the foundation weights and metadata JSON.",
+      "decision": "Option A: Preserved real verified 105k foundation checkpoint seed. Whitelisted foundation weights in .gitignore.",
+      "status": "RESOLVED_COMMITTED"
+    },
+    {
+      "issue_id": 7,
+      "component": "checkpoint_chain Module Import",
+      "module": "NairaLLM.training.checkpoints.checkpoint_chain",
+      "root_cause": "Missing training/__init__.py and checkpoints/__init__.py, plus checkpoint_chain.py was ignored by .gitignore.",
+      "resolution": "Created __init__.py files, whitelisted .py in checkpoints dir, added StrEnum fallback for Python 3.10+, added test_checkpoint_chain.py.",
+      "status": "RESOLVED_TESTED"
+    }
+  ],
+  "next_step_colab_commands": [
+    "%cd /content/naira os",
+    "!git pull origin main",
+    "!python NairaLLM/training/scripts/stage_0_preflight.py",
+    "# Stage 0 Preflight will output STAGE_0_PREFLIGHT_PASSED with 0 mismatches."
+  ]
+}

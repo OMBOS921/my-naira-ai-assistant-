@@ -503,10 +503,10 @@ def main() -> None:
     dest_b_cognition = b_dir / "dataset_b_cognition.jsonl"
     dest_b_tools = b_dir / "dataset_b_tools.jsonl"
 
-    with open(dest_b_all, "w", encoding="utf-8") as f_all, \
-         open(dest_b_domain, "w", encoding="utf-8") as f_dom, \
-         open(dest_b_cognition, "w", encoding="utf-8") as f_cog, \
-         open(dest_b_tools, "w", encoding="utf-8") as f_tls:
+    with open(dest_b_all, "w", encoding="utf-8", newline="\n") as f_all, \
+         open(dest_b_domain, "w", encoding="utf-8", newline="\n") as f_dom, \
+         open(dest_b_cognition, "w", encoding="utf-8", newline="\n") as f_cog, \
+         open(dest_b_tools, "w", encoding="utf-8", newline="\n") as f_tls:
 
         for s in b_samples:
             line = json.dumps(s, ensure_ascii=False) + "\n"
@@ -527,7 +527,7 @@ def main() -> None:
     jarvis_beh = get_expanded_behavior_trajectories()
     c_samples.extend(jarvis_beh)
     dest_c = c_dir / "dataset_c_behavior.jsonl"
-    with open(dest_c, "w", encoding="utf-8") as f_c:
+    with open(dest_c, "w", encoding="utf-8", newline="\n") as f_c:
         for s in c_samples:
             f_c.write(json.dumps(s, ensure_ascii=False) + "\n")
 

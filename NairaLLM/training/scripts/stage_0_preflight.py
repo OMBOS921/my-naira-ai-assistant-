@@ -213,27 +213,38 @@ def run_stage_0_preflight() -> dict[str, Any]:
     preflight_results["checks"]["hardware"] = hardware_check
     _LOG.info("[8/11] Hardware Check: %s | CUDA Available: %s", hardware_check.get("device_name"), hardware_check.get("cuda_available"))
 
-    # 9. Checkpoint Directory Structure & Foundation Checkpoint
+    # 9. Checkpoint Directory Structure, Package Imports & Foundation Checkpoint
     checkpoint_dir = workspace_root / "NairaLLM" / "training" / "checkpoints"
     required_stages = ["foundation", "domain", "cognition", "tools", "behavior", "final_v1"]
     for st in required_stages:
         (checkpoint_dir / st).mkdir(parents=True, exist_ok=True)
 
+    # Verify import of checkpoint_chain module
+    try:
+        from NairaLLM.training.checkpoints.checkpoint_chain import CheckpointChainManager, TrainingStage
+        chain_import_ok = True
+    except Exception as exc:
+        chain_import_ok = False
+        preflight_results["mismatches"].append(f"CheckpointChain import failed: {exc}")
+
     foundation_weights = checkpoint_dir / "foundation" / "naira_semantic_105k_numpy.npz"
     foundation_meta = checkpoint_dir / "foundation" / "foundation_checkpoint_metadata.json"
-    foundation_ok = foundation_weights.exists() and foundation_meta.exists()
-    if not foundation_ok:
-        preflight_results["mismatches"].append("Foundation checkpoint or metadata missing in checkpoints/foundation/")
+    foundation_ok = foundation_weights.exists() and foundation_meta.exists() and chain_import_ok
+    if not foundation_weights.exists():
+        preflight_results["mismatches"].append("Foundation weights missing: NairaLLM/training/checkpoints/foundation/naira_semantic_105k_numpy.npz")
+    if not foundation_meta.exists():
+        preflight_results["mismatches"].append("Foundation metadata missing: NairaLLM/training/checkpoints/foundation/foundation_checkpoint_metadata.json")
 
-    foundation_sha = compute_sha256(foundation_weights)
+    foundation_sha = compute_sha256(foundation_weights) if foundation_weights.exists() else "MISSING"
     preflight_results["checks"]["checkpoint_chain"] = {
         "directory": "NairaLLM/training/checkpoints/",
         "required_subdirectories_present": required_stages,
+        "checkpoint_chain_import_ok": chain_import_ok,
         "foundation_weights_sha256": foundation_sha,
         "foundation_metadata_present": foundation_meta.exists(),
         "status": "PASS" if foundation_ok else "FAIL",
     }
-    _LOG.info("[9/11] Checkpoint Chain: Foundation Checkpoint Verified (SHA=%s...)", foundation_sha[:10])
+    _LOG.info("[9/11] Checkpoint Chain: Foundation Checkpoint Verified (SHA=%s...) | Module Import: %s", foundation_sha[:10], "PASS" if chain_import_ok else "FAIL")
 
     # 10. Benchmark Scaffolding (360 Prompts across 18 Sections)
     bench_prompts_file = workspace_root / "NairaLLM" / "evaluation" / "benchmarks" / "final_v1_eval_prompts.json"

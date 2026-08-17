@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-17 13:48:58 UTC",
+  "timestamp": "2026-08-17 14:05:45 UTC",
   "verdict": "STAGE_0_PREFLIGHT_PASSED",
   "checks": {
     "model_config": {
@@ -34,8 +34,8 @@
       },
       "Dataset B (All Capabilities)": {
         "file_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_all_capabilities.jsonl",
-        "manifest_sha256": "d2414fcfcde5787df5fced501ca72aed3c877e4390d152f0113b51f18d96ec90",
-        "actual_sha256": "d2414fcfcde5787df5fced501ca72aed3c877e4390d152f0113b51f18d96ec90",
+        "manifest_sha256": "93fe24aef07873fa2fb5a76b5a17da775fe6296ba5b3b6e30823f8ab1c289095",
+        "actual_sha256": "93fe24aef07873fa2fb5a76b5a17da775fe6296ba5b3b6e30823f8ab1c289095",
         "records": 706,
         "tokens": 71280,
         "sha_match": true,
@@ -43,8 +43,8 @@
       },
       "Dataset B (Domain Stage)": {
         "file_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_domain.jsonl",
-        "manifest_sha256": "d70630929524fdeb46c098d55d49e46d2151e98ac91231bf0c915725dd4100ea",
-        "actual_sha256": "d70630929524fdeb46c098d55d49e46d2151e98ac91231bf0c915725dd4100ea",
+        "manifest_sha256": "c191394b76e884b84fd39f90f1d1fd7eb8e7b428c3be6233e8604fe952144a4a",
+        "actual_sha256": "c191394b76e884b84fd39f90f1d1fd7eb8e7b428c3be6233e8604fe952144a4a",
         "records": 80,
         "tokens": 5713,
         "sha_match": true,
@@ -52,8 +52,8 @@
       },
       "Dataset B (Cognition Stage)": {
         "file_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_cognition.jsonl",
-        "manifest_sha256": "794d5e1bac940673039c7c522cdf0cbe949f4291ae4801bb60dc99439c1aa180",
-        "actual_sha256": "794d5e1bac940673039c7c522cdf0cbe949f4291ae4801bb60dc99439c1aa180",
+        "manifest_sha256": "4a8e8de37c59be7a3d69704e3cbb0e2d388b021fbe056c6e1553fe4f0ff094c9",
+        "actual_sha256": "4a8e8de37c59be7a3d69704e3cbb0e2d388b021fbe056c6e1553fe4f0ff094c9",
         "records": 91,
         "tokens": 14162,
         "sha_match": true,
@@ -61,8 +61,8 @@
       },
       "Dataset B (Tools Stage)": {
         "file_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_tools.jsonl",
-        "manifest_sha256": "64c67d462c6cad623435502552655e7bf60cbf92946419d9ccaceb96974555ad",
-        "actual_sha256": "64c67d462c6cad623435502552655e7bf60cbf92946419d9ccaceb96974555ad",
+        "manifest_sha256": "583d88d0d2e2d1ca3c2e5f44635c7f7183d786d870dad646d1d577fc4d7bcdee",
+        "actual_sha256": "583d88d0d2e2d1ca3c2e5f44635c7f7183d786d870dad646d1d577fc4d7bcdee",
         "records": 535,
         "tokens": 51405,
         "sha_match": true,
@@ -70,8 +70,8 @@
       },
       "Dataset C (Behavior & Autonomy)": {
         "file_path": "NairaLLM/dataset/final/C_behavior/dataset_c_behavior.jsonl",
-        "manifest_sha256": "acdf86086df9a4d1d56aa837036accb38eedbfd72f02a5eb8307641c8b007ebb",
-        "actual_sha256": "acdf86086df9a4d1d56aa837036accb38eedbfd72f02a5eb8307641c8b007ebb",
+        "manifest_sha256": "aff52170796c80b1ae84ed7f1eb68393b8ef1c9b42869b2de8c8642910e66fc7",
+        "actual_sha256": "aff52170796c80b1ae84ed7f1eb68393b8ef1c9b42869b2de8c8642910e66fc7",
         "records": 68,
         "tokens": 8911,
         "sha_match": true,
@@ -97,6 +97,7 @@
         "behavior",
         "final_v1"
       ],
+      "checkpoint_chain_import_ok": true,
       "foundation_weights_sha256": "7bc1fb85644e84a0d2d2f3e46509c4aa5ec203949eeec7c130e94e9fe4667b60",
       "foundation_metadata_present": true,
       "status": "PASS"
@@ -111,7 +112,7 @@
   },
   "mismatches": [],
   "git_info": {
-    "commit_sha": "b7dbd0a9108877d7dd019ffe7af2c70cd285cfdc",
+    "commit_sha": "8739d0c077627b67b49bc2334ec23dfc7a02f60e",
     "branch": "main",
     "status": "CLEAN"
   }

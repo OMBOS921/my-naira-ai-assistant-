@@ -41,18 +41,23 @@ config/google_client_secret.json
 # Model Checkpoints & Large Artifacts
 # =========================
 checkpoints/
-**/checkpoints/
-*.pt
-*.ckpt
+**/checkpoints/*.pt
+**/checkpoints/*.ckpt
+**/checkpoints/*.bin
+**/checkpoints/*.safetensors
 *.npz
-*.bin
-*.safetensors
 *.zip
 *.tar
 *.tar.gz
 
-# Retain specific non-checkpoint assets if any
+# Retain specific non-checkpoint assets
 !backend/modules/voice/rvc_model/vtuber.pth
+
+# Retain NairaLLM training framework, metadata, and foundation checkpoint
+!NairaLLM/training/checkpoints/
+!NairaLLM/training/checkpoints/**/*.py
+!NairaLLM/training/checkpoints/**/*.json
+!NairaLLM/training/checkpoints/foundation/naira_semantic_105k_numpy.npz
 
 # =========================
 # Logs & Databases
