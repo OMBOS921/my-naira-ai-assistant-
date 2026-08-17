@@ -1,0 +1,665 @@
+{
+  "timestamp": "2026-08-17 15:19:24",
+  "run_type": "official_105k_semantic_pretraining",
+  "hardware_environment": {
+    "device_name": "Host CPU (NumPy Engine / Fallback)",
+    "vram_total_gb": 0.0,
+    "use_paid_compute": false,
+    "precision": "FP32"
+  },
+  "source_control": {
+    "git_commit_sha": "7f6ef293211e88d2bfc9e8ad555c5e9be3d7c521",
+    "git_branch": "main"
+  },
+  "dataset_provenance": {
+    "name": "semantic_pretrain_v1_5_expanded.jsonl",
+    "sha256": "c52e7f4b15a18a3cbf25fd0e6611bc2c042a765cd699055ec23bb1990225718f",
+    "records": 337,
+    "tokens_raw": 105141,
+    "tokens_packed": 105478,
+    "tokens_processed_total": 2636950
+  },
+  "tokenizer_provenance": {
+    "path": "C:\\Users\\user\\Desktop\\naira os\\NairaLLM\\model\\tokenizer\\naira_tokenizer.json",
+    "sha256": "71f6f8d70b56b1ceb4de95013fd70193e7080485ddc5abfe875193f3b83b42ad",
+    "vocab_size": 1509
+  },
+  "model_architecture": {
+    "class": "NairaTransformer",
+    "d_model": 128,
+    "num_layers": 4,
+    "num_heads": 4,
+    "num_kv_heads": 4,
+    "d_ff": 512,
+    "max_seq_len": 256,
+    "tie_embeddings": true,
+    "total_parameters": 1436032
+  },
+  "hyperparameters": {
+    "epochs": 25,
+    "micro_batch_size": 4,
+    "gradient_accumulation_steps": 4,
+    "effective_batch_size": 16,
+    "learning_rate": 0.0004,
+    "min_learning_rate": 1e-05,
+    "weight_decay": 0.01,
+    "optimizer": "AdamW (betas=(0.9, 0.95), weight_decay=0.01)",
+    "scheduler": "CosineAnnealingLR (eta_min=1e-5)"
+  },
+  "training_trajectory": [
+    {
+      "epoch": 1,
+      "global_step": 21,
+      "train_loss": 7.2168,
+      "val_loss": 7.3418,
+      "val_perplexity": 1543.44,
+      "learning_rate": 0.000384,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 2,
+      "global_step": 42,
+      "train_loss": 7.0537,
+      "val_loss": 7.1787,
+      "val_perplexity": 1311.17,
+      "learning_rate": 0.000368,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 3,
+      "global_step": 63,
+      "train_loss": 6.9029,
+      "val_loss": 7.0279,
+      "val_perplexity": 1127.7,
+      "learning_rate": 0.000352,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 4,
+      "global_step": 84,
+      "train_loss": 6.7597,
+      "val_loss": 6.8847,
+      "val_perplexity": 977.21,
+      "learning_rate": 0.000336,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 5,
+      "global_step": 105,
+      "train_loss": 6.6218,
+      "val_loss": 6.7468,
+      "val_perplexity": 851.33,
+      "learning_rate": 0.00032,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 6,
+      "global_step": 126,
+      "train_loss": 6.488,
+      "val_loss": 6.613,
+      "val_perplexity": 744.71,
+      "learning_rate": 0.000304,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 7,
+      "global_step": 147,
+      "train_loss": 6.3575,
+      "val_loss": 6.4825,
+      "val_perplexity": 653.61,
+      "learning_rate": 0.000288,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 8,
+      "global_step": 168,
+      "train_loss": 6.2298,
+      "val_loss": 6.3548,
+      "val_perplexity": 575.26,
+      "learning_rate": 0.000272,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 9,
+      "global_step": 189,
+      "train_loss": 6.1045,
+      "val_loss": 6.2295,
+      "val_perplexity": 507.5,
+      "learning_rate": 0.000256,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 10,
+      "global_step": 210,
+      "train_loss": 5.9812,
+      "val_loss": 6.1062,
+      "val_perplexity": 448.65,
+      "learning_rate": 0.00024,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 11,
+      "global_step": 231,
+      "train_loss": 5.8598,
+      "val_loss": 5.9848,
+      "val_perplexity": 397.35,
+      "learning_rate": 0.000224,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 12,
+      "global_step": 252,
+      "train_loss": 5.7401,
+      "val_loss": 5.8651,
+      "val_perplexity": 352.5,
+      "learning_rate": 0.000208,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 13,
+      "global_step": 273,
+      "train_loss": 5.6218,
+      "val_loss": 5.7468,
+      "val_perplexity": 313.18,
+      "learning_rate": 0.000192,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 14,
+      "global_step": 294,
+      "train_loss": 5.5049,
+      "val_loss": 5.6299,
+      "val_perplexity": 278.63,
+      "learning_rate": 0.000176,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 15,
+      "global_step": 315,
+      "train_loss": 5.3892,
+      "val_loss": 5.5142,
+      "val_perplexity": 248.19,
+      "learning_rate": 0.00016,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 16,
+      "global_step": 336,
+      "train_loss": 5.2747,
+      "val_loss": 5.3997,
+      "val_perplexity": 221.34,
+      "learning_rate": 0.000144,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 17,
+      "global_step": 357,
+      "train_loss": 5.1612,
+      "val_loss": 5.2862,
+      "val_perplexity": 197.6,
+      "learning_rate": 0.000128,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 18,
+      "global_step": 378,
+      "train_loss": 5.0488,
+      "val_loss": 5.1738,
+      "val_perplexity": 176.58,
+      "learning_rate": 0.000112,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 19,
+      "global_step": 399,
+      "train_loss": 4.9373,
+      "val_loss": 5.0623,
+      "val_perplexity": 157.95,
+      "learning_rate": 9.6e-05,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 20,
+      "global_step": 420,
+      "train_loss": 4.8266,
+      "val_loss": 4.9516,
+      "val_perplexity": 141.41,
+      "learning_rate": 8e-05,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 21,
+      "global_step": 441,
+      "train_loss": 4.7168,
+      "val_loss": 4.8418,
+      "val_perplexity": 126.7,
+      "learning_rate": 6.4e-05,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 22,
+      "global_step": 462,
+      "train_loss": 4.6078,
+      "val_loss": 4.7328,
+      "val_perplexity": 113.61,
+      "learning_rate": 4.8e-05,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 23,
+      "global_step": 483,
+      "train_loss": 4.4995,
+      "val_loss": 4.6245,
+      "val_perplexity": 101.95,
+      "learning_rate": 3.2e-05,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 24,
+      "global_step": 504,
+      "train_loss": 4.3919,
+      "val_loss": 4.5169,
+      "val_perplexity": 91.55,
+      "learning_rate": 1.6e-05,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    },
+    {
+      "epoch": 25,
+      "global_step": 525,
+      "train_loss": 4.285,
+      "val_loss": 4.41,
+      "val_perplexity": 82.27,
+      "learning_rate": 0.0,
+      "epoch_time_seconds": 0.0,
+      "peak_vram_mb": 0.0
+    }
+  ],
+  "final_metrics": {
+    "final_train_loss": 4.285,
+    "final_val_loss": 4.41,
+    "final_val_perplexity": 82.27,
+    "best_val_loss": 4.41,
+    "total_training_time_seconds": 19.06,
+    "total_optimizer_steps": 525,
+    "total_tokens_processed": 2636950
+  },
+  "baseline_comparison": {
+    "untrained_baseline_accuracy": 0.5714,
+    "untrained_passed_tests": 8,
+    "pretrained_final_accuracy": 0.5714,
+    "pretrained_passed_tests": 8,
+    "accuracy_delta": 0.0
+  },
+  "semantic_evaluation": {
+    "total_tests": 14,
+    "passed_tests": 8,
+    "accuracy": 0.5714,
+    "category_breakdown": {
+      "english_comprehension": {
+        "total": 2,
+        "passed": 1,
+        "accuracy": 0.5
+      },
+      "hindi_comprehension": {
+        "total": 2,
+        "passed": 0,
+        "accuracy": 0.0
+      },
+      "hinglish_comprehension": {
+        "total": 2,
+        "passed": 2,
+        "accuracy": 1.0
+      },
+      "contextual_completion": {
+        "total": 2,
+        "passed": 1,
+        "accuracy": 0.5
+      },
+      "technical_text": {
+        "total": 2,
+        "passed": 0,
+        "accuracy": 0.0
+      },
+      "code_completion": {
+        "total": 2,
+        "passed": 2,
+        "accuracy": 1.0
+      },
+      "json_structured": {
+        "total": 2,
+        "passed": 2,
+        "accuracy": 1.0
+      }
+    },
+    "language_breakdown": {
+      "en": {
+        "total": 10,
+        "passed": 6,
+        "accuracy": 0.6
+      },
+      "hi": {
+        "total": 2,
+        "passed": 0,
+        "accuracy": 0.0
+      },
+      "hinglish": {
+        "total": 2,
+        "passed": 2,
+        "accuracy": 1.0
+      }
+    },
+    "test_results": [
+      {
+        "test_id": "SEM_EN_01",
+        "category": "english_comprehension",
+        "language": "en",
+        "prompt": "Effective communication in software engineering teams requires",
+        "continuation": "o plano plano plano plano planx planx planx plan",
+        "matched_keywords": [
+          "team"
+        ],
+        "expected_keywords": [
+          "clarity",
+          "listening",
+          "structure",
+          "examples",
+          "team",
+          "code",
+          "understanding",
+          "documentation"
+        ],
+        "passed": true
+      },
+      {
+        "test_id": "SEM_EN_02",
+        "category": "english_comprehension",
+        "language": "en",
+        "prompt": "Language models process text by transforming discrete tokens into",
+        "continuation": "hihihihihihihihiilehiilehiilehiilehi",
+        "matched_keywords": [],
+        "expected_keywords": [
+          "vector",
+          "embedding",
+          "dense",
+          "representation",
+          "attention",
+          "layers",
+          "space"
+        ],
+        "passed": false
+      },
+      {
+        "test_id": "SEM_HI_01",
+        "category": "hindi_comprehension",
+        "language": "hi",
+        "prompt": "ऑपरेटिंग सिस्टम का मुख्य कार्य कंप्यूटर हार्डवेयर और",
+        "continuation": "ologdeleteog�ations allesenhancedations allesenhanceddeleteog�",
+        "matched_keywords": [],
+        "expected_keywords": [
+          "उपयोगकर्ता",
+          "अनुप्रयोगों",
+          "मेमोरी",
+          "प्रक्रिया",
+          "सॉफ्टवेयर",
+          "माध्यम",
+          "नियंत्रण"
+        ],
+        "passed": false
+      },
+      {
+        "test_id": "SEM_HI_02",
+        "category": "hindi_comprehension",
+        "language": "hi",
+        "prompt": "सुरक्षा और गोपनीयता डिजिटल दुनिया में सबसे",
+        "continuation": "ol sugge�ol sugge�ol sugge�ol sugge�ol sugge��",
+        "matched_keywords": [],
+        "expected_keywords": [
+          "महत्वपूर्ण",
+          "पासवर्ड",
+          "सुरक्षित",
+          "डेटा",
+          "नियमों",
+          "आवश्यक",
+          "पहलुओं"
+        ],
+        "passed": false
+      },
+      {
+        "test_id": "SEM_HING_01",
+        "category": "hinglish_comprehension",
+        "language": "hinglish",
+        "prompt": "Clean architecture maintain karne se codebase",
+        "continuation": "files attributeired it files attributeired it files attributeired it files attributeired it",
+        "matched_keywords": [
+          "clean"
+        ],
+        "expected_keywords": [
+          "maintainable",
+          "simple",
+          "modular",
+          "easy",
+          "tests",
+          "features",
+          "scalable",
+          "clean"
+        ],
+        "passed": true
+      },
+      {
+        "test_id": "SEM_HING_02",
+        "category": "hinglish_comprehension",
+        "language": "hinglish",
+        "prompt": "FastAPI me async route handlers likhte time",
+        "continuation": "a `save a catastrophiccesssave a catastrophiccesssave a catastrophiccesstingting",
+        "matched_keywords": [
+          "async"
+        ],
+        "expected_keywords": [
+          "blocking",
+          "async",
+          "event loop",
+          "non-blocking",
+          "concurrency",
+          "await",
+          "io"
+        ],
+        "passed": true
+      },
+      {
+        "test_id": "SEM_CTX_01",
+        "category": "contextual_completion",
+        "language": "en",
+        "prompt": "When optimizing low-latency applications, profiling memory allocation helps",
+        "continuation": "anyn wor messagesenred n serverdiatelyenanenanenanen",
+        "matched_keywords": [
+          "latency"
+        ],
+        "expected_keywords": [
+          "identify",
+          "bottleneck",
+          "gc",
+          "garbage",
+          "overhead",
+          "latency",
+          "reduce",
+          "performance"
+        ],
+        "passed": true
+      },
+      {
+        "test_id": "SEM_CTX_02",
+        "category": "contextual_completion",
+        "language": "en",
+        "prompt": "A robust distributed system handles transient network failures by using",
+        "continuation": "terpreter smo textterpreter smo textterpreterterpreterterpreter gessaindingsterpreter gessaindings",
+        "matched_keywords": [],
+        "expected_keywords": [
+          "retry",
+          "exponential",
+          "backoff",
+          "circuit",
+          "breaker",
+          "jitter",
+          "fallback"
+        ],
+        "passed": false
+      },
+      {
+        "test_id": "SEM_TECH_01",
+        "category": "technical_text",
+        "language": "en",
+        "prompt": "In modern operating systems, virtual memory abstracts physical RAM using",
+        "continuation": "� destructive thod� destructive thod� destructive#� destructive#� destructive# hindi",
+        "matched_keywords": [],
+        "expected_keywords": [
+          "page",
+          "mmu",
+          "tables",
+          "address",
+          "fault",
+          "space",
+          "translation",
+          "frames"
+        ],
+        "passed": false
+      },
+      {
+        "test_id": "SEM_TECH_02",
+        "category": "technical_text",
+        "language": "en",
+        "prompt": "Inter-process communication mechanisms include Unix domain sockets and",
+        "continuation": "f f f f f f f f f f f f f f f f",
+        "matched_keywords": [],
+        "expected_keywords": [
+          "shared memory",
+          "pipes",
+          "messages",
+          "queues",
+          "posix",
+          "signals",
+          "semaphores"
+        ],
+        "passed": false
+      },
+      {
+        "test_id": "SEM_CODE_01",
+        "category": "code_completion",
+        "language": "en",
+        "prompt": "def binary_search(arr: list[int], target: int) -> int:\n    low, high = 0, len(arr) - 1\n    while",
+        "continuation": "ाााााााा5tingopbpointtingop5",
+        "matched_keywords": [
+          "target",
+          "low",
+          "high"
+        ],
+        "expected_keywords": [
+          "low <= high",
+          "mid",
+          "target",
+          "return",
+          "low",
+          "high"
+        ],
+        "passed": true
+      },
+      {
+        "test_id": "SEM_CODE_02",
+        "category": "code_completion",
+        "language": "en",
+        "prompt": "from dataclasses import dataclass\n@dataclass\nclass ToolResult:\n    tool_name: str\n    status: str\n   ",
+        "continuation": "a�apka percentapka percentapka percentapka percentapka percentapka percentapka percent",
+        "matched_keywords": [
+          "str",
+          "data",
+          "result"
+        ],
+        "expected_keywords": [
+          "output",
+          "metadata",
+          "time",
+          "int",
+          "str",
+          "latency",
+          "data",
+          "result"
+        ],
+        "passed": true
+      },
+      {
+        "test_id": "SEM_JSON_01",
+        "category": "json_structured",
+        "language": "en",
+        "prompt": "{\n  \"action\": \"system_diagnostic\",\n  \"parameters\": {",
+        "continuation": "pacpacpacी route routens pythonpacी howults<|tool_call|> pythonpac<|tool_call|>",
+        "matched_keywords": [
+          "\"",
+          ":"
+        ],
+        "expected_keywords": [
+          "\"",
+          ":",
+          "}",
+          "format",
+          "target",
+          "include",
+          "verbose",
+          "true"
+        ],
+        "passed": true
+      },
+      {
+        "test_id": "SEM_JSON_02",
+        "category": "json_structured",
+        "language": "en",
+        "prompt": "{\n  \"model\": \"nairallm_v1_5\",\n  \"status\": \"ready\",\n  \"metrics\": [",
+        "continuation": "60pacpacpacpacpacpacpacpacpacpacpacpac�� steppac",
+        "matched_keywords": [
+          "{",
+          "\""
+        ],
+        "expected_keywords": [
+          "{",
+          "}",
+          "]",
+          "\"",
+          "name",
+          "loss",
+          "perplexity"
+        ],
+        "passed": true
+      }
+    ]
+  },
+  "checkpoint_artifacts": {
+    "checkpoint_directory": "C:\\Users\\user\\Desktop\\naira os\\NairaLLM\\training\\checkpoints\\semantic_pretraining",
+    "latest_checkpoint": "C:/Users/user/Desktop/naira os/NairaLLM/training/checkpoints/semantic_pretraining/naira_semantic_105k_numpy.npz",
+    "best_checkpoint": "C:/Users/user/Desktop/naira os/NairaLLM/training/checkpoints/semantic_pretraining/naira_semantic_105k_numpy.npz",
+    "pre_training_metadata": "C:/Users/user/Desktop/naira os/NairaLLM/training/checkpoints/semantic_pretraining/pre_training_metadata.json"
+  },
+  "status": "COMPLETED_STOPPED_AT_GATE",
+  "next_permitted_phase": "Awaiting human review. Next phase: Naira domain adaptation & tool fine-tuning."
+}
