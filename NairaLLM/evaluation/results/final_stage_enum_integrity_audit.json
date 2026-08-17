@@ -1,0 +1,65 @@
+{
+  "title": "NairaLLM Final V1 — TrainingStage Enum & Lineage Alignment Audit",
+  "timestamp": "2026-08-17 14:26:04 UTC",
+  "status": "STAGE_ENUM_ALIGNED_AND_VERIFIED",
+  "git_commit_sha": "eb2b28b897419cc2a3ca4407d55224c95833c6f7",
+  "canonical_stages": [
+    "semantic",
+    "domain",
+    "cognition",
+    "tools",
+    "behavior",
+    "final"
+  ],
+  "stage_lineage_matrix": [
+    {
+      "order": 1,
+      "stage": "semantic",
+      "predecessor": null,
+      "description": "Foundation semantic text pretraining (105k tokens seed)"
+    },
+    {
+      "order": 2,
+      "stage": "domain",
+      "predecessor": "semantic",
+      "description": "Naira OS internal architecture & subsystem grounding"
+    },
+    {
+      "order": 3,
+      "stage": "cognition",
+      "predecessor": "domain",
+      "description": "Reasoning, planning, context resolution & task decomposition"
+    },
+    {
+      "order": 4,
+      "stage": "tools",
+      "predecessor": "cognition",
+      "description": "Real tool calling across 102 verified Naira OS contracts"
+    },
+    {
+      "order": 5,
+      "stage": "behavior",
+      "predecessor": "tools",
+      "description": "Proactivity, autonomy levels 0-5, safety boundaries & emotional adapt"
+    },
+    {
+      "order": 6,
+      "stage": "final",
+      "predecessor": "behavior",
+      "description": "Production candidate frozen release artifact"
+    }
+  ],
+  "root_cause_analysis": {
+    "issue": "ValueError: 'semantic' is not a valid TrainingStage",
+    "root_cause": "TrainingStage enum originally defined FOUNDATION = 'foundation' while train_final_v1.py, configs, and CLI expected 'semantic'. When Stage 1 ('semantic') was validated by chain_mgr, TrainingStage('semantic') threw a ValueError.",
+    "resolution": "1. Aligned TrainingStage enum to SEMANTIC = 'semantic', DOMAIN = 'domain', COGNITION = 'cognition', TOOLS = 'tools', BEHAVIOR = 'behavior', FINAL = 'final'.\n2. Added normalize_stage() helper supporting seamless 'foundation' backward compatibility.\n3. Updated foundation checkpoint metadata with stage='semantic'.\n4. Added comprehensive regression test suite in test_checkpoint_chain.py."
+  },
+  "regression_test_results": {
+    "test_training_stage_enum": "PASSED",
+    "test_stage_normalization_and_aliases": "PASSED",
+    "test_sequential_lineage_predecessors": "PASSED",
+    "test_chain_manager_parent_validation": "PASSED",
+    "test_foundation_checkpoint_stage_compatibility": "PASSED"
+  },
+  "preflight_verdict": "STAGE_0_PREFLIGHT_PASSED"
+}

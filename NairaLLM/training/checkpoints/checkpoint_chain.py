@@ -40,7 +40,7 @@ _LOG = logging.getLogger("nairallm.checkpoint_chain")
 
 
 class TrainingStage(StrEnum):
-    FOUNDATION = "foundation"
+    SEMANTIC = "semantic"
     DOMAIN = "domain"
     COGNITION = "cognition"
     TOOLS = "tools"
@@ -48,8 +48,17 @@ class TrainingStage(StrEnum):
     FINAL = "final"
 
 
+def normalize_stage(stage: TrainingStage | str) -> TrainingStage:
+    if isinstance(stage, TrainingStage):
+        return stage
+    s = str(stage).strip().lower()
+    if s == "foundation":
+        return TrainingStage.SEMANTIC
+    return TrainingStage(s)
+
+
 STAGE_ORDER: list[TrainingStage] = [
-    TrainingStage.FOUNDATION,
+    TrainingStage.SEMANTIC,
     TrainingStage.DOMAIN,
     TrainingStage.COGNITION,
     TrainingStage.TOOLS,
@@ -58,8 +67,8 @@ STAGE_ORDER: list[TrainingStage] = [
 ]
 
 STAGE_PREDECESSORS: dict[TrainingStage, TrainingStage | None] = {
-    TrainingStage.FOUNDATION: None,
-    TrainingStage.DOMAIN: TrainingStage.FOUNDATION,
+    TrainingStage.SEMANTIC: None,
+    TrainingStage.DOMAIN: TrainingStage.SEMANTIC,
     TrainingStage.COGNITION: TrainingStage.DOMAIN,
     TrainingStage.TOOLS: TrainingStage.COGNITION,
     TrainingStage.BEHAVIOR: TrainingStage.TOOLS,
@@ -128,8 +137,8 @@ class CheckpointMetadata:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> CheckpointMetadata:
         data_copy = dict(data)
-        if "stage" in data_copy and isinstance(data_copy["stage"], str):
-            data_copy["stage"] = TrainingStage(data_copy["stage"])
+        if "stage" in data_copy and data_copy["stage"] is not None:
+            data_copy["stage"] = normalize_stage(data_copy["stage"])
         return cls(**{k: v for k, v in data_copy.items() if k in cls.__dataclass_fields__})
 
     def save(self, file_path: str | Path) -> None:
@@ -156,7 +165,7 @@ class CheckpointChainManager:
         self.checkpoints_dir.mkdir(parents=True, exist_ok=True)
 
     def get_stage_checkpoint_dir(self, stage: TrainingStage | str) -> Path:
-        st = TrainingStage(stage) if isinstance(stage, str) else stage
+        st = normalize_stage(stage)
         p = self.checkpoints_dir / st.value
         p.mkdir(parents=True, exist_ok=True)
         return p
@@ -166,20 +175,21 @@ class CheckpointChainManager:
         current_stage: TrainingStage | str,
         parent_metadata_path: str | Path | None,
     ) -> tuple[bool, str]:
-        st = TrainingStage(current_stage) if isinstance(current_stage, str) else current_stage
+        st = normalize_stage(current_stage)
         expected_parent_stage = STAGE_PREDECESSORS.get(st)
 
         if expected_parent_stage is None:
-            return True, "Foundation stage requires no parent."
+            return True, f"Initial stage '{st.value}' requires no parent checkpoint."
 
         if parent_metadata_path is None or not Path(parent_metadata_path).exists():
             return False, f"Stage '{st.value}' requires a valid parent checkpoint from '{expected_parent_stage.value}', but none was found."
 
         try:
             parent_meta = CheckpointMetadata.load(parent_metadata_path)
-            if parent_meta.stage != expected_parent_stage:
-                return False, f"Stage lineage mismatch: Expected parent stage '{expected_parent_stage.value}', got '{parent_meta.stage.value}'."
-            return True, f"Valid parent lineage verified from '{parent_meta.stage.value}'."
+            parent_st = normalize_stage(parent_meta.stage)
+            if parent_st != expected_parent_stage:
+                return False, f"Stage lineage mismatch: Expected parent stage '{expected_parent_stage.value}', got '{parent_st.value}'."
+            return True, f"Valid parent lineage verified from '{parent_st.value}'."
         except Exception as exc:
             return False, f"Failed to load and validate parent metadata: {exc}"
 
@@ -195,7 +205,7 @@ class CheckpointChainManager:
         metrics: dict[str, Any] | None = None,
         hardware_info: dict[str, Any] | None = None,
     ) -> CheckpointMetadata:
-        st = TrainingStage(stage) if isinstance(stage, str) else stage
+        st = normalize_stage(stage)
         weights_p = Path(weights_path)
 
         parent_meta: CheckpointMetadata | None = None
