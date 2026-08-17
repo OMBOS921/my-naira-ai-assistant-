@@ -1,0 +1,1036 @@
+{
+  "timestamp": "2026-08-17 15:57:57",
+  "audit_name": "semantic_benchmark_integrity_audit",
+  "benchmark_measuring_neural_model_verdict": {
+    "does_legacy_benchmark_measure_neural_model": false,
+    "flaw_name": "PROMPT_CONTAINED_KEYWORD_LEAKAGE",
+    "root_cause": "The legacy evaluate_test_case inspected case.expected_keywords against gen_text (prompt + generated tokens). For 8 out of 14 tests (57.1%), keywords were already present in the prompt string, producing a guaranteed 8/14 (57.1%) score on completely random/untrained weights.",
+    "prompt_leaked_tests_count": 8,
+    "prompt_leaked_tests_percentage": 57.14
+  },
+  "comparative_summary": {
+    "legacy_flawed_evaluator": {
+      "untrained_random_baseline": "8 / 14 (57.1%)",
+      "trained_105k_model": "8 / 14 (57.1%)",
+      "delta": "0.0% (Artifact of prompt leakage)"
+    },
+    "strict_generation_evaluator": {
+      "untrained_random_baseline": "0 / 14 (0.0%)",
+      "trained_105k_model": "1 / 14 (7.1%)",
+      "delta": "7.1%"
+    }
+  },
+  "workflow_leakage_audit": {
+    "hardcoded_answers": false,
+    "deterministic_fallbacks": false,
+    "prompt_contained_keyword_leakage": true,
+    "cached_outputs_used": false,
+    "test_fixtures_bypassing_model": false
+  },
+  "test_traces": [
+    {
+      "id": "SEM_EN_01",
+      "category": "english_comprehension",
+      "language": "en",
+      "input": "Effective communication in software engineering teams requires",
+      "prompt_token_count": 31,
+      "expected_behavior": "Generate continuation with keywords: ['clarity', 'listening', 'structure', 'examples', 'code', 'understanding', 'documentation']",
+      "prompt_contained_keywords": [
+        "team"
+      ],
+      "has_prompt_leakage": true,
+      "legacy_flawed_evaluation": {
+        "random_model_pass": true,
+        "random_matched_keywords": [
+          "team"
+        ],
+        "trained_model_pass": true,
+        "trained_matched_keywords": [
+          "team"
+        ],
+        "flaw_explanation": "Evaluated full string (prompt + continuation). Matched keywords inside the prompt itself."
+      },
+      "strict_generation_evaluation": {
+        "random_model": {
+          "generated_continuation": "screenshot\u0014%\"}**:cription\u001fsioncription\u001fsioncriptionsioncriptionsioncriptionsioncriptionsioncriptions",
+          "generated_token_ids": [
+            525,
+            219,
+            916,
+            699,
+            1420,
+            230,
+            832,
+            1420,
+            230,
+            832,
+            1420,
+            832,
+            1420,
+            832,
+            1420,
+            832
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'screenshot\u0014%\"}**:cription\u001fsioncription\u001fs'"
+        },
+        "trained_model": {
+          "generated_continuation": "o Plano Plano Plano Plano PlanX PlanX PlanX PlanX PlanX Plan Plan PlanX Plan Plan PlanX Plan PlanX P",
+          "generated_token_ids": [
+            89,
+            1355,
+            89,
+            1355,
+            89,
+            1355,
+            89,
+            1355,
+            89,
+            1355,
+            66,
+            1355,
+            66,
+            1355,
+            66,
+            1355
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'o plano plano plano plano planx planx pl'"
+        }
+      }
+    },
+    {
+      "id": "SEM_EN_02",
+      "category": "english_comprehension",
+      "language": "en",
+      "input": "Language models process text by transforming discrete tokens into",
+      "prompt_token_count": 23,
+      "expected_behavior": "Generate continuation with keywords: ['vector', 'embedding', 'dense', 'representation', 'attention', 'layers', 'space']",
+      "prompt_contained_keywords": [],
+      "has_prompt_leakage": false,
+      "legacy_flawed_evaluation": {
+        "random_model_pass": false,
+        "random_matched_keywords": [],
+        "trained_model_pass": false,
+        "trained_matched_keywords": [],
+        "flaw_explanation": "No keyword in prompt."
+      },
+      "strict_generation_evaluation": {
+        "random_model": {
+          "generated_continuation": "AddnavigateoughtAddnavigateoughtAddAddAddAddAddAddAddAddAddAddAddAddAddAddAddAddAddAddAddAddAddAddAd",
+          "generated_token_ids": [
+            1392,
+            569,
+            320,
+            1392,
+            569,
+            320,
+            1392,
+            1392,
+            1392,
+            1392,
+            1392,
+            1392,
+            1392,
+            1392,
+            1392,
+            1392
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'addnavigateoughtaddnavigateoughtaddaddad'"
+        },
+        "trained_model": {
+          "generated_continuation": "HIHIHIHIHIHIHIHIileHIileHIileHIileHIileHIile�ile�ile structuredveile structuredveile structuredve st",
+          "generated_token_ids": [
+            946,
+            946,
+            946,
+            946,
+            946,
+            946,
+            946,
+            946,
+            754,
+            946,
+            754,
+            946,
+            754,
+            946,
+            754,
+            946
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'hihihihihihihihiilehiilehiilehiilehiileh'"
+        }
+      }
+    },
+    {
+      "id": "SEM_HI_01",
+      "category": "hindi_comprehension",
+      "language": "hi",
+      "input": "ऑपरेटिंग सिस्टम का मुख्य कार्य कंप्यूटर हार्डवेयर और",
+      "prompt_token_count": 49,
+      "expected_behavior": "Generate continuation with keywords: ['उपयोगकर्ता', 'अनुप्रयोगों', 'मेमोरी', 'प्रक्रिया', 'सॉफ्टवेयर', 'माध्यम', 'नियंत्रण']",
+      "prompt_contained_keywords": [],
+      "has_prompt_leakage": false,
+      "legacy_flawed_evaluation": {
+        "random_model_pass": false,
+        "random_matched_keywords": [],
+        "trained_model_pass": false,
+        "trained_matched_keywords": [],
+        "flaw_explanation": "No keyword in prompt."
+      },
+      "strict_generation_evaluation": {
+        "random_model": {
+          "generated_continuation": "MEMkended FastAPI them MEMkendboard MEMkendboard MEMkendboard MEMkendboard MEMitHubboard MEMitHub Fa",
+          "generated_token_ids": [
+            1329,
+            478,
+            487,
+            910,
+            1222,
+            1329,
+            478,
+            567,
+            1329,
+            478,
+            567,
+            1329,
+            478,
+            567,
+            1329,
+            478
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'memkended fastapi them memkendboard memk'"
+        },
+        "trained_model": {
+          "generated_continuation": "ologDeleteog�ations allesEnhancedations allesEnhancedDeleteog�ationsducesolog�ationsducesolog�ations",
+          "generated_token_ids": [
+            282,
+            763,
+            1386,
+            763,
+            105,
+            1256,
+            804,
+            317,
+            1505,
+            1256,
+            804,
+            317,
+            1505,
+            1386,
+            763,
+            105
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'ologdeleteog�ations allesenhancedations '"
+        }
+      }
+    },
+    {
+      "id": "SEM_HI_02",
+      "category": "hindi_comprehension",
+      "language": "hi",
+      "input": "सुरक्षा और गोपनीयता डिजिटल दुनिया में सबसे",
+      "prompt_token_count": 42,
+      "expected_behavior": "Generate continuation with keywords: ['महत्वपूर्ण', 'पासवर्ड', 'सुरक्षित', 'डेटा', 'नियमों', 'आवश्यक', 'पहलुओं']",
+      "prompt_contained_keywords": [],
+      "has_prompt_leakage": false,
+      "legacy_flawed_evaluation": {
+        "random_model_pass": false,
+        "random_matched_keywords": [],
+        "trained_model_pass": false,
+        "trained_matched_keywords": [],
+        "flaw_explanation": "No keyword in prompt."
+      },
+      "strict_generation_evaluation": {
+        "random_model": {
+          "generated_continuation": "risk to wilpythononesystem optimiz Fileonesystem optimiz Fileonesystem optimiz Fileonesystem optimiz",
+          "generated_token_ids": [
+            1431,
+            313,
+            1226,
+            1055,
+            678,
+            445,
+            1213,
+            1287,
+            678,
+            445,
+            1213,
+            1287,
+            678,
+            445,
+            1213,
+            1287
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'risk to wilpythononesystem optimiz fileo'"
+        },
+        "trained_model": {
+          "generated_continuation": "ol Sugge�ol Sugge�ol Sugge�ol Sugge�ol Sugge��ol Sugge��ol Sugge�ol Sugge�ol Sugge��ol Sugge",
+          "generated_token_ids": [
+            282,
+            1240,
+            259,
+            282,
+            1240,
+            259,
+            282,
+            1240,
+            259,
+            282,
+            1240,
+            259,
+            282,
+            1240,
+            259,
+            259
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'ol sugge�ol sugge�ol sugge�ol sugge�ol s'"
+        }
+      }
+    },
+    {
+      "id": "SEM_HING_01",
+      "category": "hinglish_comprehension",
+      "language": "hinglish",
+      "input": "Clean architecture maintain karne se codebase",
+      "prompt_token_count": 16,
+      "expected_behavior": "Generate continuation with keywords: ['maintainable', 'simple', 'modular', 'easy', 'tests', 'features', 'scalable']",
+      "prompt_contained_keywords": [
+        "clean"
+      ],
+      "has_prompt_leakage": true,
+      "legacy_flawed_evaluation": {
+        "random_model_pass": true,
+        "random_matched_keywords": [
+          "clean"
+        ],
+        "trained_model_pass": true,
+        "trained_matched_keywords": [
+          "clean"
+        ],
+        "flaw_explanation": "Evaluated full string (prompt + continuation). Matched keywords inside the prompt itself."
+      },
+      "strict_generation_evaluation": {
+        "random_model": {
+          "generated_continuation": "���������������������������� great great great great",
+          "generated_token_ids": [
+            105,
+            127,
+            127,
+            127,
+            127,
+            127,
+            127,
+            127,
+            127,
+            127,
+            127,
+            127,
+            127,
+            127,
+            127,
+            127
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: '���������������������������� great great'"
+        },
+        "trained_model": {
+          "generated_continuation": "files attributeired it files attributeired it files attributeired it files attributeired it files at",
+          "generated_token_ids": [
+            902,
+            1443,
+            755,
+            1205,
+            902,
+            1443,
+            755,
+            1205,
+            902,
+            1443,
+            755,
+            1205,
+            902,
+            1443,
+            755,
+            1205
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'files attributeired it files attributeir'"
+        }
+      }
+    },
+    {
+      "id": "SEM_HING_02",
+      "category": "hinglish_comprehension",
+      "language": "hinglish",
+      "input": "FastAPI me async route handlers likhte time",
+      "prompt_token_count": 18,
+      "expected_behavior": "Generate continuation with keywords: ['blocking', 'event loop', 'non-blocking', 'concurrency', 'await', 'io']",
+      "prompt_contained_keywords": [
+        "async"
+      ],
+      "has_prompt_leakage": true,
+      "legacy_flawed_evaluation": {
+        "random_model_pass": true,
+        "random_matched_keywords": [
+          "async"
+        ],
+        "trained_model_pass": true,
+        "trained_matched_keywords": [
+          "async"
+        ],
+        "flaw_explanation": "Evaluated full string (prompt + continuation). Matched keywords inside the prompt itself."
+      },
+      "strict_generation_evaluation": {
+        "random_model": {
+          "generated_continuation": "ulateTemplate Reportntntntntntntulateageageage�).\u001aatusulateage�).\u001aatusulateage�).\u001aatusulateageQu",
+          "generated_token_ids": [
+            1153,
+            1417,
+            1385,
+            285,
+            285,
+            285,
+            285,
+            285,
+            285,
+            1153,
+            438,
+            438,
+            438,
+            190,
+            923,
+            225
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'ulatetemplate reportntntntntntntulateage'"
+        },
+        "trained_model": {
+          "generated_continuation": "a `save a catastrophiccesssave a catastrophiccesssave a catastrophiccesstingtingtingtingtingtingting",
+          "generated_token_ids": [
+            273,
+            530,
+            776,
+            273,
+            1458,
+            479,
+            776,
+            273,
+            1458,
+            479,
+            776,
+            273,
+            1458,
+            479,
+            778,
+            778
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'a `save a catastrophiccesssave a catastr'"
+        }
+      }
+    },
+    {
+      "id": "SEM_CTX_01",
+      "category": "contextual_completion",
+      "language": "en",
+      "input": "When optimizing low-latency applications, profiling memory allocation helps",
+      "prompt_token_count": 26,
+      "expected_behavior": "Generate continuation with keywords: ['identify', 'bottleneck', 'gc', 'garbage', 'overhead', 'reduce', 'performance']",
+      "prompt_contained_keywords": [
+        "latency"
+      ],
+      "has_prompt_leakage": true,
+      "legacy_flawed_evaluation": {
+        "random_model_pass": true,
+        "random_matched_keywords": [
+          "latency"
+        ],
+        "trained_model_pass": true,
+        "trained_matched_keywords": [
+          "latency"
+        ],
+        "flaw_explanation": "Evaluated full string (prompt + continuation). Matched keywords inside the prompt itself."
+      },
+      "strict_generation_evaluation": {
+        "random_model": {
+          "generated_continuation": "St�7ations value value value value value value value value value messa URLFactmmandodel value�mmando",
+          "generated_token_ids": [
+            973,
+            178,
+            33,
+            1256,
+            1088,
+            1088,
+            1088,
+            1088,
+            1088,
+            1088,
+            1088,
+            1088,
+            1088,
+            1321,
+            1100,
+            943
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'st�7ations value value value value value'"
+        },
+        "trained_model": {
+          "generated_continuation": "anyn wor messagesenred n serverdiatelyenanenanenanenanenanenanenanenanenanults n server OS n",
+          "generated_token_ids": [
+            373,
+            662,
+            557,
+            1492,
+            417,
+            452,
+            450,
+            1362,
+            1325,
+            417,
+            373,
+            417,
+            373,
+            417,
+            373,
+            417
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'anyn wor messagesenred n serverdiatelyen'"
+        }
+      }
+    },
+    {
+      "id": "SEM_CTX_02",
+      "category": "contextual_completion",
+      "language": "en",
+      "input": "A robust distributed system handles transient network failures by using",
+      "prompt_token_count": 27,
+      "expected_behavior": "Generate continuation with keywords: ['retry', 'exponential', 'backoff', 'circuit', 'breaker', 'jitter', 'fallback']",
+      "prompt_contained_keywords": [],
+      "has_prompt_leakage": false,
+      "legacy_flawed_evaluation": {
+        "random_model_pass": false,
+        "random_matched_keywords": [],
+        "trained_model_pass": false,
+        "trained_matched_keywords": [],
+        "flaw_explanation": "No keyword in prompt."
+      },
+      "strict_generation_evaluation": {
+        "random_model": {
+          "generated_continuation": "u�� m m m m m m m m m m m m m m m m m m m m m m m Deleting Deleting Deleting Deleting Deleting Delet",
+          "generated_token_ids": [
+            95,
+            242,
+            261,
+            408,
+            408,
+            408,
+            408,
+            408,
+            408,
+            408,
+            408,
+            408,
+            408,
+            408,
+            408,
+            408
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'u�� m m m m m m m m m m m m m m m m m m '"
+        },
+        "trained_model": {
+          "generated_continuation": "terpreter smo textterpreter smo textterpreterterpreterterpreter gessaindingsterpreter gessaindingste",
+          "generated_token_ids": [
+            1220,
+            1140,
+            1265,
+            1220,
+            1140,
+            1265,
+            1220,
+            1220,
+            1220,
+            1086,
+            1064,
+            1118,
+            1220,
+            1086,
+            1064,
+            1118
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'terpreter smo textterpreter smo textterp'"
+        }
+      }
+    },
+    {
+      "id": "SEM_TECH_01",
+      "category": "technical_text",
+      "language": "en",
+      "input": "In modern operating systems, virtual memory abstracts physical RAM using",
+      "prompt_token_count": 29,
+      "expected_behavior": "Generate continuation with keywords: ['page', 'mmu', 'tables', 'address', 'fault', 'space', 'translation', 'frames']",
+      "prompt_contained_keywords": [],
+      "has_prompt_leakage": false,
+      "legacy_flawed_evaluation": {
+        "random_model_pass": false,
+        "random_matched_keywords": [],
+        "trained_model_pass": false,
+        "trained_matched_keywords": [],
+        "flaw_explanation": "No keyword in prompt."
+      },
+      "strict_generation_evaluation": {
+        "random_model": {
+          "generated_continuation": "Zerence�ks browser�ks browser�ks browser�ks browser�ks browser�ks browser�ks browser�ks browser�ks b",
+          "generated_token_ids": [
+            68,
+            630,
+            268,
+            651,
+            597,
+            268,
+            651,
+            597,
+            268,
+            651,
+            597,
+            268,
+            651,
+            597,
+            268,
+            651
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'zerence�ks browser�ks browser�ks browser'"
+        },
+        "trained_model": {
+          "generated_continuation": "� destructive thod� destructive thod� destructive#� destructive#� destructive# Hindi� destructive th",
+          "generated_token_ids": [
+            194,
+            1475,
+            1157,
+            194,
+            1475,
+            1157,
+            194,
+            1475,
+            13,
+            194,
+            1475,
+            13,
+            194,
+            1475,
+            13,
+            1291
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: '� destructive thod� destructive thod� de'"
+        }
+      }
+    },
+    {
+      "id": "SEM_TECH_02",
+      "category": "technical_text",
+      "language": "en",
+      "input": "Inter-process communication mechanisms include Unix domain sockets and",
+      "prompt_token_count": 34,
+      "expected_behavior": "Generate continuation with keywords: ['shared memory', 'pipes', 'messages', 'queues', 'posix', 'signals', 'semaphores']",
+      "prompt_contained_keywords": [],
+      "has_prompt_leakage": false,
+      "legacy_flawed_evaluation": {
+        "random_model_pass": false,
+        "random_matched_keywords": [],
+        "trained_model_pass": false,
+        "trained_matched_keywords": [],
+        "flaw_explanation": "No keyword in prompt."
+      },
+      "strict_generation_evaluation": {
+        "random_model": {
+          "generated_continuation": "sionaisaResearchsionaisaks\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014",
+          "generated_token_ids": [
+            832,
+            1184,
+            1412,
+            832,
+            1184,
+            651,
+            219,
+            219,
+            219,
+            219,
+            219,
+            219,
+            219,
+            219,
+            219,
+            219
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'sionaisaresearchsionaisaks\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014\u0014'"
+        },
+        "trained_model": {
+          "generated_continuation": "F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F",
+          "generated_token_ids": [
+            527,
+            527,
+            527,
+            527,
+            527,
+            527,
+            527,
+            527,
+            527,
+            527,
+            527,
+            527,
+            527,
+            527,
+            527,
+            527
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No expected keywords in continuation: 'f f f f f f f f f f f f f f f f f f f f '"
+        }
+      }
+    },
+    {
+      "id": "SEM_CODE_01",
+      "category": "code_completion",
+      "language": "en",
+      "input": "def binary_search(arr: list[int], target: int) -> int:\n    low, high = 0, len(arr) - 1\n    while",
+      "prompt_token_count": 56,
+      "expected_behavior": "Generate continuation with keywords: ['low <= high', 'mid', 'return']",
+      "prompt_contained_keywords": [
+        "target",
+        "low",
+        "high"
+      ],
+      "has_prompt_leakage": true,
+      "legacy_flawed_evaluation": {
+        "random_model_pass": true,
+        "random_matched_keywords": [
+          "target",
+          "low",
+          "high"
+        ],
+        "trained_model_pass": true,
+        "trained_matched_keywords": [
+          "target",
+          "low",
+          "high"
+        ],
+        "flaw_explanation": "Evaluated full string (prompt + continuation). Matched keywords inside the prompt itself."
+      },
+      "strict_generation_evaluation": {
+        "random_model": {
+          "generated_continuation": "faste ToolRes ready�ँ�ँ�ँ�ँ�ँ�ँ�ँ�ँ�ँ�ँ�ँ�ँ�ँ�ँ=",
+          "generated_token_ids": [
+            823,
+            1322,
+            1460,
+            242,
+            671,
+            242,
+            671,
+            242,
+            671,
+            242,
+            671,
+            242,
+            671,
+            242,
+            671,
+            242
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No code continuation syntax generated: 'faste toolres ready�ँ�ँ�ँ�ँ�ँ�'"
+        },
+        "trained_model": {
+          "generated_continuation": "ाााााााा5tingOpBpointtingOp5tingOp5tingOpETtingOpETtingOpETtingOpETting",
+          "generated_token_ids": [
+            400,
+            400,
+            400,
+            400,
+            400,
+            400,
+            400,
+            400,
+            31,
+            778,
+            963,
+            44,
+            700,
+            778,
+            963,
+            31
+          ],
+          "pass": true,
+          "matched_keywords": [],
+          "scoring_reason": "Generated code keyword: 'ाााााााा5tingopbpointtingop5ti'"
+        }
+      }
+    },
+    {
+      "id": "SEM_CODE_02",
+      "category": "code_completion",
+      "language": "en",
+      "input": "from dataclasses import dataclass\n@dataclass\nclass ToolResult:\n    tool_name: str\n    status: str\n   ",
+      "prompt_token_count": 54,
+      "expected_behavior": "Generate continuation with keywords: ['output', 'metadata', 'time', 'int', 'latency']",
+      "prompt_contained_keywords": [
+        "str",
+        "data",
+        "result"
+      ],
+      "has_prompt_leakage": true,
+      "legacy_flawed_evaluation": {
+        "random_model_pass": true,
+        "random_matched_keywords": [
+          "str",
+          "data",
+          "result"
+        ],
+        "trained_model_pass": true,
+        "trained_matched_keywords": [
+          "str",
+          "data",
+          "result"
+        ],
+        "flaw_explanation": "Evaluated full string (prompt + continuation). Matched keywords inside the prompt itself."
+      },
+      "strict_generation_evaluation": {
+        "random_model": {
+          "generated_continuation": "ntntntntntntntntntnt Summarizent Summarizent Summarizent Summarizent Summarizent Summarizent Summari",
+          "generated_token_ids": [
+            285,
+            285,
+            285,
+            285,
+            285,
+            285,
+            285,
+            285,
+            285,
+            285,
+            1477,
+            285,
+            1477,
+            285,
+            1477,
+            285
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No code continuation syntax generated: 'ntntntntntntntntntnt summarize'"
+        },
+        "trained_model": {
+          "generated_continuation": "a�apka percentapka percentapka percentapka percentapka percentapka percentapka percentapka percentap",
+          "generated_token_ids": [
+            273,
+            186,
+            893,
+            1455,
+            893,
+            1455,
+            893,
+            1455,
+            893,
+            1455,
+            893,
+            1455,
+            893,
+            1455,
+            893,
+            1455
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No code continuation syntax generated: 'a�apka percentapka percentapka'"
+        }
+      }
+    },
+    {
+      "id": "SEM_JSON_01",
+      "category": "json_structured",
+      "language": "en",
+      "input": "{\n  \"action\": \"system_diagnostic\",\n  \"parameters\": {",
+      "prompt_token_count": 29,
+      "expected_behavior": "Generate continuation with keywords: ['}', 'format', 'target', 'include', 'verbose', 'true']",
+      "prompt_contained_keywords": [
+        "\"",
+        ":"
+      ],
+      "has_prompt_leakage": true,
+      "legacy_flawed_evaluation": {
+        "random_model_pass": true,
+        "random_matched_keywords": [
+          "\"",
+          ":"
+        ],
+        "trained_model_pass": true,
+        "trained_matched_keywords": [
+          "\"",
+          ":"
+        ],
+        "flaw_explanation": "Evaluated full string (prompt + continuation). Matched keywords inside the prompt itself."
+      },
+      "strict_generation_evaluation": {
+        "random_model": {
+          "generated_continuation": "�izeithithith dictith dictith dictuse preferen preferen preferen preferenstep preferenstep preferens",
+          "generated_token_ids": [
+            123,
+            628,
+            443,
+            443,
+            443,
+            1339,
+            443,
+            1339,
+            443,
+            1339,
+            660,
+            1281,
+            1281,
+            1281,
+            1281,
+            1154
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No valid JSON structure generated: '�izeithithith dictith dictith '"
+        },
+        "trained_model": {
+          "generated_continuation": "pacpacpacी route routens Pythonpacी Howults<|tool_call|> Pythonpac<|tool_call|> thought60 routeinter",
+          "generated_token_ids": [
+            1051,
+            1051,
+            1051,
+            475,
+            1437,
+            1437,
+            1033,
+            429,
+            1051,
+            475,
+            1288,
+            543,
+            5,
+            429,
+            1051,
+            5
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No valid JSON structure generated: 'pacpacpacी route routens pytho'"
+        }
+      }
+    },
+    {
+      "id": "SEM_JSON_02",
+      "category": "json_structured",
+      "language": "en",
+      "input": "{\n  \"model\": \"nairallm_v1_5\",\n  \"status\": \"ready\",\n  \"metrics\": [",
+      "prompt_token_count": 40,
+      "expected_behavior": "Generate continuation with keywords: ['}', ']', 'name', 'loss', 'perplexity']",
+      "prompt_contained_keywords": [
+        "{",
+        "\""
+      ],
+      "has_prompt_leakage": true,
+      "legacy_flawed_evaluation": {
+        "random_model_pass": true,
+        "random_matched_keywords": [
+          "{",
+          "\""
+        ],
+        "trained_model_pass": true,
+        "trained_matched_keywords": [
+          "{",
+          "\""
+        ],
+        "flaw_explanation": "Evaluated full string (prompt + continuation). Matched keywords inside the prompt itself."
+      },
+      "strict_generation_evaluation": {
+        "random_model": {
+          "generated_continuation": "color preferenshot preferenshot preferenshotize color preferenbute files muteǌ preferenbute files mu",
+          "generated_token_ids": [
+            412,
+            1281,
+            505,
+            1281,
+            505,
+            1281,
+            505,
+            628,
+            412,
+            1281,
+            992,
+            902,
+            1241,
+            142,
+            245,
+            1281
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No valid JSON structure generated: 'color preferenshot preferensho'"
+        },
+        "trained_model": {
+          "generated_continuation": "60pacpacpacpacpacpacpacpacpacpacpacpac�� steppac बहpac बहpac बहpac बहpac बहpac बहpac बहpac बहpac",
+          "generated_token_ids": [
+            574,
+            1051,
+            1051,
+            1051,
+            1051,
+            1051,
+            1051,
+            1051,
+            1051,
+            1051,
+            1051,
+            1051,
+            1051,
+            534,
+            1136,
+            1051
+          ],
+          "pass": false,
+          "matched_keywords": [],
+          "scoring_reason": "No valid JSON structure generated: '60pacpacpacpacpacpacpacpacpacp'"
+        }
+      }
+    }
+  ]
+}

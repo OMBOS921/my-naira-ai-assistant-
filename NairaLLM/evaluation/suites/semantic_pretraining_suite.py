@@ -220,9 +220,17 @@ class SemanticPretrainingSuite:
         )
         dt = (time.perf_counter() - t0) * 1000.0
 
-        clean_gen = gen_text.lower()
-        matched = [kw for kw in case.expected_keywords if kw.lower() in clean_gen]
-        passed = (len(matched) >= 1) and len(gen_text.strip()) > 3
+        # Isolate ONLY newly generated continuation text
+        continuation = gen_text[len(case.prompt):].strip().lower()
+        prompt_lower = case.prompt.lower()
+        
+        # Clean expected keywords to exclude any keywords present in the input prompt
+        clean_expected = [kw for kw in case.expected_keywords if kw.lower() not in prompt_lower]
+        if not clean_expected:
+            clean_expected = case.expected_keywords
+
+        matched = [kw for kw in clean_expected if kw.lower() in continuation]
+        passed = (len(matched) >= 1) and len(continuation) > 2
 
         return SemanticEvalRecord(
             test_id=case.test_id,
