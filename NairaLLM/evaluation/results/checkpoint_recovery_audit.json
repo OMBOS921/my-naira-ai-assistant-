@@ -1,0 +1,43 @@
+{
+  "title": "NairaLLM Final V1 — Checkpoint Recovery & Lineage Audit",
+  "timestamp": "2026-08-17 15:53:15 UTC",
+  "git_commit_sha": "81caaf5a889e5e6cf837e6a85fb56667f0fca920",
+  "search_findings": {
+    "target_file": "nairallm_v1_domain_checkpoint.pt",
+    "domain_checkpoint_lost": true,
+    "searched_locations": [
+      "Local workspace / repository filesystem",
+      "NairaLLM/training/checkpoints/domain/",
+      "Google Colab /content ephemeral disk (session reset)"
+    ],
+    "domain_metadata_found": true,
+    "domain_metadata_path": "NairaLLM/training/checkpoints/domain/nairallm_v1_domain_checkpoint_metadata.json",
+    "domain_pt_found": false,
+    "domain_pt_path": null
+  },
+  "root_cause": "Stage 2 domain training completed in an earlier Google Colab session before automated Google Drive persistence was enabled. When the Colab ephemeral virtual machine terminated, the binary .pt file was lost while git preserved code, configs, datasets, and metadata. The new FileNotFoundError safety check correctly blocked Stage 3 from starting from uninitialized scratch.",
+  "recovery_lineage_verification": {
+    "foundation_semantic_weights_path": "NairaLLM/training/checkpoints/foundation/naira_semantic_105k_numpy.npz",
+    "foundation_semantic_weights_bytes": 5318096,
+    "foundation_metadata_path": "NairaLLM/training/checkpoints/foundation/foundation_checkpoint_metadata.json",
+    "stage_2_parent_validation": "PASSED",
+    "stage_2_parent_reason": "Valid parent lineage verified from 'semantic'.",
+    "stage_2_dataset_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_domain.jsonl",
+    "stage_2_dataset_sha256": "c191394b76e884b84fd39f90f1d1fd7eb8e7b428c3be6233e8604fe952144a4a"
+  },
+  "persistence_system_status": {
+    "automated_gdrive_backup": "ENABLED_AND_TESTED",
+    "target_gdrive_directory": "/content/drive/MyDrive/Naira-Training/checkpoints/final_v1/domain/",
+    "auto_restore_on_startup": "ENABLED_AND_TESTED",
+    "strict_predecessor_guard": "ACTIVE"
+  },
+  "recovery_action_plan": {
+    "step_1": "Mount Google Drive in Google Colab session.",
+    "step_2": "Pull latest git commit containing persistence and collator updates.",
+    "step_3": "Run ONE recovery training of Stage 2 (Domain) from verified semantic foundation.",
+    "step_4": "Verify nairallm_v1_domain_checkpoint.pt is saved locally and backed up to Google Drive.",
+    "step_5": "Launch Stage 3 (Cognition), which will auto-load the newly persisted Stage 2 checkpoint."
+  },
+  "exact_recovery_command": "# Execute in Google Colab:\nfrom google.colab import drive\ndrive.mount('/content/drive')\n\n%cd /content\n!git clone https://github.com/OMBOS921/my-naira-ai-assistant-.git \"naira os\" || (cd \"naira os\" && git fetch origin main && git reset --hard origin/main)\n%cd \"/content/naira os\"\n\n# 1. Run Recovery Stage 2 (Domain Training):\n!python NairaLLM/training/scripts/train_final_v1.py \\\n    --stage domain \\\n    --config NairaLLM/configs/final_nairallm_v1.json\n\n# 2. Verify Google Drive Domain Checkpoint Exists:\n!ls -lh /content/drive/MyDrive/Naira-Training/checkpoints/final_v1/domain/\n",
+  "verdict": "READY_FOR_STAGE_2_RECOVERY_TRAINING"
+}
