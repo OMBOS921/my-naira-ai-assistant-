@@ -1,4 +1,5 @@
-"""Context Compression — compresses context to fit within token windows.
+from typing import Any
+"""Any Compression — compresses context to fit within token windows.
 
 Applies compression strategies including summarisation, deduplication,
 and priority-based truncation to reduce context size.

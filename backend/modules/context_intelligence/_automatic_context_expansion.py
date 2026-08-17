@@ -1,10 +1,12 @@
-"""Automatic Context Expansion — expands context with related files automatically.
+from __future__ import annotations
+from typing import Any
+"""Automatic Any Expansion — expands context with related files automatically.
 
 Analyses the current context and automatically discovers and includes
 related files, symbols, and dependencies to enrich the LLM's context.
 """
 
-from __future__ import annotations
+
 
 import logging
 

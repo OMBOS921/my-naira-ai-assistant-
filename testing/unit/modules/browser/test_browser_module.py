@@ -1,3 +1,4 @@
+from typing import Any
 """Comprehensive tests for the browser module.
 
 Covers:
@@ -40,7 +41,6 @@ from backend.modules.browser._navigation import BrowserNavigation
 from backend.modules.browser._search import BrowserSearch
 from backend.modules.browser._session import BrowserSession
 from backend.types import ModuleInterface, ToolResult
-
 # =========================================================================
 # BrowserPage, BrowserTab, BrowserSearchResult, BrowserSearchResponse
 # =========================================================================

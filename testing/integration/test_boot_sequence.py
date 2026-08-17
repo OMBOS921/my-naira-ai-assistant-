@@ -39,7 +39,6 @@ from backend.modules.settings import AppConfig, FeatureFlags, SettingsManager
 from backend.modules.utils.di import DIContainer, DuplicateRegistrationError, ServiceNotFoundError
 from backend.orchestrator import EventBus, FSMState, Orchestrator
 from backend.types import ModuleInterface
-
 # =========================================================================
 # Full boot sequence
 # =========================================================================

@@ -30,7 +30,6 @@ from backend.modules.pc_control._volume import PCVolume
 from backend.modules.pc_control._window_manager import PCWindowManager
 from backend.modules.pc_control.ports.pc_control_port import PCControlPort
 from backend.types import ToolResult
-
 _LOG = logging.getLogger("naira.pc_control")
 
 

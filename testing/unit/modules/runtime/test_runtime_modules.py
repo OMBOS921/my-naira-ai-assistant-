@@ -1,3 +1,4 @@
+from typing import Any
 """Comprehensive unit tests for runtime module components.
 
 Covers:
@@ -39,16 +40,7 @@ from backend.runtime.runtime import Runtime
 from backend.runtime.session_manager import SessionManager, _SimpleSession
 from backend.runtime.tool_router import ToolRouter
 from backend.types import (
-    Context,
-    LLMResponse,
-    Message,
-    ModuleInterface,
-    TokenUsage,
-    ToolCall,
-    ToolDef,
-    ToolResult,
-    UserRequest,
-    UserResponse,
+    Any, Message, ModuleInterface, ToolCall, ToolDef, ToolResult, UserRequest, UserResponse
 )
 
 # =========================================================================
@@ -78,12 +70,12 @@ class TestContextRouter:
     def test_build_context_without_manager(self) -> None:
         router = ContextRouter()
         ctx = router.build_context("s1", "hello", "test prompt")
-        assert isinstance(ctx, Context)
+        assert isinstance(ctx, Any)
         assert ctx.messages == []
 
     def test_build_context_with_manager(self) -> None:
         mock_mgr = MagicMock(spec=ContextManager)
-        mock_mgr.build_context = MagicMock(return_value=Context(
+        mock_mgr.build_context = MagicMock(return_value=Any(
             system_prompt="test", messages=[Message(role="user", content="hi")], token_count=5,
         ))
         router = ContextRouter(context_manager=mock_mgr)
@@ -419,7 +411,7 @@ class TestRequestPipeline:
     @pytest.mark.asyncio
     async def test_process_with_context_manager(self) -> None:
         mock_ctx = MagicMock(spec=ContextManager)
-        mock_ctx.build_context = MagicMock(return_value=Context(
+        mock_ctx.build_context = MagicMock(return_value=Any(
             system_prompt="test prompt",
             messages=[Message(role="user", content="Hello")],
             token_count=5,
@@ -460,7 +452,7 @@ class TestRequestPipeline:
     @pytest.mark.asyncio
     async def test_context_router_property(self) -> None:
         pipeline = RequestPipeline()
-        assert isinstance(pipeline.context_router, ContextRouter)
+        assert isinstance(pipeline.context_routerRouter)
 
     @pytest.mark.asyncio
     async def test_degraded_raises(self) -> None:
@@ -479,7 +471,7 @@ class TestRequestPipeline:
         mock_bus.emit = AsyncMock()
         pipeline = RequestPipeline(
             context_manager=MagicMock(
-                build_context=MagicMock(return_value=Context(
+                build_context=MagicMock(return_value=Any(
                     system_prompt="sp", messages=[], token_count=0,
                 ))
             ),
@@ -542,11 +534,11 @@ class TestResponsePipeline:
     @pytest.mark.asyncio
     async def test_generate_success(self) -> None:
         mock_llm = MagicMock(spec=LLMManager)
-        mock_llm.generate = AsyncMock(return_value=LLMResponse(
+        mock_llm.generate = AsyncMock(return_value=Any(
             text="Hello world",
             tool_calls=None,
             finish_reason="stop",
-            token_usage=TokenUsage(prompt_tokens=10, completion_tokens=5, total_tokens=15),
+            token_usage=Any(prompt_tokens=10, completion_tokens=5, total_tokens=15),
             provider="test",
             duration_ms=100.0,
         ))
@@ -567,19 +559,19 @@ class TestResponsePipeline:
 
         # First call returns tool calls, second returns final text
         mock_llm.generate = AsyncMock(side_effect=[
-            LLMResponse(
+            Any(
                 text="Let me calculate",
                 tool_calls=[ToolCall(id="1", name="calc", arguments={"x": 6, "y": 7})],
                 finish_reason="tool_calls",
-                token_usage=TokenUsage(10, 5, 15),
+                token_usage=Any(10, 5, 15),
                 provider="test",
                 duration_ms=100.0,
             ),
-            LLMResponse(
+            Any(
                 text="The answer is 42",
                 tool_calls=None,
                 finish_reason="stop",
-                token_usage=TokenUsage(20, 10, 30),
+                token_usage=Any(20, 10, 30),
                 provider="test",
                 duration_ms=200.0,
             ),
@@ -604,11 +596,11 @@ class TestResponsePipeline:
         mock_tools.execute_multi = AsyncMock(return_value=[
             ToolResult(status="success", output="result"),
         ])
-        mock_llm.generate = AsyncMock(return_value=LLMResponse(
+        mock_llm.generate = AsyncMock(return_value=Any(
             text="Calling tool",
             tool_calls=[ToolCall(id="1", name="calc", arguments={"x": 1})],
             finish_reason="tool_calls",
-            token_usage=TokenUsage(10, 5, 15),
+            token_usage=Any(10, 5, 15),
             provider="test",
             duration_ms=100.0,
         ))
@@ -708,11 +700,11 @@ class TestMessageDispatcher:
         ))
 
         mock_response_pipeline = MagicMock(spec=ResponsePipeline)
-        mock_response_pipeline.generate = AsyncMock(return_value=LLMResponse(
+        mock_response_pipeline.generate = AsyncMock(return_value=Any(
             text="Hi there!",
             tool_calls=None,
             finish_reason="stop",
-            token_usage=TokenUsage(5, 5, 10),
+            token_usage=Any(5, 5, 10),
             provider="test",
             duration_ms=50.0,
         ))
@@ -870,16 +862,16 @@ class TestRuntime:
     @pytest.mark.asyncio
     async def test_process_request_success(self) -> None:
         mock_llm = MagicMock(spec=LLMManager)
-        mock_llm.generate = AsyncMock(return_value=LLMResponse(
+        mock_llm.generate = AsyncMock(return_value=Any(
             text="Success response",
             tool_calls=None,
             finish_reason="stop",
-            token_usage=TokenUsage(10, 5, 15),
+            token_usage=Any(10, 5, 15),
             provider="test",
             duration_ms=100.0,
         ))
         mock_ctx = MagicMock(spec=ContextManager)
-        mock_ctx.build_context = MagicMock(return_value=Context(
+        mock_ctx.build_context = MagicMock(return_value=Any(
             system_prompt="System prompt",
             messages=[Message(role="user", content="Hello")],
             token_count=5,
@@ -964,7 +956,7 @@ class TestRuntime:
         assert isinstance(runtime.request_pipeline, RequestPipeline)
         assert isinstance(runtime.response_pipeline, ResponsePipeline)
         assert isinstance(runtime.tool_router, ToolRouter)
-        assert isinstance(runtime.context_router, ContextRouter)
+        assert isinstance(runtime.context_routerRouter)
         assert isinstance(runtime.session_manager, SessionManager)
         assert isinstance(runtime.message_dispatcher, MessageDispatcher)
         await runtime.async_shutdown()
@@ -981,9 +973,9 @@ class TestRuntimeEventEmission:
         mock_bus = MagicMock(spec=EventBus)
         mock_bus.emit = AsyncMock()
         mock_llm = MagicMock(spec=LLMManager)
-        mock_llm.generate = AsyncMock(return_value=LLMResponse(
+        mock_llm.generate = AsyncMock(return_value=Any(
             text="OK", tool_calls=None, finish_reason="stop",
-            token_usage=TokenUsage(1, 1, 2), provider="test", duration_ms=10.0,
+            token_usage=Any(1, 1, 2), provider="test", duration_ms=10.0,
         ))
         mock_memory = MagicMock(spec=MemoryManager)
         mock_memory.store_message = AsyncMock()
@@ -1037,9 +1029,9 @@ class TestRuntimeMemoryIntegration:
         mock_memory = MagicMock(spec=MemoryManager)
         mock_memory.store_message = AsyncMock()
         mock_llm = MagicMock(spec=LLMManager)
-        mock_llm.generate = AsyncMock(return_value=LLMResponse(
+        mock_llm.generate = AsyncMock(return_value=Any(
             text="Response text", tool_calls=None, finish_reason="stop",
-            token_usage=TokenUsage(1, 1, 2), provider="test", duration_ms=10.0,
+            token_usage=Any(1, 1, 2), provider="test", duration_ms=10.0,
         ))
         runtime = Runtime(llm_manager=mock_llm, memory_manager=mock_memory)
         request = UserRequest(
@@ -1056,9 +1048,9 @@ class TestRuntimeMemoryIntegration:
             side_effect=RuntimeError("Memory store failed")
         )
         mock_llm = MagicMock(spec=LLMManager)
-        mock_llm.generate = AsyncMock(return_value=LLMResponse(
+        mock_llm.generate = AsyncMock(return_value=Any(
             text="Response", tool_calls=None, finish_reason="stop",
-            token_usage=TokenUsage(1, 1, 2), provider="test", duration_ms=10.0,
+            token_usage=Any(1, 1, 2), provider="test", duration_ms=10.0,
         ))
         runtime = Runtime(llm_manager=mock_llm, memory_manager=mock_memory)
         request = UserRequest(

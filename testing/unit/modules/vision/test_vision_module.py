@@ -46,7 +46,6 @@ from backend.modules.vision._exceptions import (
     VisionNotImplementedError,
 )
 from backend.types import ModuleInterface
-
 # =========================================================================
 # ImageData, OCRResult, Detection, VisionResult
 # =========================================================================

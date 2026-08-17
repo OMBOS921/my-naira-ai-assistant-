@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Any
 """
 JSONVectorIndexAdapter — implements ``VectorIndexPort`` for JSON keyword index.
 
@@ -5,18 +7,16 @@ JSONVectorIndexAdapter — implements ``VectorIndexPort`` for JSON keyword index
 21_System_Contracts.md §16.5 — No vector server.
 
 This adapter is instantiated at boot time (Step 9) and injected into
-the Context Manager or consumed directly.
+the Any Manager or consumed directly.
 """
 
-from __future__ import annotations
+
 
 import asyncio
 
 from backend.modules.memory.ports.vector_index_port import VectorIndexPort
 from backend.modules.memory.vector_index import VectorIndex
 from backend.types import SearchResult
-
-
 class JSONVectorIndexAdapter(VectorIndexPort):
     """Adapter that exposes a ``VectorIndex`` through the ``VectorIndexPort`` interface.
 

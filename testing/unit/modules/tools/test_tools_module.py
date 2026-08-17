@@ -28,7 +28,6 @@ from backend.modules.tools._registry import ToolRegistry
 from backend.modules.tools._validation import ToolValidation
 from backend.modules.tools.ports.tool_provider import ToolProvider
 from backend.types import ModuleInterface, ToolCall, ToolDef, ToolResult
-
 # =========================================================================
 # Helpers
 # =========================================================================

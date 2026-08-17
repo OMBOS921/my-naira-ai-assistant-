@@ -12,7 +12,6 @@ from typing import Any
 
 from backend.modules.tools._definition import ToolDefinition
 from backend.types import ToolResult
-
 type ToolHandler = Callable[..., Coroutine[Any, Any, ToolResult]]
 """Signature for a tool execution handler.
 

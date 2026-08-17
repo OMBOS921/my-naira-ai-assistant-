@@ -1,0 +1,209 @@
+{
+  "total_tests": 14,
+  "passed_tests": 3,
+  "accuracy": 0.2143,
+  "language_breakdown": {
+    "en": {
+      "passed": 3,
+      "total": 10,
+      "accuracy": 0.3
+    },
+    "hi": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "hinglish": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    }
+  },
+  "category_breakdown": {
+    "english_comprehension": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "hindi_comprehension": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "hinglish_comprehension": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "contextual_completion": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "technical_text": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "code_completion": {
+      "passed": 1,
+      "total": 2,
+      "accuracy": 0.5
+    },
+    "json_structured": {
+      "passed": 2,
+      "total": 2,
+      "accuracy": 1.0
+    }
+  },
+  "records": [
+    {
+      "test_id": "SEM_EN_01",
+      "prompt": "Effective communication in software engineering teams requires",
+      "language": "en",
+      "category": "english_comprehension",
+      "generated_text": "_\n<|tool_call|> \"\":",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 147.35
+    },
+    {
+      "test_id": "SEM_EN_02",
+      "prompt": "Language models process text by transforming discrete tokens into",
+      "language": "en",
+      "category": "english_comprehension",
+      "generated_text": "\n<|tool_call|>_{\"<|intent|> \"s}\":",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 71.93
+    },
+    {
+      "test_id": "SEM_HI_01",
+      "prompt": "ऑपरेटिंग सिस्टम का मुख्य कार्य कंप्यूटर हार्डवेयर और",
+      "language": "hi",
+      "category": "hindi_comprehension",
+      "generated_text": "_\n<|tool_call|> \"\":",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 79.12
+    },
+    {
+      "test_id": "SEM_HI_02",
+      "prompt": "सुरक्षा और गोपनीयता डिजिटल दुनिया में सबसे",
+      "language": "hi",
+      "category": "hindi_comprehension",
+      "generated_text": "\n<|tool_call|>_{\"<|intent|> \"\":",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 153.67
+    },
+    {
+      "test_id": "SEM_HING_01",
+      "prompt": "Clean architecture maintain karne se codebase",
+      "language": "hinglish",
+      "category": "hinglish_comprehension",
+      "generated_text": "_\n \"<|tool_call|>{\"<|intent|>\":",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 63.89
+    },
+    {
+      "test_id": "SEM_HING_02",
+      "prompt": "FastAPI me async route handlers likhte time",
+      "language": "hinglish",
+      "category": "hinglish_comprehension",
+      "generated_text": "\n_ \"<|tool_call|>{\"<|intent|>\":",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 133.77
+    },
+    {
+      "test_id": "SEM_CTX_01",
+      "prompt": "When optimizing low-latency applications, profiling memory allocation helps",
+      "language": "en",
+      "category": "contextual_completion",
+      "generated_text": "\n<|tool_call|>_ \"{\"<|intent|>\":",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 107.2
+    },
+    {
+      "test_id": "SEM_CTX_02",
+      "prompt": "A robust distributed system handles transient network failures by using",
+      "language": "en",
+      "category": "contextual_completion",
+      "generated_text": "\n<|tool_call|>_{\"<|intent|> \"s}\":",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 126.45
+    },
+    {
+      "test_id": "SEM_TECH_01",
+      "prompt": "In modern operating systems, virtual memory abstracts physical RAM using",
+      "language": "en",
+      "category": "technical_text",
+      "generated_text": "_\n<|tool_call|>{\"<|intent|> \"s}\":",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 118.12
+    },
+    {
+      "test_id": "SEM_TECH_02",
+      "prompt": "Inter-process communication mechanisms include Unix domain sockets and",
+      "language": "en",
+      "category": "technical_text",
+      "generated_text": "\n_ \"<|tool_call|>{\"<|intent|>\":",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 111.82
+    },
+    {
+      "test_id": "SEM_CODE_01",
+      "prompt": "def binary_search(arr: list[int], target: int) -> int:\n    low, high = 0, len(arr) - 1\n    while",
+      "language": "en",
+      "category": "code_completion",
+      "generated_text": "_\n<|tool_call|>{\" \"<|intent|>\":",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 73.11
+    },
+    {
+      "test_id": "SEM_CODE_02",
+      "prompt": "from dataclasses import dataclass\n@dataclass\nclass ToolResult:\n    tool_name: str\n    status: str\n   ",
+      "language": "en",
+      "category": "code_completion",
+      "generated_text": "\n<|tool_call|>_ \"{\"<|intent|>\":",
+      "matched_keywords": [
+        "int"
+      ],
+      "coherence_passed": true,
+      "latency_ms": 158.52
+    },
+    {
+      "test_id": "SEM_JSON_01",
+      "prompt": "{\n  \"action\": \"system_diagnostic\",\n  \"parameters\": {",
+      "language": "en",
+      "category": "json_structured",
+      "generated_text": "\n_ \"<|tool_call|>{\"<|intent|>\":",
+      "matched_keywords": [
+        "\"",
+        ":"
+      ],
+      "coherence_passed": true,
+      "latency_ms": 21.14
+    },
+    {
+      "test_id": "SEM_JSON_02",
+      "prompt": "{\n  \"model\": \"nairallm_v1_5\",\n  \"status\": \"ready\",\n  \"metrics\": [",
+      "language": "en",
+      "category": "json_structured",
+      "generated_text": "_\n<|tool_call|>{\" \"<|intent|>\":",
+      "matched_keywords": [
+        "{",
+        "\""
+      ],
+      "coherence_passed": true,
+      "latency_ms": 18.01
+    }
+  ]
+}

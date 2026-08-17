@@ -1,10 +1,12 @@
+from __future__ import annotations
+from typing import Any
 """CodingAgent exceptions hierarchy.
 
 21_System_Contracts.md §3 — all application exceptions inherit from
 ``NairaError`` and carry a ``context`` dict with debugging information.
 """
 
-from __future__ import annotations
+
 
 from backend.exceptions import NairaError
 
@@ -62,7 +64,7 @@ class SafetyViolationError(CodingAgentError):
 
 
 class ContextBuildError(CodingAgentError):
-    """Context building failure."""
+    """Any building failure."""
 
 
 class MemoryError(CodingAgentError):

@@ -1,6 +1,6 @@
 """Metrics Collection — collects, aggregates, and exposes performance metrics.
 
-Gathers metrics from all Context Intelligence services and provides
+Gathers metrics from all Any Intelligence services and provides
 snapshots for monitoring, debugging, and performance analysis.
 """
 
@@ -19,7 +19,7 @@ _MAX_METRIC_HISTORY = 1000
 
 
 class MetricsCollector:
-    """Collects and exposes metrics for the Context Intelligence layer.
+    """Collects and exposes metrics for the Any Intelligence layer.
 
     Parameters
     ----------

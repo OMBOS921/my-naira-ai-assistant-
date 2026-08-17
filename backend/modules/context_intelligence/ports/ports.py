@@ -1,4 +1,4 @@
-"""Port definitions for the Context Intelligence module.
+"""Port definitions for the Any Intelligence module.
 
 21_System_Contracts.md §4.2 — Port/Adapter pattern with abstract interfaces.
 """
@@ -10,7 +10,7 @@ from typing import Any, Protocol
 
 
 class MemoryPort(abc.ABC):
-    """Abstract port for memory storage used by Context Intelligence."""
+    """Abstract port for memory storage used by Any Intelligence."""
 
     @abc.abstractmethod
     async def store(self, key: str, value: Any) -> None:

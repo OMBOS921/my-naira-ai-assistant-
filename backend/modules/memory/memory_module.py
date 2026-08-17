@@ -32,7 +32,6 @@ from backend.modules.memory.sqlite_store import SQLiteStore
 from backend.modules.memory.vector_index import VectorIndex
 from backend.modules.tools._definition import ToolDefinition
 from backend.types import Message, ToolResult
-
 _LOG = logging.getLogger("naira.memory")
 
 DEFAULT_DB_FILENAME = "naira_memory.db"

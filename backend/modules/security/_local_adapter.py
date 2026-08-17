@@ -20,7 +20,6 @@ from backend.modules.security._types import (
 )
 from backend.modules.security.ports.security_port import SecurityPort
 from backend.types import ToolResult
-
 _LOG = logging.getLogger("naira.security.adapter")
 
 

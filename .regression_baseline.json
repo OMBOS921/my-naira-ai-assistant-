@@ -1,21 +1,7 @@
 {
-  "total_tests": 2548,
-  "passed": 2535,
-  "failed": 13,
-  "duration_s": 284.3630919000134,
-  "failures": [
-    "FAILED testing/integration/test_boot_sequence.py::TestFullBoot::test_boot_all_modules",
-    "FAILED testing/integration/test_boot_sequence.py::TestShutdown::test_orchestrator_module_init_order",
-    "FAILED testing/integration/test_boot_sequence.py::TestModuleLifecycle::test_all_modules_conform_to_protocol",
-    "FAILED testing/integration/test_boot_sequence.py::TestBootOrder::test_boot_order_is_correct",
-    "FAILED testing/integration/test_boot_sequence.py::TestShutdownOrder::test_shutdown_order_is_reverse_of_boot",
-    "FAILED testing/integration/test_boot_sequence.py::TestEventBusInjection::test_all_modules_have_event_bus",
-    "FAILED testing/integration/test_boot_sequence.py::TestHealthVerification::test_verify_boot_health_all_healthy",
-    "FAILED testing/integration/test_boot_sequence.py::TestHealthVerification::test_verify_health_detects_missing_module",
-    "FAILED testing/integration/test_boot_sequence.py::TestHealthVerification::test_verify_health_detects_missing_service",
-    "FAILED testing/integration/test_boot_sequence.py::TestHealthVerification::test_verify_health_detects_degraded_modules",
-    "FAILED testing/integration/test_boot_sequence.py::TestFullIntegration::test_full_boot_health_shutdown_cycle",
-    "FAILED testing/integration/test_boot_sequence.py::TestAdapterSelection::test_llm_starts_healthy_when_api_key_available",
-    "FAILED testing/unit/modules/vision/test_vision_module.py::TestScreenCapture::test_capture_behavior"
-  ]
+  "total_tests": 0,
+  "passed": 0,
+  "failed": 0,
+  "duration_s": 30.243479800000387,
+  "failures": []
 }

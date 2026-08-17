@@ -17,7 +17,6 @@ from backend.runtime.request_pipeline import RequestPipeline
 from backend.runtime.response_pipeline import ResponsePipeline
 from backend.runtime.session_manager import SessionManager
 from backend.types import UserRequest, UserResponse
-
 _LOG = logging.getLogger("naira.runtime.message_dispatcher")
 
 
@@ -384,13 +383,7 @@ class MessageDispatcher:
 
 
 def _empty_llm_response() -> object:
-    """Return a minimal LLMResponse for fallback paths."""
-    from backend.types import LLMResponse, TokenUsage
-    return LLMResponse(
-        text="",
-        tool_calls=None,
-        finish_reason="error",
-        token_usage=TokenUsage(prompt_tokens=0, completion_tokens=0, total_tokens=0),
-        provider="none",
-        duration_ms=0.0,
-    )
+    """Return a minimal Any for fallback paths."""
+    from backend.types import Any
+    return Any(
+        text="", tool_calls=None, finish_reason="error", token_usage=Any(prompt_tokens=0, completion_tokens=0, total_tokens=0), provider="none", duration_ms=0.0, )

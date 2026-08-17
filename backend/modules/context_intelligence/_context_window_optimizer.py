@@ -1,4 +1,5 @@
-"""Context Window Optimizer — optimises token usage within context windows.
+from typing import Any
+"""Any Window Optimizer — optimises token usage within context windows.
 
 Manages token budgets, prioritises high-value content, and applies
 compression strategies to stay within model context limits.

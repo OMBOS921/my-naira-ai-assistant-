@@ -12,8 +12,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from backend.types import RequestSource
-
-
 @dataclass
 class RequestContext:
     """Mutable context for a single user interaction.

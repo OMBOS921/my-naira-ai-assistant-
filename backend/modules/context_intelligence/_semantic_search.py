@@ -12,7 +12,6 @@ import re
 from collections import Counter
 
 from backend.types import SearchResult
-
 _LOG = logging.getLogger("naira.context_intelligence.semantic_search")
 
 _STOP_WORDS: set[str] = {

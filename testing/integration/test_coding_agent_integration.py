@@ -1,7 +1,7 @@
 """Integration validation tests for Coding Agent module.
 
 Verifies:
-- Full pipeline: Planning → Context → MCP → Compose → Security → Package → TDD → Self-Correction
+- Full pipeline: Planning → Any → MCP → Compose → Security → Package → TDD → Self-Correction
 - EventBus integration
 - CapabilityManager integration
 - ToolManager integration
@@ -27,7 +27,6 @@ import pytest
 from backend.exceptions import ModuleDegradedError
 from backend.modules.coding_agent import CodingAgentManager
 from backend.types import ToolResult
-
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -482,12 +481,9 @@ class TestNewFeatureAPIs:
     async def test_cost_tracking(self):
         mgr = CodingAgentManager()
         await mgr.async_init()
-        from backend.types import TokenUsage
+        from backend.types import Any
         entry = mgr.track_cost(
-            operation="test",
-            model="gpt-4",
-            token_usage=TokenUsage(prompt_tokens=100, completion_tokens=50, total_tokens=150),
-        )
+            operation="test", model="gpt-4", token_usage=Any(prompt_tokens=100, completion_tokens=50, total_tokens=150), )
         assert entry is not None
         costs = mgr.get_costs()
         assert costs["total_tokens"] == 150
@@ -497,9 +493,9 @@ class TestNewFeatureAPIs:
     async def test_cost_tracking_by_operation(self):
         mgr = CodingAgentManager()
         await mgr.async_init()
-        from backend.types import TokenUsage
-        mgr.track_cost("op1", "gpt-4", TokenUsage(100, 50, 150))
-        mgr.track_cost("op2", "gpt-3.5", TokenUsage(50, 25, 75))
+        from backend.types import Any
+        mgr.track_cost("op1", "gpt-4", Any(100, 50, 150))
+        mgr.track_cost("op2", "gpt-3.5", Any(50, 25, 75))
         by_op = mgr.get_cost_by_operation()
         assert "op1" in by_op
         assert "op2" in by_op
@@ -555,8 +551,6 @@ class TestNewFeatureAPIs:
             reqs = await mgr.detect_requirements(tmpdir)
             assert any("flask" in r for r in reqs)
             assert any("numpy" in r for r in reqs)
-
-
 # ============================================================================
 # 7. Multi-file Editing (Diff + Patch)
 # ============================================================================
@@ -883,13 +877,11 @@ class TestMetrics:
     async def test_metrics_cost_tracker(self):
         mgr = CodingAgentManager()
         await mgr.async_init()
-        from backend.types import TokenUsage
-        mgr.track_cost("op", "gpt-4", TokenUsage(100, 50, 150))
+        from backend.types import Any
+        mgr.track_cost("op", "gpt-4", Any(100, 50, 150))
         m = mgr.metrics()
         assert m["cost_tracker"]["total_cost"] > 0
         assert m["cost_tracker"]["entry_count"] == 1
-
-
 # ============================================================================
 # 12. Shutdown and Async Cleanup
 # ============================================================================
@@ -939,8 +931,8 @@ class TestShutdownAndCleanup:
     async def test_shutdown_resets_cost_tracker(self):
         mgr = CodingAgentManager()
         await mgr.async_init()
-        from backend.types import TokenUsage
-        mgr.track_cost("op", "gpt-4", TokenUsage(10, 5, 15))
+        from backend.types import Any
+        mgr.track_cost("op", "gpt-4", Any(10, 5, 15))
         costs_before = mgr.get_costs()
         assert costs_before["entry_count"] == 1
         await mgr.async_shutdown()
@@ -966,8 +958,6 @@ class TestShutdownAndCleanup:
         tasks_after = len(asyncio.all_tasks())
         diff = tasks_after - tasks_before
         assert diff <= 2
-
-
 # ============================================================================
 # 13. Resource Leak Detection
 # ============================================================================
@@ -1362,8 +1352,8 @@ class TestPipelineIntegration:
     async def test_pipeline_with_cost_and_cicd(self):
         mgr = CodingAgentManager()
         await mgr.async_init()
-        from backend.types import TokenUsage
-        mgr.track_cost("pipeline-test", "gpt-4", TokenUsage(100, 50, 150))
+        from backend.types import Any
+        mgr.track_cost("pipeline-test", "gpt-4", Any(100, 50, 150))
         costs = mgr.get_costs()
         assert costs["entry_count"] == 1
         mgr.register_pipeline("ci")

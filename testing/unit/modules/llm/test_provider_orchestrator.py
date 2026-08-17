@@ -1,3 +1,4 @@
+from typing import Any
 """
 Comprehensive unit test suite for LLMProviderOrchestrator and Resilience Layer.
 
@@ -32,9 +33,7 @@ from backend.modules.llm.health import ProviderHealthTracker, ProviderStatus
 from backend.modules.llm.orchestrator import LLMProviderOrchestrator
 from backend.modules.llm.ports.llm_port import LLMPort
 from backend.modules.llm.provider_base import ProviderBase, RetryPolicy
-from backend.types import LLMResponse, Message, TokenUsage, ToolDef
-
-
+from backend.types import Message, ToolDef
 def _make_mock_provider(
     name: str,
     *,
@@ -57,11 +56,11 @@ def _make_mock_provider(
         provider.generate = AsyncMock(side_effect=side_effect)
     else:
         provider.generate = AsyncMock(
-            return_value=LLMResponse(
+            return_value=Any(
                 text=response_text,
                 tool_calls=None,
                 finish_reason="stop",
-                token_usage=TokenUsage(10, 10, 20),
+                token_usage=Any(10, 10, 20),
                 provider=name,
                 duration_ms=25.0,
             )
@@ -130,11 +129,11 @@ class TestRetryLogic:
         mock_provider.generate = AsyncMock(
             side_effect=[
                 ProviderRateLimitError("Rate limit transient"),
-                LLMResponse(
+                Any(
                     text="Retry success",
                     tool_calls=None,
                     finish_reason="stop",
-                    token_usage=TokenUsage(5, 5, 10),
+                    token_usage=Any(5, 5, 10),
                     provider="retry_p",
                     duration_ms=15.0,
                 ),

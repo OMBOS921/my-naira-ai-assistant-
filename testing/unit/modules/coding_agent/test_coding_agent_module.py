@@ -69,7 +69,6 @@ from backend.modules.coding_agent.providers.workspace_manager_provider import (
     TempWorkspaceManagerProvider,
 )
 from backend.types import ModuleInterface, ToolResult
-
 # =========================================================================
 # Helpers
 # =========================================================================
@@ -1428,8 +1427,6 @@ class TestSelfCorrectionLoop:
         s = SelfCorrectionLoop()
         s.degrade()
         assert s.degraded
-
-
 # =========================================================================
 # TDD Loop
 # =========================================================================
@@ -1522,8 +1519,6 @@ class TestTDDLoop:
 
         with pytest.raises(TDDTestFailureError):
             await t.execute_tdd("feature", write_test, run_test, write_code)
-
-
 # =========================================================================
 # CI/CD Monitor
 # =========================================================================
@@ -1616,9 +1611,9 @@ class TestCostTracker:
     @pytest.mark.asyncio
     async def test_track_cost(self) -> None:
         from backend.modules.coding_agent._cost_tracker import CostTracker
-        from backend.types import TokenUsage
+        from backend.types import Any
         c = CostTracker()
-        entry = c.track("llm_call", "gemini-2.0-flash", TokenUsage(100, 50, 150))
+        entry = c.track("llm_call", "gemini-2.0-flash", Any(100, 50, 150))
         assert entry.prompt_tokens == 100
         assert entry.completion_tokens == 50
         assert entry.total_tokens == 150
@@ -1637,9 +1632,9 @@ class TestCostTracker:
     @pytest.mark.asyncio
     async def test_get_costs(self) -> None:
         from backend.modules.coding_agent._cost_tracker import CostTracker
-        from backend.types import TokenUsage
+        from backend.types import Any
         c = CostTracker()
-        c.track("op1", "gemini-2.0-flash", TokenUsage(100, 50, 150))
+        c.track("op1", "gemini-2.0-flash", Any(100, 50, 150))
         costs = c.get_costs()
         assert costs["total_tokens"] == 150
         assert costs["entry_count"] == 1
@@ -1647,18 +1642,18 @@ class TestCostTracker:
     @pytest.mark.asyncio
     async def test_get_cost_by_operation(self) -> None:
         from backend.modules.coding_agent._cost_tracker import CostTracker
-        from backend.types import TokenUsage
+        from backend.types import Any
         c = CostTracker()
-        c.track("llm", "gemini-2.0-flash", TokenUsage(100, 50, 150))
+        c.track("llm", "gemini-2.0-flash", Any(100, 50, 150))
         by_op = c.get_cost_by_operation()
         assert "llm" in by_op
 
     @pytest.mark.asyncio
     async def test_reset(self) -> None:
         from backend.modules.coding_agent._cost_tracker import CostTracker
-        from backend.types import TokenUsage
+        from backend.types import Any
         c = CostTracker()
-        c.track("op1", "gemini-2.0-flash", TokenUsage(100, 50, 150))
+        c.track("op1", "gemini-2.0-flash", Any(100, 50, 150))
         c.reset()
         assert c.total_cost == 0.0
         assert c.get_costs()["entry_count"] == 0
@@ -1667,20 +1662,18 @@ class TestCostTracker:
     async def test_budget_limit(self) -> None:
         from backend.modules.coding_agent._cost_tracker import CostTracker
         from backend.modules.coding_agent._exceptions import CostTrackingError
-        from backend.types import TokenUsage
+        from backend.types import Any
         c = CostTracker(budget_limit=0.000001)
         with pytest.raises(CostTrackingError):
-            c.track("llm", "gemini-2.0-flash", TokenUsage(10000, 5000, 15000))
+            c.track("llm", "gemini-2.0-flash", Any(10000, 5000, 15000))
 
     @pytest.mark.asyncio
     async def test_disabled_returns_zero_cost(self) -> None:
         from backend.modules.coding_agent._cost_tracker import CostTracker
-        from backend.types import TokenUsage
+        from backend.types import Any
         c = CostTracker(enabled=False)
-        entry = c.track("test", "gemini-2.0-flash", TokenUsage(100, 50, 150))
+        entry = c.track("test", "gemini-2.0-flash", Any(100, 50, 150))
         assert entry.estimated_cost == 0.0
-
-
 # =========================================================================
 # Code Security Scanner
 # =========================================================================
@@ -1867,10 +1860,10 @@ class TestCodingAgentManagerNewFeatures:
 
     @pytest.mark.asyncio
     async def test_cost_tracking(self) -> None:
-        from backend.types import TokenUsage
+        from backend.types import Any
         mgr = CodingAgentManager()
         await mgr.async_init()
-        entry = mgr.track_cost("test", "gemini-2.0-flash", TokenUsage(100, 50, 150))
+        entry = mgr.track_cost("test", "gemini-2.0-flash", Any(100, 50, 150))
         assert entry.total_tokens == 150
 
         entry2 = mgr.track_tokens("test2", "gemini-2.0-flash", 200, 100)
@@ -1988,8 +1981,6 @@ class TestCodingAgentManagerNewFeatures:
         mgr.track_tokens("test", "gemini", 10, 5)
         await mgr.async_shutdown()
         assert not mgr.initialized
-
-
 # =========================================================================
 # Exception hierarchy
 # =========================================================================

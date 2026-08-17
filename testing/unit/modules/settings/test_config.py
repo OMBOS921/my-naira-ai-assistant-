@@ -105,7 +105,7 @@ class TestAppConfig:
         cfg = AppConfig()
         assert isinstance(cfg.log, LogConfig)
         assert isinstance(cfg.security, SecurityConfig)
-        assert isinstance(cfg.context, ContextConfig)
+        assert isinstance(cfg.contextConfig)
         assert isinstance(cfg.llm, LLMConfig)
         assert isinstance(cfg.modules, ModulesConfig)
         assert isinstance(cfg.event_bus, EventBusConfig)

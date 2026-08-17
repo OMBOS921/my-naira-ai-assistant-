@@ -18,18 +18,13 @@ from backend.exceptions import ModuleDegradedError
 from backend.modules.analytics import AnalyticsEvent, EventType
 from backend.modules.decision import RouteTarget
 from backend.runtime._request_context import RequestContext
-from backend.runtime._tool_loop import MAX_TOOL_ITERATIONS, run_tool_loop
+
 from backend.runtime.autonomous_task_engine import AutonomousTaskEngine
 from backend.runtime.fast_command_router import CommandIntent, FastCommandRouter
 from backend.runtime.multi_agent.multi_agent_orchestrator import MultiAgentOrchestrator
 from backend.modules.reasoning_gateway import IntentCategory, ReasoningGateway
 from backend.types import (
-    LLMResponse,
-    Message,
-    TokenUsage,
-    ToolDef,
-    UserRequest,
-    UserResponse,
+    Message, ToolDef, UserRequest, UserResponse, ModuleDegradedError
 )
 
 _LOG = logging.getLogger("naira.runtime")
@@ -60,6 +55,8 @@ _INTENT_CAPABILITY_MAP: dict[str, str] = {
 }
 
 
+MAX_TOOL_ITERATIONS = 15
+
 class RuntimeManager:
     """Orchestrates the end-to-end AI execution pipeline.
 
@@ -67,7 +64,7 @@ class RuntimeManager:
     1. Decision & Routing resolution (via DecisionManager / FastCommandRouter)
     2. Task Planning for multi-step requests (via PlanningManager)
     3. Session resolution (via ConversationManager)
-    4. Context assembly (via ContextManager)
+    4. Any assembly (via ContextManager)
     5. Prompt compilation (via PromptManager)
     6. LLM generation with tool calling (via LLMManager + ToolManager)
     7. Analytics event recording (via AnalyticsManager)
@@ -84,8 +81,6 @@ class RuntimeManager:
         config: object | None = None,
         logger: logging.Logger | None = None,
         context_manager: object | None = None,
-        prompt_manager: object | None = None,
-        llm_manager: object | None = None,
         tool_manager: object | None = None,
         memory_manager: object | None = None,
         conversation_manager: object | None = None,
@@ -107,8 +102,6 @@ class RuntimeManager:
         self._config = config
         self._logger = logger or _LOG
         self._context_manager = context_manager
-        self._prompt_manager = prompt_manager
-        self._llm_manager = llm_manager
         self._tool_manager = tool_manager
         self._memory_manager = memory_manager
         self._conversation_manager = conversation_manager
@@ -226,7 +219,7 @@ class RuntimeManager:
                 "request_id": str(ctx.request_id),
             })
 
-            # Stage 0: Security Validation (BEFORE Decision, FCR, Planning, Prompt, Context, LLM)
+            # Stage 0: Security Validation (BEFORE Decision, FCR, Planning, Prompt, Any, LLM)
             if self._security_manager is not None and hasattr(self._security_manager, "validate_input"):
                 val_res = self._security_manager.validate_input(request.text)
                 if val_res.status == "reject":
@@ -245,7 +238,7 @@ class RuntimeManager:
                     )
 
             # Decision Engine Routing
-            target_route = RouteTarget.LLM_CONVERSATION
+            target_route = RouteTarget.UNHANDLED
             if self._decision_manager is not None:
                 decide_fn: Any = getattr(self._decision_manager, "decide", None)
                 if callable(decide_fn):
@@ -257,7 +250,7 @@ class RuntimeManager:
                     )
 
             if (
-                target_route == RouteTarget.LLM_CONVERSATION
+                target_route == RouteTarget.UNHANDLED
                 and self._fast_command_router is not None
                 and self._fast_command_router.is_fast_command(request.text)
             ):
@@ -276,7 +269,7 @@ class RuntimeManager:
                         "[ROUTING] FCR classified as CONVERSATION — falling through to LLM pipeline for text=%r",
                         request.text,
                     )
-                    target_route = RouteTarget.LLM_CONVERSATION
+                    target_route = RouteTarget.UNHANDLED
                 else:
                     # Capability Enforcement Gate
                     req_cap = _INTENT_CAPABILITY_MAP.get(intent_name)
@@ -318,16 +311,6 @@ class RuntimeManager:
                                 )
                             )
 
-                    token_usage = self._estimate_token_usage("", fast_result)
-                    final_response = LLMResponse(
-                        text=fast_result,
-                        tool_calls=None,
-                        finish_reason="stop",
-                        token_usage=token_usage,
-                        provider="fast_command_router",
-                        duration_ms=duration_ms,
-                    )
-                    await self._store_turn(ctx, final_response)
                     return UserResponse(
                         request_id=request.id,
                         text=fast_result,
@@ -368,16 +351,6 @@ class RuntimeManager:
                                 )
                             )
 
-                    token_usage = self._estimate_token_usage("", res_text)
-                    final_response = LLMResponse(
-                        text=res_text,
-                        tool_calls=None,
-                        finish_reason="stop",
-                        token_usage=token_usage,
-                        provider="planning_engine",
-                        duration_ms=duration_ms,
-                    )
-                    await self._store_turn(ctx, final_response)
                     return UserResponse(
                         request_id=request.id,
                         text=res_text,
@@ -429,16 +402,6 @@ class RuntimeManager:
                     duration_ms = (time.time() - ctx.start_time) * 1000
                     raw_text = getattr(res, "output", "") or getattr(res, "error", "") or f"Coding task completed with status: {getattr(res, 'status', 'completed')}"
                     res_text = await self._synthesize_conversational_reply(request.text, raw_text)
-                    token_usage = self._estimate_token_usage("", res_text)
-                    final_response = LLMResponse(
-                        text=res_text,
-                        tool_calls=None,
-                        finish_reason="stop",
-                        token_usage=token_usage,
-                        provider="coding_agent",
-                        duration_ms=duration_ms,
-                    )
-                    await self._store_turn(ctx, final_response)
                     return UserResponse(
                         request_id=request.id,
                         text=res_text,
@@ -473,16 +436,6 @@ class RuntimeManager:
 
                 bypass_text = await self._synthesize_conversational_reply(request.text, raw_text)
 
-                token_usage = self._estimate_token_usage("", bypass_text)
-                final_response = LLMResponse(
-                    text=bypass_text,
-                    tool_calls=None,
-                    finish_reason="stop",
-                    token_usage=token_usage,
-                    provider="reasoning_gateway",
-                    duration_ms=duration_ms,
-                )
-                await self._store_turn(ctx, final_response)
                 return UserResponse(
                     request_id=request.id,
                     text=bypass_text,
@@ -490,65 +443,7 @@ class RuntimeManager:
                     duration_ms=duration_ms,
                 )
 
-            # Route 3: Standard LLM_CONVERSATION
-            self._logger.info(
-                "[ROUTING] Falling through to LLM conversation pipeline for text=%r", request.text
-            )
-
-            if self._analytics_manager is not None:
-                rec_fn = getattr(self._analytics_manager, "record", None)
-                if callable(rec_fn):
-                    rec_fn(
-                        AnalyticsEvent(
-                            event_type=EventType.LLM_FALLBACK,
-                            duration_ms=0.0,
-                            success=True,
-                            payload={"request": request.text},
-                        )
-                    )
-
-            ctx.current_stage = "session"
-            await self._resolve_session(ctx)
-
-            ctx.current_stage = "context"
-            ctx.system_prompt = self._compile_prompt()
-            if ctx.metadata and "personality_context" in ctx.metadata:
-                ctx.system_prompt += "\n\n" + ctx.metadata["personality_context"]
-            
-            ctx.messages = self._build_context(ctx).messages[:]
-
-            ctx.current_stage = "llm"
-            tool_defs = self._get_tool_defs()
-            response = await self._generate_with_tools(
-                ctx.system_prompt,
-                ctx.messages,
-                tool_defs,
-            )
-
-            ctx.current_stage = "memory"
-            await self._store_turn(ctx, response)
-
-            ctx.current_stage = "emit"
-            duration_ms = (time.time() - ctx.start_time) * 1000
-
-            await self._emit_event("runtime.request_complete", {
-                "session_id": ctx.session_id,
-                "request_id": str(ctx.request_id),
-                "duration_ms": duration_ms,
-                "token_usage": {
-                    "prompt_tokens": response.token_usage.prompt_tokens,
-                    "completion_tokens": response.token_usage.completion_tokens,
-                    "total_tokens": response.token_usage.total_tokens,
-                },
-            })
-
-            return UserResponse(
-                request_id=request.id,
-                text=response.text,
-                source=request.source,
-                duration_ms=duration_ms,
-            )
-
+            return UserResponse(request_id=request.id, text="Error: No route found for request. LLM is disabled.", source=request.source, duration_ms=0.0)
         except Exception as exc:
             duration_ms = (time.time() - ctx.start_time) * 1000
             self._logger.error(
@@ -597,7 +492,7 @@ class RuntimeManager:
             })
 
             # Stage 0: Decision Engine Routing
-            target_route = RouteTarget.LLM_CONVERSATION
+            target_route = RouteTarget.UNHANDLED
             if self._decision_manager is not None:
                 decide_fn: Any = getattr(self._decision_manager, "decide", None)
                 if callable(decide_fn):
@@ -605,7 +500,7 @@ class RuntimeManager:
                     target_route = decision.target
 
             if (
-                target_route == RouteTarget.LLM_CONVERSATION
+                target_route == RouteTarget.UNHANDLED
                 and self._fast_command_router is not None
                 and self._fast_command_router.is_fast_command(request.text)
             ):
@@ -633,16 +528,6 @@ class RuntimeManager:
 
                     yield fast_result
 
-                    token_usage = self._estimate_token_usage("", fast_result)
-                    final_response = LLMResponse(
-                        text=fast_result,
-                        tool_calls=None,
-                        finish_reason="stop",
-                        token_usage=token_usage,
-                        provider="fast_command_router",
-                        duration_ms=duration_ms,
-                    )
-                    await self._store_turn(ctx, final_response)
                     return
 
             # Reasoning Gateway Evaluation (stream)
@@ -671,55 +556,10 @@ class RuntimeManager:
                     bypass_text = f"Request '{request.text}' processed deterministically by Reasoning Gateway."
 
                 yield bypass_text
-                token_usage = self._estimate_token_usage("", bypass_text)
-                final_response = LLMResponse(
-                    text=bypass_text,
-                    tool_calls=None,
-                    finish_reason="stop",
-                    token_usage=token_usage,
-                    provider="reasoning_gateway",
-                    duration_ms=duration_ms,
-                )
-                await self._store_turn(ctx, final_response)
                 return
 
-            ctx.current_stage = "session"
-            await self._resolve_session(ctx)
-
-            ctx.current_stage = "context"
-            ctx.system_prompt = self._compile_prompt()
-            if ctx.metadata and "personality_context" in ctx.metadata:
-                ctx.system_prompt += "\n\n" + ctx.metadata["personality_context"]
-            
-            ctx.messages = self._build_context(ctx).messages[:]
-            tool_defs = self._get_tool_defs()
-
-            ctx.current_stage = "llm"
-            accumulated_text = ""
-
-            async for chunk in self._stream_with_tools(
-                ctx.system_prompt,
-                ctx.messages,
-                tool_defs,
-            ):
-                accumulated_text += chunk
-                yield chunk
-
-            ctx.current_stage = "memory"
-            token_usage = self._estimate_token_usage(
-                ctx.system_prompt, accumulated_text
-            )
-            final_response = LLMResponse(
-                text=accumulated_text,
-                tool_calls=None,
-                finish_reason="stop",
-                token_usage=token_usage,
-                provider="runtime_stream",
-                duration_ms=(time.time() - ctx.start_time) * 1000,
-            )
-
-            await self._store_turn(ctx, final_response)
-            ctx.current_stage = "emit"
+            yield "[Error]: No route found for request. LLM is disabled."
+            return
 
         except Exception as exc:
             self._logger.error(
@@ -788,297 +628,19 @@ class RuntimeManager:
         if self._conversation_manager is None:
             return None
 
-        resolve = getattr(self._conversation_manager, "process_request", None)
-        if callable(resolve):
-            try:
-                req = UserRequest(
-                    id=ctx.request_id,
-                    session_id=ctx.session_id,
-                    text=ctx.user_text,
-                    source=ctx.source,
-                    timestamp=time.time(),
-                    metadata=ctx.metadata,
-                )
-                try:
-                    result = resolve(req)
-                except TypeError:
-                    try:
-                        result = resolve(ctx)
-                    except TypeError:
-                        result = resolve(ctx.session_id)
-
-                if inspect.isawaitable(result):
-                    result = await result
-                return result
-            except Exception as exc:
-                self._logger.warning(
-                    "ConversationManager process_request failed: %s", exc
-                )
-
-        route = getattr(self._conversation_manager, "router", None)
-        if route is not None:
-            route_fn = getattr(route, "route", None)
-            if callable(route_fn):
-                try:
-                    result = route_fn(ctx.session_id)
-                    if inspect.isawaitable(result):
-                        result = await result
-                    return result
-                except Exception as exc:
-                    self._logger.warning(
-                        "ConversationManager router route failed: %s", exc
-                    )
-        return None
-
-    def _compile_prompt(self) -> str:
-        """Compile the system prompt via PromptManager."""
-        if self._prompt_manager is None:
-            return ""
-        compile_fn = getattr(self._prompt_manager, "compile", None)
-        if compile_fn is not None:
-            return compile_fn()
-        return ""
-
-    def _build_context(self, ctx: RequestContext) -> object:
-        """Build context via ContextManager."""
-        if self._context_manager is None:
-            return _empty_context()
-        build = getattr(self._context_manager, "build_context", None)
-        if build is not None:
-            return build(ctx.session_id, ctx.user_text, ctx.system_prompt)
-        return _empty_context()
-
-    def _get_tool_defs(self) -> list[ToolDef]:
-        """Fetch tool definitions from the ToolManager."""
-        if self._tool_manager is None:
-            return []
-        get_defs = getattr(self._tool_manager, "get_tool_defs", None)
-        if get_defs is not None:
-            return get_defs()
-        return []
-
-    async def _generate_with_tools(
-        self,
-        system_prompt: str,
-        context_messages: list[Message],
-        tool_defs: list[ToolDef],
-    ) -> LLMResponse:
-        """Generate an LLM response with optional tool calling loop."""
-        if self._llm_manager is None:
-            return _empty_llm_response()
-
-        if tool_defs:
-            return await run_tool_loop(
-                llm_manager=self._llm_manager,
-                tool_manager=self._tool_manager,
-                system_prompt=system_prompt,
-                context_messages=context_messages,
-                tool_defs=tool_defs,
-            )
-
-        generate = getattr(self._llm_manager, "generate", None)
-        if generate is not None:
-            return await generate(system_prompt, context_messages)  # type: ignore
-        return _empty_llm_response()
-
-    async def _stream_with_tools(
-        self,
-        system_prompt: str,
-        context_messages: list[Message],
-        tool_defs: list[ToolDef],
-    ) -> AsyncIterator[str]:
-        """Stream response tokens with native multi-iteration tool execution."""
-        if self._llm_manager is None:
-            yield "Action failed"
-            return
-
-        generate_fn = getattr(self._llm_manager, "generate", None)
-        if generate_fn is None:
-            yield "Action failed"
-            return
-
-        iterations = 0
-        final_text_yielded = False
-
-        while iterations < self._max_tool_iterations:
-            iterations += 1
-            try:
-                response: LLMResponse = await generate_fn(  # type: ignore
-                    prompt=system_prompt,
-                    context=context_messages,
-                    tools=tool_defs if tool_defs else None,
-                )
-            except Exception as exc:
-                self._logger.error(
-                    "LLM generation error in stream loop (iter %d): %s", iterations, exc
-                )
-                if not final_text_yielded:
-                    yield "Action failed"
-                return
-
-            if response.tool_calls:
-                assistant_msg = Message(
-                    role="assistant",
-                    content=response.text or "",
-                    tool_calls=response.tool_calls,
-                )
-                context_messages.append(assistant_msg)
-
-                for tc in response.tool_calls:
-                    res_content = "Tool executed successfully."
-                    if self._tool_manager is not None:
-                        try:
-                            tool_res = await self._tool_manager.execute_tool_call(tc)
-                            if hasattr(tool_res, "result") and tool_res.result is not None:
-                                res_content = (
-                                    json.dumps(tool_res.result)
-                                    if isinstance(tool_res.result, (dict, list))
-                                    else str(tool_res.result)
-                                )
-                            elif hasattr(tool_res, "error") and tool_res.error:
-                                res_content = f"Error: {tool_res.error}"
-                        except Exception as tool_exc:
-                            self._logger.error("Tool execution error: %s", tool_exc)
-                            res_content = f"Tool execution failed: {tool_exc}"
-
-                    context_messages.append(
-                        Message(
-                            role="tool",
-                            content=res_content,
-                            tool_call_id=tc.id,
-                        )
-                    )
-                continue
-            else:
-                text_content = response.text or ""
-                if text_content.strip():
-                    yield text_content
-                    final_text_yielded = True
-                else:
-                    yield "Action executed successfully."
-                    final_text_yielded = True
-                return
-
-        if not final_text_yielded:
-            yield "Action executed successfully."
-
-    async def _store_turn(
-        self,
-        ctx: RequestContext,
-        response: LLMResponse,
-    ) -> None:
-        """Persist both sides of the conversation turn."""
-        asst_text = (
-            response.text if (response and response.text) else "Action executed successfully."
-        )
-
-        if self._context_manager is not None:
-            add_asst = getattr(self._context_manager, "add_assistant_message", None)
-            if add_asst is not None:
-                try:
-                    add_asst(ctx.session_id, asst_text)
-                except Exception as exc:
-                    self._logger.warning("Failed to store assistant message in context: %s", exc)
-
-        if self._memory_manager is None:
-            return
-        store = getattr(self._memory_manager, "store_message", None)
-        if store is None:
-            return
-        try:
-            await store(  # type: ignore
-                ctx.session_id,
-                Message(role="user", content=ctx.user_text),
-            )
-            await store(  # type: ignore
-                ctx.session_id,
-                Message(role="assistant", content=asst_text),
-            )
-        except Exception as exc:
-            self._logger.warning("Failed to persist messages: %s", exc)
-
-    def _estimate_token_usage(
-        self,
-        prompt: str,
-        response_text: str,
-    ) -> TokenUsage:
-        """Estimate token usage for streaming (rough heuristic)."""
-        prompt_tokens = max(1, len(prompt) // 4)
-        completion_tokens = max(1, len(response_text) // 4)
-        return TokenUsage(
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-            total_tokens=prompt_tokens + completion_tokens,
-        )
 
     async def _synthesize_conversational_reply(self, user_text: str, raw_output: str) -> str:
-        """Pass raw operation or tool outputs through the LLM for natural, conversational synthesis."""
-        if self._llm_manager is None or not hasattr(self._llm_manager, "generate"):
-            return raw_output
-        try:
-            sys_prompt = self._compile_prompt() + (
-                "\n\n[SYSTEM INSTRUCTION]: Now that the tools or operations have executed, provide a natural, "
-                "conversational, and concise reply to the user based on the results. Do NOT output technical logs or 'plan executed' messages."
-            )
-            context = [
-                Message(role="user", content=user_text),
-                Message(role="user", content=f"[System Observation / Operation Result]: {raw_output}"),
-            ]
-            resp = await self._llm_manager.generate(
-                prompt=sys_prompt,
-                context=context,
-                tools=None,
-            )
-            if resp and resp.text:
-                text_clean = resp.text.strip()
-                # Do not let AI provider outage errors overwrite real operation results
-                if (
-                    getattr(resp, "provider", "") in ("orchestrator_outage_fallback", "none")
-                    or "trouble connecting to AI services" in text_clean
-                    or "unable to reach AI services" in text_clean
-                ):
-                    return raw_output
-                # Do not let synthesis repeat the user's input command instead of execution result
-                if text_clean.lower() == user_text.strip().lower():
-                    return raw_output
-                return text_clean
-        except Exception as exc:
-            self._logger.warning("[SYNTHESIS] Synthesis pass failed, returning raw output: %s", exc)
+        """Deterministic pass-through."""
         return raw_output
 
-    # ------------------------------------------------------------------
-    # Event emission
-    # ------------------------------------------------------------------
-
-    async def _emit_event(self, event_type: str, data: dict[str, Any]) -> None:
+    async def _emit_event(self, event_type: str, data: dict) -> None:
         if self._event_bus is None:
             return
         emit = getattr(self._event_bus, "emit", None)
         if emit is not None:
-            await emit(event_type, data)  # type: ignore
-
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
+            await emit(event_type, data)
 
     def _ensure_not_degraded(self) -> None:
         if self._degraded:
-            raise ModuleDegradedError(
-                "RuntimeManager is degraded",
-                context={"module": "runtime"},
-            )
-
-
-def _empty_context() -> object:
-    return SimpleNamespace(messages=[], system_prompt="")
-
-
-def _empty_llm_response() -> LLMResponse:
-    return LLMResponse(
-        text="",
-        tool_calls=None,
-        finish_reason="error",
-        token_usage=TokenUsage(prompt_tokens=0, completion_tokens=0, total_tokens=0),
-        provider="none",
-        duration_ms=0.0,
-    )
+            from backend.types import ModuleDegradedError
+            raise ModuleDegradedError("RuntimeManager is degraded", context={"module": "runtime"})

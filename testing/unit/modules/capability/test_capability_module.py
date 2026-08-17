@@ -25,7 +25,6 @@ from backend.modules.capability.ports.capability_provider import (
 )
 from backend.modules.capability.registry import CapabilityRegistry
 from backend.types import ModuleInterface
-
 # =========================================================================
 # Capability
 # =========================================================================

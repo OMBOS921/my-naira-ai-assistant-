@@ -56,7 +56,7 @@ async def test_decision_happy_path() -> None:
 
     # Default LLM route
     dec = await decision_mgr.decide("what is the capital of France?")
-    assert dec.target == RouteTarget.LLM_CONVERSATION
+    assert dec.target == RouteTarget.UNHANDLED
 
     # Complex prompt containing script execution, error debugging, and execute_local_python tool call
     complex_prompt = (
@@ -77,7 +77,7 @@ async def test_decision_degraded_path() -> None:
     assert decision_mgr.degraded
 
     dec = await decision_mgr.decide("open chrome")
-    assert dec.target == RouteTarget.LLM_CONVERSATION
+    assert dec.target == RouteTarget.UNHANDLED
     assert dec.confidence == 1.0
 
 
@@ -110,9 +110,9 @@ async def test_decision_route_demotion_via_analytics(tmp_path: Path) -> None:
             )
         )
 
-    # Now decision manager should demote the route from FCR to LLM_CONVERSATION
+    # Now decision manager should demote the route from FCR to UNHANDLED
     dec_after = await decision_mgr.decide("flaky command")
-    assert dec_after.target == RouteTarget.LLM_CONVERSATION
+    assert dec_after.target == RouteTarget.UNHANDLED
     assert "demoted" in dec_after.reason.lower()
 
     await analytics_mgr.async_shutdown()

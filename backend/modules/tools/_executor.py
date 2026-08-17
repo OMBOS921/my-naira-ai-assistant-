@@ -18,7 +18,6 @@ from backend.modules.tools._permissions import ToolPermission
 from backend.modules.tools._registry import ToolHandler, ToolRegistry
 from backend.modules.tools._validation import ToolValidation
 from backend.types import ToolCall, ToolResult
-
 _LOG = logging.getLogger("naira.tools")
 
 

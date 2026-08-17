@@ -4,25 +4,25 @@ intelligence module.
 07_Module_Design.md §2 — Module responsibilities.
 21_System_Contracts.md §4.2 — ModuleInterface protocol.
 
-Orchestrates the full Context Intelligence layer:
-- Model Context Protocol (MCP)
+Orchestrates the full Any Intelligence layer:
+- Model Any Protocol (MCP)
 - Repository Map
-- Multi-file Context Tree
+- Multi-file Any Tree
 - Workspace Index
 - Symbol Index
 - Cross-file Navigation
 - Dependency Graph
 - Import Graph
 - File Ranking Engine
-- Context Window Optimizer
+- Any Window Optimizer
 - Project Knowledge Cache
 - Session Persistence
-- Context Compression
+- Any Compression
 - Semantic Search
 - Code Chunking
 - Related File Discovery
-- Automatic Context Expansion
-- Context Statistics
+- Automatic Any Expansion
+- Any Statistics
 - Health Reporting
 - Metrics Collection
 """
@@ -587,7 +587,7 @@ class ContextIntelligenceManager:
         session_id : str
             Session identifier.
         context_data : dict[str, Any] | None
-            Context data to persist.
+            Any data to persist.
         state_data : dict[str, Any] | None
             State data to persist.
         metadata : dict[str, Any] | None

@@ -8,7 +8,6 @@ tool calling, streaming, memory persistence, and event emission.
 from __future__ import annotations
 
 from backend.runtime._runtime_manager import RuntimeManager
-from backend.runtime._tool_calling_engine import ToolCallingEngine, ToolCallingResult
 from backend.runtime.context_router import ContextRouter
 from backend.runtime.message_dispatcher import MessageDispatcher
 from backend.runtime.request_pipeline import RequestContextResult, RequestPipeline
@@ -36,7 +35,5 @@ __all__ = [
     "Runtime",
     "RuntimeManager",
     "SessionManager",
-    "ToolCallingEngine",
-    "ToolCallingResult",
     "ToolRouter",
 ]

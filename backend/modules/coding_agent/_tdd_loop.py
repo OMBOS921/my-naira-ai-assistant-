@@ -7,7 +7,6 @@ from typing import Any, Callable
 
 from backend.modules.coding_agent._exceptions import TDDError, TDDTestFailureError
 from backend.types import ToolResult
-
 _LOG = logging.getLogger("naira.coding_agent.tdd")
 
 

@@ -22,7 +22,6 @@ from backend.modules.security.permission_engine import (
 )
 from backend.modules.security.ports.security_port import SecurityPort
 from backend.types import ToolResult, ValidationResult
-
 _LOG = logging.getLogger("naira.security")
 
 

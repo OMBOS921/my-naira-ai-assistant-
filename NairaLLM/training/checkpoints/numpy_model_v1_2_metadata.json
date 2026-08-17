@@ -1,0 +1,184 @@
+{
+  "dataset_version": "v1.2",
+  "model_config": {
+    "vocab_size": 1507,
+    "d_model": 64,
+    "num_layers": 2,
+    "num_heads": 2,
+    "num_kv_heads": 2,
+    "d_ff": 128,
+    "max_seq_len": 256,
+    "norm_eps": 1e-05,
+    "rope_theta": 10000.0,
+    "tie_embeddings": true,
+    "dropout": 0.0
+  },
+  "tokenizer_version": "1.0 (Byte-Level BPE)",
+  "num_epochs": 20,
+  "final_train_loss": 3.9748,
+  "final_val_loss": 4.2911,
+  "final_perplexity": 73.05,
+  "training_time_seconds": 309.59,
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 5.0892,
+      "train_perplexity": 162.26,
+      "val_loss": 5.0534,
+      "val_perplexity": 156.55,
+      "lr": 0.004
+    },
+    {
+      "epoch": 2,
+      "train_loss": 4.6293,
+      "train_perplexity": 102.44,
+      "val_loss": 4.5984,
+      "val_perplexity": 99.33,
+      "lr": 0.003975
+    },
+    {
+      "epoch": 3,
+      "train_loss": 4.3504,
+      "train_perplexity": 77.51,
+      "val_loss": 4.4549,
+      "val_perplexity": 86.05,
+      "lr": 0.003902
+    },
+    {
+      "epoch": 4,
+      "train_loss": 4.2732,
+      "train_perplexity": 71.75,
+      "val_loss": 4.4591,
+      "val_perplexity": 86.41,
+      "lr": 0.003782
+    },
+    {
+      "epoch": 5,
+      "train_loss": 4.2456,
+      "train_perplexity": 69.8,
+      "val_loss": 4.5078,
+      "val_perplexity": 90.72,
+      "lr": 0.003618
+    },
+    {
+      "epoch": 6,
+      "train_loss": 4.2848,
+      "train_perplexity": 72.58,
+      "val_loss": 4.4726,
+      "val_perplexity": 87.58,
+      "lr": 0.003414
+    },
+    {
+      "epoch": 7,
+      "train_loss": 4.2853,
+      "train_perplexity": 72.63,
+      "val_loss": 4.4611,
+      "val_perplexity": 86.58,
+      "lr": 0.003176
+    },
+    {
+      "epoch": 8,
+      "train_loss": 4.2344,
+      "train_perplexity": 69.02,
+      "val_loss": 4.4417,
+      "val_perplexity": 84.92,
+      "lr": 0.002908
+    },
+    {
+      "epoch": 9,
+      "train_loss": 4.226,
+      "train_perplexity": 68.44,
+      "val_loss": 4.4884,
+      "val_perplexity": 88.98,
+      "lr": 0.002618
+    },
+    {
+      "epoch": 10,
+      "train_loss": 4.2302,
+      "train_perplexity": 68.73,
+      "val_loss": 4.3599,
+      "val_perplexity": 78.25,
+      "lr": 0.002313
+    },
+    {
+      "epoch": 11,
+      "train_loss": 4.1274,
+      "train_perplexity": 62.02,
+      "val_loss": 4.3641,
+      "val_perplexity": 78.58,
+      "lr": 0.002
+    },
+    {
+      "epoch": 12,
+      "train_loss": 4.0905,
+      "train_perplexity": 59.77,
+      "val_loss": 4.3016,
+      "val_perplexity": 73.82,
+      "lr": 0.001687
+    },
+    {
+      "epoch": 13,
+      "train_loss": 4.0695,
+      "train_perplexity": 58.53,
+      "val_loss": 4.3429,
+      "val_perplexity": 76.93,
+      "lr": 0.001382
+    },
+    {
+      "epoch": 14,
+      "train_loss": 4.0413,
+      "train_perplexity": 56.9,
+      "val_loss": 4.2777,
+      "val_perplexity": 72.07,
+      "lr": 0.001092
+    },
+    {
+      "epoch": 15,
+      "train_loss": 4.0139,
+      "train_perplexity": 55.36,
+      "val_loss": 4.2895,
+      "val_perplexity": 72.93,
+      "lr": 0.000824
+    },
+    {
+      "epoch": 16,
+      "train_loss": 4.0019,
+      "train_perplexity": 54.7,
+      "val_loss": 4.2859,
+      "val_perplexity": 72.67,
+      "lr": 0.000586
+    },
+    {
+      "epoch": 17,
+      "train_loss": 3.9959,
+      "train_perplexity": 54.37,
+      "val_loss": 4.2881,
+      "val_perplexity": 72.83,
+      "lr": 0.000382
+    },
+    {
+      "epoch": 18,
+      "train_loss": 3.9924,
+      "train_perplexity": 54.19,
+      "val_loss": 4.293,
+      "val_perplexity": 73.18,
+      "lr": 0.000218
+    },
+    {
+      "epoch": 19,
+      "train_loss": 3.9811,
+      "train_perplexity": 53.57,
+      "val_loss": 4.2912,
+      "val_perplexity": 73.05,
+      "lr": 9.8e-05
+    },
+    {
+      "epoch": 20,
+      "train_loss": 3.9748,
+      "train_perplexity": 53.24,
+      "val_loss": 4.2911,
+      "val_perplexity": 73.05,
+      "lr": 2.5e-05
+    }
+  ]
+}

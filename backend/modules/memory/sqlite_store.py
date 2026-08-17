@@ -1,3 +1,4 @@
+from typing import Any
 """
 SQLiteStore — raw SQLite persistence for conversation data.
 
@@ -19,8 +20,6 @@ from pathlib import Path
 
 from backend.modules.memory.memory_models import MIGRATIONS
 from backend.types import Message
-
-
 class SQLiteStore:
     """Synchronous SQLite store for conversation history and settings.
 

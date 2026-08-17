@@ -1,4 +1,4 @@
-"""Default adapter implementations for Context Intelligence ports."""
+"""Default adapter implementations for Any Intelligence ports."""
 
 from __future__ import annotations
 

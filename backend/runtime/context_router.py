@@ -12,8 +12,7 @@ from typing import Any
 
 from backend.modules.context import ContextManager
 from backend.orchestrator import EventBus
-from backend.types import Context, Message
-
+from backend.types import Message
 _LOG = logging.getLogger("naira.runtime.context_router")
 
 
@@ -57,7 +56,7 @@ class ContextRouter:
             if init is not None:
                 await init()
         self._initialized = True
-        self._logger.debug("Context router initialised")
+        self._logger.debug("Any router initialised")
 
     async def async_shutdown(self) -> None:
         """Release resources."""
@@ -67,7 +66,7 @@ class ContextRouter:
                 await shutdown()
         self._degraded = False
         self._initialized = False
-        self._logger.debug("Context router shut down")
+        self._logger.debug("Any router shut down")
 
     def degrade(self) -> None:
         """Mark as degraded."""
@@ -76,7 +75,7 @@ class ContextRouter:
             degrade = getattr(self._context_manager, "degrade", None)
             if degrade is not None:
                 degrade()
-        self._logger.warning("Context router marked degraded")
+        self._logger.warning("Any router marked degraded")
 
     @property
     def degraded(self) -> bool:
@@ -95,7 +94,7 @@ class ContextRouter:
         session_id: str,
         user_text: str,
         system_prompt: str,
-    ) -> Context:
+    ) -> Any:
         """Build a context for LLM inference.
 
         Parameters
@@ -109,7 +108,7 @@ class ContextRouter:
 
         Returns
         -------
-        Context
+        Any
             Immutable context payload with messages and token count.
         """
         self._ensure_not_degraded()
@@ -125,7 +124,7 @@ class ContextRouter:
                 system_prompt=system_prompt,
             )
         except Exception as exc:
-            self._logger.error("Context build failed: %s", exc)
+            self._logger.error("Any build failed: %s", exc)
             return _empty_context()
 
     def get_session_context(self, session_id: str) -> list[Message] | None:
@@ -206,9 +205,9 @@ class ContextRouter:
         return self._context_manager.session_count
 
 
-def _empty_context() -> Context:
-    """Return a minimal Context for fallback paths."""
-    return Context(
+def _empty_context() -> Any:
+    """Return a minimal Any for fallback paths."""
+    return Any(
         system_prompt="",
         messages=[],
         token_count=0,

@@ -1,3 +1,4 @@
+from typing import Any
 """Regression tests for the conversation-routing bug fix.
 
 Verifies:
@@ -14,9 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from backend.runtime.fast_command_router import CommandIntent, FastCommandRouter
 from backend.runtime._runtime_manager import RuntimeManager
-from backend.types import LLMResponse, TokenUsage, UserRequest
-
-
+from backend.types import UserRequest
 # ---------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------
@@ -30,11 +29,11 @@ def fcr():
 @pytest.fixture
 def mock_llm_manager():
     mgr = AsyncMock()
-    mgr.generate.return_value = LLMResponse(
+    mgr.generate.return_value = Any(
         text="Hi there! How can I help you today?",
         tool_calls=None,
         finish_reason="stop",
-        token_usage=TokenUsage(prompt_tokens=10, completion_tokens=10, total_tokens=20),
+        token_usage=Any(prompt_tokens=10, completion_tokens=10, total_tokens=20),
         provider="test",
         duration_ms=50.0,
     )

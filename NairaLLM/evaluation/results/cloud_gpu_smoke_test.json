@@ -1,0 +1,98 @@
+{
+  "timestamp": "2026-08-16 21:43:13",
+  "environment": {
+    "provider": "local_workstation",
+    "use_paid_compute": false,
+    "python_version": "3.14.6",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "processor": "Intel64 Family 6 Model 78 Stepping 3, GenuineIntel",
+    "cpu_count": 4,
+    "cost_guard_alert": "PERMITTED_FREE_OR_LOCAL",
+    "disk_total_gb": 106.64,
+    "disk_free_gb": 22.34,
+    "ram_total_gb": 3.89,
+    "ram_available_gb": 0.34,
+    "torch_available": false,
+    "torch_version": "not_installed",
+    "cuda_available": false,
+    "cuda_version": "N/A",
+    "device_type": "cpu_numpy_fallback",
+    "device_name": "Pure NumPy CPU Fallback",
+    "vram_total_gb": 0.0,
+    "amp_supported": false,
+    "bf16_supported": false,
+    "free_gpu_available": false,
+    "recommended_config": {
+      "batch_size": 2,
+      "gradient_accumulation_steps": 1,
+      "precision": "fp32",
+      "learning_rate": 0.001,
+      "context_length": 128,
+      "tier_class": "cpu_development"
+    }
+  },
+  "checks": {
+    "1_tokenizer": {
+      "status": "PASSED",
+      "vocab_size": 1509
+    },
+    "2_model_creation": {
+      "status": "PASSED",
+      "params": 275392,
+      "device": "cpu_numpy"
+    },
+    "3_batch_load": {
+      "status": "PASSED",
+      "tokens": [
+        958,
+        12,
+        45,
+        89
+      ]
+    },
+    "4_forward_pass": {
+      "status": "PASSED",
+      "shape": [
+        4,
+        1509
+      ]
+    },
+    "5_loss_calc": {
+      "status": "PASSED",
+      "loss": 7.32
+    },
+    "6_backward_pass": {
+      "status": "PASSED",
+      "backend": "numpy"
+    },
+    "7_optimizer_step": {
+      "status": "PASSED",
+      "backend": "numpy"
+    },
+    "8_checkpoint_save": {
+      "status": "PASSED",
+      "file_size_bytes": 1022451
+    },
+    "9_checkpoint_reload": {
+      "status": "PASSED",
+      "parity_diff": 0.0
+    },
+    "10_resumed_step": {
+      "status": "PASSED",
+      "shape": [
+        3,
+        1509
+      ]
+    }
+  },
+  "metrics": {
+    "device_name": "Pure NumPy CPU Fallback",
+    "device_type": "cpu_numpy_fallback",
+    "vram_total_gb": 0.0,
+    "peak_gpu_vram_mb": 0.0,
+    "peak_cpu_ram_mb": 41.71,
+    "elapsed_time_seconds": 0.969,
+    "checkpoint_saved_path": "C:/Users/user/Desktop/naira os/NairaLLM/training/checkpoints/smoke_test_numpy.npz"
+  },
+  "all_passed": true
+}

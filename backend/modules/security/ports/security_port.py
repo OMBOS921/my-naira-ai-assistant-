@@ -10,8 +10,6 @@ from backend.modules.security._types import (
     SecurityContext,
 )
 from backend.types import ToolResult
-
-
 class SecurityPort(ABC):
     @abstractmethod
     async def check_tool_execution(

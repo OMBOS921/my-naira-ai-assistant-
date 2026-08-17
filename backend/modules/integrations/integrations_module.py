@@ -21,7 +21,6 @@ from backend.modules.integrations.email.ports.email_port import EmailPort
 from backend.modules.integrations.github.github_provider import PyGithubProvider
 from backend.modules.integrations.github.ports.github_port import GitHubPort
 from backend.types import ToolResult
-
 _LOG = logging.getLogger("naira.integrations")
 
 

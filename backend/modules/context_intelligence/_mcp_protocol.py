@@ -1,7 +1,7 @@
-"""Model Context Protocol (MCP) — structured context formatting and transmission.
+"""Model Any Protocol (MCP) — structured context formatting and transmission.
 
 Defines how context payloads are structured, serialised, and transmitted
-between the Context Intelligence layer and consumers.
+between the Any Intelligence layer and consumers.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ _LOG = logging.getLogger("naira.context_intelligence.mcp")
 
 
 class MCPProtocol:
-    """Model Context Protocol — formats and manages context payloads.
+    """Model Any Protocol — formats and manages context payloads.
 
     Parameters
     ----------
@@ -126,7 +126,7 @@ class MCPProtocol:
         Parameters
         ----------
         context : MCPContext
-            Context to serialise.
+            Any to serialise.
 
         Returns
         -------
@@ -167,7 +167,7 @@ class MCPProtocol:
         Parameters
         ----------
         context : MCPContext
-            Context to estimate.
+            Any to estimate.
 
         Returns
         -------

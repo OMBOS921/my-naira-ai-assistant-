@@ -21,7 +21,6 @@ from backend.modules.browser._exceptions import (
 from backend.modules.browser._types import BrowserSearchResponse
 from backend.modules.browser.ports.browser_port import BrowserPort
 from backend.types import ToolResult
-
 _LOG = logging.getLogger("naira.browser.executor")
 
 

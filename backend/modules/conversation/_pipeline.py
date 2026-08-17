@@ -15,8 +15,7 @@ from backend.modules.conversation._bridge import ConversationMemoryBridge
 from backend.modules.conversation._history import ConversationHistory
 from backend.modules.conversation._session import ConversationSession
 from backend.modules.conversation._state import ConversationState
-from backend.types import LLMResponse, Message, TokenUsage, UserRequest, UserResponse
-
+from backend.types import Message, UserRequest, UserResponse
 _LOG = logging.getLogger("naira.conversation")
 
 
@@ -200,7 +199,7 @@ class ConversationPipeline:
         self,
         prompt: str,
         context_messages: list[Message],
-    ) -> LLMResponse:
+    ) -> Any:
         """Phase 5: generate response via LLMManager."""
         if self._llm_manager is None:
             return _empty_llm_response()
@@ -262,13 +261,13 @@ def _empty_context() -> object:
     return type("EmptyContext", (), {"messages": [], "system_prompt": ""})()
 
 
-def _empty_llm_response() -> LLMResponse:
-    """Return a minimal LLMResponse for fallback paths when no LLM is available."""
-    return LLMResponse(
+def _empty_llm_response() -> Any:
+    """Return a minimal Any for fallback paths when no LLM is available."""
+    return Any(
         text="",
         tool_calls=None,
         finish_reason="error",
-        token_usage=TokenUsage(prompt_tokens=0, completion_tokens=0, total_tokens=0),
+        token_usage=Any(prompt_tokens=0, completion_tokens=0, total_tokens=0),
         provider="none",
         duration_ms=0.0,
     )

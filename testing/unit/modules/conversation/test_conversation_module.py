@@ -1,3 +1,4 @@
+from typing import Any
 """Comprehensive tests for the conversation module.
 
 Covers:
@@ -10,7 +11,7 @@ Covers:
 - ConversationManager (ModuleInterface, lifecycle, process_request, idle cleanup)
 - Session timeout management
 - Event integration
-- Context merging
+- Any merging
 """
 
 from __future__ import annotations
@@ -31,12 +32,7 @@ from backend.modules.conversation._session import ConversationSession
 from backend.modules.conversation._state import ConversationState
 from backend.modules.conversation.conversation_module import ConversationManager
 from backend.types import (
-    LLMResponse,
-    Message,
-    ModuleInterface,
-    TokenUsage,
-    UserRequest,
-    UserResponse,
+    Any, Message, ModuleInterface, UserRequest, UserResponse
 )
 
 # =========================================================================
@@ -548,11 +544,11 @@ class TestConversationPipeline:
     @pytest.fixture
     def mock_llm_manager(self) -> MagicMock:
         mgr = MagicMock()
-        mgr.generate = AsyncMock(return_value=LLMResponse(
+        mgr.generate = AsyncMock(return_value=Any(
             text="Hello, world!",
             tool_calls=None,
             finish_reason="stop",
-            token_usage=TokenUsage(prompt_tokens=10, completion_tokens=5, total_tokens=15),
+            token_usage=Any(prompt_tokens=10, completion_tokens=5, total_tokens=15),
             provider="test",
             duration_ms=100.0,
         ))
@@ -803,11 +799,11 @@ class TestConversationManagerProcessRequest:
     @pytest.fixture
     def mgr(self) -> ConversationManager:
         mock_llm = MagicMock()
-        mock_llm.generate = AsyncMock(return_value=LLMResponse(
+        mock_llm.generate = AsyncMock(return_value=Any(
             text="Hi there!",
             tool_calls=None,
             finish_reason="stop",
-            token_usage=TokenUsage(prompt_tokens=5, completion_tokens=3, total_tokens=8),
+            token_usage=Any(prompt_tokens=5, completion_tokens=3, total_tokens=8),
             provider="test",
             duration_ms=50.0,
         ))
@@ -908,9 +904,9 @@ class TestConversationManagerSessions:
     @pytest.mark.asyncio
     async def test_get_session_after_request(self) -> None:
         mock_llm = MagicMock()
-        mock_llm.generate = AsyncMock(return_value=LLMResponse(
+        mock_llm.generate = AsyncMock(return_value=Any(
             text="OK", tool_calls=None, finish_reason="stop",
-            token_usage=TokenUsage(1, 1, 2), provider="test", duration_ms=10.0,
+            token_usage=Any(1, 1, 2), provider="test", duration_ms=10.0,
         ))
         mgr = ConversationManager(
             llm_manager=mock_llm,

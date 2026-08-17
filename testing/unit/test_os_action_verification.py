@@ -1,3 +1,4 @@
+from typing import Any
 """Unit tests for OS action verification, fake success fixes, and response formatting in Naira OS."""
 
 import os
@@ -11,9 +12,7 @@ from backend.runtime.fast_command_router import FastCommandRouter, CommandIntent
 from backend.runtime.action_lifecycle import ActionLifecycle, ActionState, NaturalResponseFormatter
 from backend.runtime._runtime_manager import RuntimeManager
 from backend.modules.coding_agent.providers.vscode_integration_provider import VSCodeIntegrationProvider
-from backend.types import LLMResponse, Message, TokenUsage, UserRequest, UserResponse
-
-
+from backend.types import Message, UserRequest, UserResponse
 @pytest.fixture
 def temp_workspace():
     tmp_dir = tempfile.mkdtemp()
@@ -178,11 +177,11 @@ async def test_synthesis_preserves_raw_output_on_provider_outage():
     user_prompt = "create folder my_project"
 
     mock_llm = AsyncMock()
-    mock_llm.generate.return_value = LLMResponse(
+    mock_llm.generate.return_value = Any(
         text="I'm having trouble connecting to AI services right now. Please try again in a moment.",
         tool_calls=None,
         finish_reason="stop",
-        token_usage=TokenUsage(prompt_tokens=0, completion_tokens=0, total_tokens=0),
+        token_usage=Any(prompt_tokens=0, completion_tokens=0, total_tokens=0),
         provider="orchestrator_outage_fallback",
         duration_ms=0.0,
     )
@@ -201,11 +200,11 @@ async def test_synthesis_does_not_echo_user_command():
     user_prompt = "open notepad"
 
     mock_llm = AsyncMock()
-    mock_llm.generate.return_value = LLMResponse(
+    mock_llm.generate.return_value = Any(
         text="open notepad",
         tool_calls=None,
         finish_reason="stop",
-        token_usage=TokenUsage(prompt_tokens=10, completion_tokens=5, total_tokens=15),
+        token_usage=Any(prompt_tokens=10, completion_tokens=5, total_tokens=15),
         provider="gemini",
         duration_ms=50.0,
     )

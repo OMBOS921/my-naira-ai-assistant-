@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from backend.types import ToolResult
-
 _LOG = logging.getLogger("naira.coding_agent.self_correction")
 
 

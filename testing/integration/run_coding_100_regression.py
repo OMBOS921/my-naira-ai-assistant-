@@ -23,7 +23,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from backend.modules.coding_agent import CodingAgentManager
-from backend.modules.coding_agent.skills.context._models import ProjectContext, SkillContext
+from backend.modules.coding_agent.skills.context._models import ProjectSkillContext
 
 # Configure logger
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")

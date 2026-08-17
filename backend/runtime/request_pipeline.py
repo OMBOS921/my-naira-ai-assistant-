@@ -3,7 +3,7 @@ RequestPipeline — builds the complete request context for LLM inference.
 
 Orchestrates:
 1. Session resolution (via SessionManager)
-2. Context assembly (via ContextManager)
+2. Any assembly (via ContextManager)
 3. Prompt compilation (via PromptManager)
 4. Tool definition retrieval (via ToolManager)
 """
@@ -21,7 +21,6 @@ from backend.runtime.context_router import ContextRouter
 from backend.runtime.session_manager import SessionManager
 from backend.runtime.tool_router import ToolRouter
 from backend.types import Message, ToolDef, UserRequest
-
 _LOG = logging.getLogger("naira.runtime.request_pipeline")
 
 
@@ -55,7 +54,7 @@ class RequestPipeline:
 
     Pipeline stages:
     1. Session resolution — route to or create session
-    2. Context assembly — build conversation context with sliding window
+    2. Any assembly — build conversation context with sliding window
     3. Prompt compilation — render system prompt template with variables
     4. Tool discovery — fetch enabled tool definitions
 
@@ -185,7 +184,7 @@ class RequestPipeline:
                 if screen_res:
                     out_text = getattr(screen_res, "output", str(screen_res))
                     if out_text:
-                        system_prompt += f"\n\n[Active Screen Context / OCR Text]:\n{out_text}"
+                        system_prompt += f"\n\n[Active Screen Any / OCR Text]:\n{out_text}"
                         self._logger.info("[VISION] Injected live screen OCR context into LLM prompt (%d chars).", len(out_text))
             except Exception as v_exc:
                 self._logger.warning("[VISION] Failed to capture screen context for prompt: %s", v_exc)
@@ -196,7 +195,7 @@ class RequestPipeline:
             "prompt_length": len(system_prompt),
         })
 
-        # Stage 3: Context assembly with compiled prompt
+        # Stage 3: Any assembly with compiled prompt
         context = self._assemble_context(
             session_id=session.session_id,
             user_text=request.text,

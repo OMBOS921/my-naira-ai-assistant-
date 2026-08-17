@@ -18,8 +18,7 @@ from backend.modules.llm import LLMManager
 from backend.orchestrator import EventBus
 from backend.runtime._tool_calling_engine import ToolCallingEngine
 from backend.runtime.tool_router import ToolRouter
-from backend.types import LLMResponse, Message, TokenUsage, ToolDef
-
+from backend.types import Message, ToolDef
 _LOG = logging.getLogger("naira.runtime.response_pipeline")
 
 MAX_TOOL_ITERATIONS: int = 10
@@ -31,11 +30,11 @@ class GenerationResult:
 
     Attributes
     ----------
-    response : LLMResponse
+    response : Any
         The complete LLM response (text, tool calls, metadata).
     """
 
-    response: LLMResponse
+    response: Any
 
 
 class ResponsePipeline:
@@ -136,7 +135,7 @@ class ResponsePipeline:
         messages: list[Message],
         tool_defs: list[ToolDef],
         session_id: str,
-    ) -> LLMResponse:
+    ) -> Any:
         """Generate a complete response with tool calling loop.
 
         Parameters
@@ -152,7 +151,7 @@ class ResponsePipeline:
 
         Returns
         -------
-        LLMResponse
+        Any
             The final LLM response (no tool calls).
         """
         self._ensure_not_degraded()
@@ -259,13 +258,13 @@ class ResponsePipeline:
         return self._tool_router
 
 
-def _empty_llm_response() -> LLMResponse:
-    """Return a minimal LLMResponse for fallback paths."""
-    return LLMResponse(
+def _empty_llm_response() -> Any:
+    """Return a minimal Any for fallback paths."""
+    return Any(
         text="",
         tool_calls=None,
         finish_reason="error",
-        token_usage=TokenUsage(prompt_tokens=0, completion_tokens=0, total_tokens=0),
+        token_usage=Any(prompt_tokens=0, completion_tokens=0, total_tokens=0),
         provider="none",
         duration_ms=0.0,
     )

@@ -1,6 +1,6 @@
 """Health Reporting — monitors and reports the health of context services.
 
-Provides comprehensive health checks for all Context Intelligence
+Provides comprehensive health checks for all Any Intelligence
 services, aggregating individual service health into a unified report.
 """
 

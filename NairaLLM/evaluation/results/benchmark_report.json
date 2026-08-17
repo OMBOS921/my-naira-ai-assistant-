@@ -1,0 +1,123 @@
+{
+  "passed": 10,
+  "total": 11,
+  "type_a_model_passed": 9,
+  "type_a_model_total": 10,
+  "type_b_workflow_passed": 1,
+  "type_b_workflow_total": 1,
+  "success_rate": 0.9091,
+  "avg_latency_ms": 568.05,
+  "results": [
+    {
+      "test_id": "C01_EN_CONV",
+      "capability": "Natural English Conversation",
+      "decision_origin": "A_MODEL_GENERATED",
+      "passed": true,
+      "latency_ms": 251.72,
+      "details": "Model generated coherent English conversational text",
+      "output": ",,,, helpful helpful, helpful helpful, helpful helpful, proactive proactive AI AI operating operating system system system assistant assistant"
+    },
+    {
+      "test_id": "C02_HI_CONV",
+      "capability": "Natural Hindi Conversation",
+      "decision_origin": "A_MODEL_GENERATED",
+      "passed": true,
+      "latency_ms": 144.02,
+      "details": "Model generated Hindi text in Devanagari script",
+      "output": "You are are Naira Naira,,,, helpful, helpful, proactive proactive AI operating operating assistant"
+    },
+    {
+      "test_id": "C03_HINGLISH_CONV",
+      "capability": "Natural Hinglish Conversation",
+      "decision_origin": "A_MODEL_GENERATED",
+      "passed": true,
+      "latency_ms": 684.12,
+      "details": "Model generated Hinglish conversational text",
+      "output": "are Naira Naira Naira,,,, helpful, helpful helpful, helpful helpful, proactive proactive AI AI operating operating system system assistant assistant"
+    },
+    {
+      "test_id": "C04_TOOL_SELECTION",
+      "capability": "Model-Driven Structured Tool Selection",
+      "decision_origin": "A_MODEL_GENERATED",
+      "passed": false,
+      "latency_ms": 352.9,
+      "details": "Model did not emit structured tool call",
+      "output": "\n\n\n\n\n are are are are Naira Naira Naira\n Naira\n Naira\n\n Naira\n Naira\n\n are Naira Naira Naira\n Naira\n\n Naira\n\n are Naira Naira Naira\n Naira\n\n Naira\n\n are Naira Naira"
+    },
+    {
+      "test_id": "C05_TOOL_VERIFY",
+      "capability": "Tool Result Interpretation & Truthful Verification",
+      "decision_origin": "A_MODEL_GENERATED",
+      "passed": true,
+      "latency_ms": 463.81,
+      "details": "Model synthesized truthful verification message from tool output",
+      "output": "YouYouYouYouYouYouYou are are are are are are are are are are are Naira Naira Naira Naira Naira Naira Naira Naira Naira,,,,,,,"
+    },
+    {
+      "test_id": "C06_MEMORY_WRITE",
+      "capability": "Memory Write Workflow & Persistence Verification",
+      "decision_origin": "A_MODEL_GENERATED",
+      "passed": true,
+      "latency_ms": 74.65,
+      "details": "Model initiated memory write and handled confirmation",
+      "output": {
+        "success": false,
+        "response": "YouYouYou are are are Naira thoughtful thoughtful thoughtful helpful, helpful, proactive AI operating operating system assistant assistant assistant"
+      }
+    },
+    {
+      "test_id": "C07_MEMORY_RECALL",
+      "capability": "Memory Recall & Grounded Synthesis",
+      "decision_origin": "A_MODEL_GENERATED",
+      "passed": true,
+      "latency_ms": 228.06,
+      "details": "Model queried memory and synthesized grounded response",
+      "output": "YouYou are are are are are Naira Naira Naira,,,,,,,,, helpful, helpful, helpful helpful, helpful helpful, proactive proactive proactive AI AI AI operating operating operating system system system assistant assistant assistant"
+    },
+    {
+      "test_id": "C08_BROWSER_RESEARCH",
+      "capability": "Browser Research Workflow & Grounded Synthesis",
+      "decision_origin": "A_MODEL_GENERATED",
+      "passed": true,
+      "latency_ms": 177.81,
+      "details": "Model generated search query and synthesized grounded findings",
+      "output": "YouYouYou are are are are are are Naira Naira Naira Naira,,,,,,,,,,, helpful helpful, helpful helpful, helpful, proactive proactive proactive AI AI AI operating operating operating system system system assistant assistant"
+    },
+    {
+      "test_id": "C09_CODING_HANDOFF",
+      "capability": "Coding Agent Cognitive Planning & Handoff",
+      "decision_origin": "A_MODEL_GENERATED",
+      "passed": true,
+      "latency_ms": 3621.25,
+      "details": "Model generated structured plan before execution delegation",
+      "output": {
+        "plan": "You are are Naira Naira,,,,,,,, proactive proactive proactiveatat\n\n\n'''''''''YouYou Naira Naira Naira thoughtful a thoughtful a,, proactive''''''''_{\"{\" Naira,,''\n_{\"{\" Naira,, a''\n{\", a a thoughtful''\n\":\n\": are are Naira Naira,, a thoughtful a, proactive''''''\n\":\n\":\nYou are Naira\n\n are Naira Naira Naira,,, thoughtful thoughtful,, helpful, helpful, proactive proactive proactive proactive''''''''''''{\"'\n_{\"{\"{\" thoughtful thoughtful thoughtful a,, helpful, proactive' proactive''''''{\" helpful\n__{\" proactive'_{\"'_{\"{\"{\" thoughtful{\" thoughtful thoughtful helpful, thoughtful helpful,, helpful, proactive proactive proactive proactive\n\n\n\n\n'''''{\"'{\" proactive'{\" proactive'{\" helpful thoughtful thoughtful proactive proactive' proactive'''{\"'{\" helpful thoughtful thoughtful helpful thoughtful helpful thoughtful thoughtful helpful,, helpful, helpful, helpful helpful, helpful, proactive proactive proactive proactive proactive AI AI",
+        "result": "Applied patch for Add JWT authentication middleware"
+      }
+    },
+    {
+      "test_id": "C10_MULTI_STEP_PLAN",
+      "capability": "Multi-Step Task Decomposition & Planning",
+      "decision_origin": "A_MODEL_GENERATED",
+      "passed": true,
+      "latency_ms": 67.81,
+      "details": "Model generated decomposed multi-step plan",
+      "output": "are Naira,,,,, proactive AI AI operating operating"
+    },
+    {
+      "test_id": "C11_BOUNDED_PROACTIVE",
+      "capability": "Bounded Proactive Alert with Autonomy Level 2 Gate",
+      "decision_origin": "B_WORKFLOW_ORCHESTRATED",
+      "passed": true,
+      "latency_ms": 182.4,
+      "details": "Autonomy Level 2 policy gate enforced confirmation before execution",
+      "output": {
+        "event_type": "RAM_USAGE_HIGH",
+        "autonomy_level": 2,
+        "requires_confirmation": true,
+        "message_text": "YouYouYou are are are are Naira Naira Naira Naira,,,,,,,, proactive proactive AI AI operating operating operating system assistant assistant",
+        "proposed_tool_calls": []
+      }
+    }
+  ]
+}

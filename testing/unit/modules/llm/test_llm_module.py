@@ -1,3 +1,4 @@
+from typing import Any
 """Comprehensive unit tests for the LLM module and DeepSeekProvider."""
 
 from __future__ import annotations
@@ -22,9 +23,7 @@ from backend.modules.llm.llm_module import LLMManager
 from backend.modules.llm.ports.llm_port import LLMPort
 from backend.modules.llm.provider_base import ProviderBase, RetryPolicy
 from backend.modules.llm.safety import SafetyConfig
-from backend.types import LLMResponse, Message, TokenUsage, ToolCall, ToolDef
-
-
+from backend.types import Message, ToolCall, ToolDef
 class TestGenerationConfig:
     def test_defaults(self) -> None:
         gc = GenerationConfig()
@@ -151,11 +150,11 @@ class TestDeepSeekProvider:
     @pytest.mark.asyncio
     async def test_deepseek_provider_generate_stream(self) -> None:
         provider = DeepSeekProvider(api_key="test-naira-key")
-        mock_response = LLMResponse(
+        mock_response = Any(
             text="Hello world!",
             tool_calls=None,
             finish_reason="stop",
-            token_usage=TokenUsage(1, 1, 2),
+            token_usage=Any(1, 1, 2),
             provider="deepseek",
             duration_ms=0.0,
         )
@@ -176,11 +175,11 @@ class TestLLMManager:
         mock_provider = MagicMock(spec=ProviderBase)
         mock_provider.provider_name = "deepseek"
         mock_provider.generate = AsyncMock(
-            return_value=LLMResponse(
+            return_value=Any(
                 text="Manager success",
                 tool_calls=None,
                 finish_reason="stop",
-                token_usage=TokenUsage(1, 1, 2),
+                token_usage=Any(1, 1, 2),
                 provider="deepseek",
                 duration_ms=10.0,
             )

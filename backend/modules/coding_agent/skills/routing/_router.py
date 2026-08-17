@@ -18,7 +18,7 @@ import re
 from backend.modules.coding_agent.skills._config import SkillConfig
 from backend.modules.coding_agent.skills._registry import SkillRegistry
 from backend.modules.coding_agent.skills._skill_port import SkillPort
-from backend.modules.coding_agent.skills.context._models import ProjectContext, SkillContext
+from backend.modules.coding_agent.skills.context._models import ProjectSkillContext
 
 _LOG = logging.getLogger("naira.coding_agent.skills.routing")
 

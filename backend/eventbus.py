@@ -23,7 +23,6 @@ from fnmatch import fnmatch as _fnmatch
 from typing import Any, Callable, Coroutine, Literal
 
 from backend.types import Event, EventPriority
-
 type _SubscriberCallback = Callable[[Event], Coroutine[Any, Any, None]]
 type _EventFilter = Callable[[Event], bool]
 

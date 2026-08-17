@@ -1,0 +1,26 @@
+{
+  "model": {
+    "d_model": 128,
+    "num_layers": 4,
+    "num_heads": 4,
+    "num_kv_heads": 4,
+    "d_ff": 384,
+    "max_seq_len": 512,
+    "norm_eps": 1e-5,
+    "rope_theta": 10000.0,
+    "tie_embeddings": true
+  },
+  "training": {
+    "batch_size": 4,
+    "learning_rate": 5e-4,
+    "min_learning_rate": 1e-5,
+    "weight_decay": 0.01,
+    "num_epochs": 40,
+    "warmup_steps": 10,
+    "grad_clip": 1.0,
+    "eval_interval": 5,
+    "save_interval": 10,
+    "checkpoint_dir": "NairaLLM/training/checkpoints",
+    "log_dir": "NairaLLM/training/logs"
+  }
+}

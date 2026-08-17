@@ -41,7 +41,7 @@ def score_route(
     req_text = request.strip()
     if not req_text:
         return RouteDecision(
-            target=RouteTarget.LLM_CONVERSATION,
+            target=RouteTarget.UNHANDLED,
             confidence=1.0,
             reason="Empty request default fallback",
         )
@@ -81,7 +81,7 @@ def score_route(
                     intent_rate = rate_fn(req_text)
                     if intent_rate < 0.5:
                         return RouteDecision(
-                            target=RouteTarget.LLM_CONVERSATION,
+                            target=RouteTarget.UNHANDLED,
                             confidence=0.7,
                             reason=(
                                 f"FCR matched but demoted due to low analytics success rate "
@@ -97,7 +97,7 @@ def score_route(
 
     # 4. Default fallback to LLM conversation
     return RouteDecision(
-        target=RouteTarget.LLM_CONVERSATION,
+        target=RouteTarget.UNHANDLED,
         confidence=1.0,
         reason="Default LLM conversation path",
     )

@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Any
 """Comprehensive tests for the voice module.
 
 Covers:
@@ -15,7 +17,7 @@ Covers:
 - ModuleInterface protocol conformance
 """
 
-from __future__ import annotations
+
 
 from unittest.mock import MagicMock
 
@@ -41,7 +43,6 @@ from backend.modules.voice import (
 from backend.modules.voice._exceptions import VoiceAudioError
 from backend.modules.voice._exceptions import VoiceNotImplementedError
 from backend.types import ModuleInterface
-
 # =========================================================================
 # AudioData, TranscriptionResult, SynthesisResult, WakeWordResult, VoiceResult
 # =========================================================================

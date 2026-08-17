@@ -1,4 +1,6 @@
 from __future__ import annotations
+from typing import Any
+
 
 import asyncio
 import pytest
@@ -49,8 +51,8 @@ async def test_area_3_llm_dynamic_timeout() -> None:
         def __init__(self) -> None:
             super().__init__(provider_name="dummy", timeout=60)
         async def _call_provider(self, prompt, context, tools):
-            from backend.types import LLMResponse, TokenUsage
-            return LLMResponse("OK", None, "stop", TokenUsage(1, 1, 2), "dummy", 1.0)
+            from backend.types import Any
+            return Any("OK", None, "stop", Any(1, 1, 2), "dummy", 1.0)
         async def _count_tokens_internal(self, text: str) -> int:
             return len(text)
 
@@ -58,8 +60,6 @@ async def test_area_3_llm_dynamic_timeout() -> None:
     assert prov._timeout == 60
     resp = await prov.generate("Hello", [])
     assert resp.text == "OK"
-
-
 from backend.modules.pc_control._production_adapter import ProductionPCControlAdapter
 
 

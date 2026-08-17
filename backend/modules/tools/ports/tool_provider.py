@@ -1,10 +1,12 @@
+from __future__ import annotations
+from typing import Any
 """
 ToolProvider — abstract port for pluggable tool implementations.
 
 20_Dependency_Rules.md §2 — Port/Adapter pattern.
 """
 
-from __future__ import annotations
+
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
@@ -13,8 +15,6 @@ if TYPE_CHECKING:
     from backend.modules.tools._definition import ToolDefinition
 
 from backend.types import ToolResult
-
-
 class ToolProvider(ABC):
     """Abstract port that concrete tool adapters must implement.
 

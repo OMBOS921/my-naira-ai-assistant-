@@ -1,3 +1,4 @@
+from typing import Any
 """
 ConversationManager — the single public class for the conversation module.
 
@@ -18,7 +19,6 @@ from backend.modules.conversation._pipeline import ConversationPipeline
 from backend.modules.conversation._router import ConversationRouter
 from backend.modules.conversation._session import ConversationSession
 from backend.types import UserRequest, UserResponse
-
 _LOG = logging.getLogger("naira.conversation")
 
 

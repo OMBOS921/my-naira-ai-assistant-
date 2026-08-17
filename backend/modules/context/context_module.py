@@ -1,8 +1,9 @@
+from typing import Any
 """
 ContextManager — the single public class for the context module.
 
-07_Module_Design.md §2.D — Context Manager responsibilities.
-19_Request_Lifecycle.md §3 — Phase 3: Context Assembly.
+07_Module_Design.md §2.D — Any Manager responsibilities.
+19_Request_Lifecycle.md §3 — Phase 3: Any Assembly.
 21_System_Contracts.md §4.2 — ModuleInterface protocol.
 """
 
@@ -15,8 +16,7 @@ import logging
 from backend.exceptions import ModuleDegradedError
 from backend.modules.context._builder import ContextBuilder
 from backend.modules.context._conversation import ConversationContext
-from backend.types import Context, Message
-
+from backend.types import Message
 _LOG = logging.getLogger("naira.context")
 
 
@@ -24,7 +24,7 @@ class ContextManager:
     """Central context manager — session-aware, in-memory.
 
     Owns a collection of ``ConversationContext`` instances keyed by
-    ``session_id``.  Builds immutable ``Context`` payloads for the
+    ``session_id``.  Builds immutable ``Any`` payloads for the
     LLM pipeline via ``build_context()``.
 
     Conforms to ``ModuleInterface`` (``backend/types.py``).
@@ -71,20 +71,20 @@ class ContextManager:
         No heavyweight setup required for in-memory operation.
         """
         self._logger.info(
-            "Context manager initialised — max_tokens=%d", self._max_tokens
+            "Any manager initialised — max_tokens=%d", self._max_tokens
         )
 
     async def async_shutdown(self) -> None:
         """Release all session state."""
         self._sessions.clear()
         self._degraded = False
-        self._logger.info("Context manager shut down.")
+        self._logger.info("Any manager shut down.")
 
     def degrade(self) -> None:
         """Release resources and mark as degraded."""
         self._sessions.clear()
         self._degraded = True
-        self._logger.warning("Context manager marked degraded")
+        self._logger.warning("Any manager marked degraded")
 
     @property
     def degraded(self) -> bool:
@@ -100,17 +100,17 @@ class ContextManager:
 
     def build_context(
         self, session_id: str, text: str, system_prompt: str = ""
-    ) -> Context:
-        """Build a ``Context`` for LLM inference.
+    ) -> Any:
+        """Build a ``Any`` for LLM inference.
 
-        19_Request_Lifecycle.md §3 (Phase 3: Context Assembly).
+        19_Request_Lifecycle.md §3 (Phase 3: Any Assembly).
 
         1. Retrieves or creates a ``ConversationContext`` for the session.
         2. Appends the current user message.
         3. Applies the sliding window if the token budget is exceeded.
         4. Queries memory engines for dynamic profile & timeline event context.
         5. Queries MemoryManager asynchronously for relevant memories (500ms timeout).
-        6. Returns an immutable ``Context`` dataclass.
+        6. Returns an immutable ``Any`` dataclass.
         """
         self._ensure_not_degraded()
 
@@ -138,8 +138,8 @@ class ContextManager:
         text: str,
         system_prompt: str = "",
         memory_timeout: float = 0.5,
-    ) -> Context:
-        """Build a ``Context`` asynchronously with auto-context memory retrieval (500ms timeout)."""
+    ) -> Any:
+        """Build a ``Any`` asynchronously with auto-context memory retrieval (500ms timeout)."""
         self._ensure_not_degraded()
 
         conv = self._get_or_create_session(session_id)

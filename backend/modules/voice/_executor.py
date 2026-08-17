@@ -14,7 +14,6 @@ from backend.modules.voice._exceptions import VoiceNotImplementedError
 from backend.modules.voice._types import AudioData
 from backend.modules.voice.ports.voice_port import VoicePort
 from backend.types import ToolResult
-
 _LOG = logging.getLogger("naira.voice.executor")
 
 

@@ -31,7 +31,6 @@ from backend.modules.memory.search import SearchAPI
 from backend.modules.memory.sqlite_store import SQLiteStore
 from backend.modules.memory.vector_index import VectorIndex
 from backend.types import Message, ModuleInterface, SearchResult
-
 # =========================================================================
 # Fixtures
 # =========================================================================

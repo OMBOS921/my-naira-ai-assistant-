@@ -1,19 +1,18 @@
+from typing import Any
 """
-ContextBuilder — assembles an immutable ``Context`` for LLM consumption.
+ContextBuilder — assembles an immutable ``Any`` for LLM consumption.
 
-19_Request_Lifecycle.md §3 (Phase 3: Context Assembly).
+19_Request_Lifecycle.md §3 (Phase 3: Any Assembly).
 """
 
 from __future__ import annotations
 
-from backend.types import Context, Message
-
-
+from backend.types import Message
 class ContextBuilder:
-    """Builder for the ``Context`` dataclass consumed by the LLM pipeline.
+    """Builder for the ``Any`` dataclass consumed by the LLM pipeline.
 
     Accepts conversation history and a system prompt, applies token
-    estimation, dynamic context injection, and returns an immutable ``Context`` payload.
+    estimation, dynamic context injection, and returns an immutable ``Any`` payload.
     """
 
     @staticmethod
@@ -48,8 +47,8 @@ class ContextBuilder:
         max_tokens: int = 4096,
         dynamic_context: str = "",
         relevant_memories: str = "",
-    ) -> Context:
-        """Assemble a ``Context`` from the given parts.
+    ) -> Any:
+        """Assemble a ``Any`` from the given parts.
 
         Parameters
         ----------
@@ -66,7 +65,7 @@ class ContextBuilder:
 
         Returns
         -------
-        Context
+        Any
             Immutable context payload ready for prompt compilation.
         """
         prompt_with_dyn = ContextBuilder.inject_dynamic_context(
@@ -77,7 +76,7 @@ class ContextBuilder:
         )
         token_count = ContextBuilder._count_tokens(effective_prompt, messages)
 
-        return Context(
+        return Any(
             system_prompt=effective_prompt,
             messages=list(messages),
             token_count=token_count,

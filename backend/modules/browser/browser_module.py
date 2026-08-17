@@ -25,7 +25,6 @@ from backend.modules.browser._search import BrowserSearch
 from backend.modules.browser._session import BrowserSession
 from backend.modules.browser.ports.browser_port import BrowserPort
 from backend.types import ToolResult
-
 _LOG = logging.getLogger("naira.browser")
 
 

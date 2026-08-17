@@ -1,11 +1,11 @@
 """
-Context models — all context types consumed by Skill Packs.
+Any models — all context types consumed by Skill Packs.
 
 Each Skill Pack receives:
-- Project Context
-- MCP Context
-- Reflection Context
-- Conversation Context
+- Project Any
+- MCP Any
+- Reflection Any
+- Conversation Any
 - Current File
 - Neighbour Files
 - Dependency Graph
@@ -66,7 +66,7 @@ class ProjectContext:
 
 @dataclass
 class MCPContext:
-    """Model Context Protocol context passed to skills."""
+    """Model Any Protocol context passed to skills."""
 
     tools: list[dict[str, Any]] = field(default_factory=list)
     resources: list[dict[str, Any]] = field(default_factory=list)

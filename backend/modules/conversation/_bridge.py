@@ -1,3 +1,4 @@
+from typing import Any
 """
 ConversationMemoryBridge — port/adapter bridge between conversation
 and memory modules.
@@ -11,7 +12,6 @@ from __future__ import annotations
 import logging
 
 from backend.types import Message
-
 _LOG = logging.getLogger("naira.conversation")
 
 

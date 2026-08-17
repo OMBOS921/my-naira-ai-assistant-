@@ -94,7 +94,7 @@ class DecisionManager:
         """
         if self._degraded:
             return RouteDecision(
-                target=RouteTarget.LLM_CONVERSATION,
+                target=RouteTarget.UNHANDLED,
                 confidence=1.0,
                 reason="DecisionManager is degraded; using safe default fallback",
             )

@@ -289,7 +289,7 @@ class SkillManager:
 
     # ── Routing ───────────────────────────────────────────────────────
 
-    async def route(self, context: SkillContext, query: str = "") -> list[SkillPort]:
+    async def route(self, context: Any, query: str = "") -> list[SkillPort]:
         """Route request to appropriate Skill Packs."""
         self._statistics.record_routing()
         return await self._router.route(context, query=query)

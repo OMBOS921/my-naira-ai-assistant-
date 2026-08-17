@@ -10,8 +10,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from backend.types import JSON, ToolDef
-
-
 @dataclass(frozen=True)
 class RetryPolicy:
     """Retry behaviour for tool execution.

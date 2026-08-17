@@ -1,8 +1,9 @@
+from typing import Any
 """
 ConversationContext — in-memory conversation history for one session.
 
 21_System_Contracts.md §16 — Memory Contracts.
-19_Request_Lifecycle.md §3 — Phase 3: Context Assembly.
+19_Request_Lifecycle.md §3 — Phase 3: Any Assembly.
 
 No database persistence.  All state lives in the instance for the
 duration of the current session.
@@ -13,7 +14,6 @@ from __future__ import annotations
 import logging
 
 from backend.types import Message
-
 _LOG = logging.getLogger("naira.context")
 
 

@@ -11,8 +11,6 @@ from __future__ import annotations
 from backend.modules.memory.sqlite_store import SQLiteStore
 from backend.modules.memory.vector_index import VectorIndex
 from backend.types import SearchResult
-
-
 class SearchAPI:
     """Combined search across SQLite conversation store and vector index.
 

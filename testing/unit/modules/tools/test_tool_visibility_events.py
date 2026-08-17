@@ -11,8 +11,6 @@ from backend.eventbus import EventBus
 from backend.modules.tools import ToolDefinition, ToolManager
 from backend.runtime.tool_router import ToolRouter
 from backend.types import ToolCall
-
-
 @pytest.mark.asyncio
 async def test_tool_visibility_events_in_tool_manager() -> None:
     event_bus = EventBus()

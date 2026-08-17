@@ -35,7 +35,6 @@ from backend.modules.security.ports.security_port import SecurityPort
 from backend.modules.security.security_module import SecurityManager
 from backend.modules.settings._config import AppConfig, SecurityConfig
 from backend.types import ToolResult
-
 # =========================================================================
 # Fixtures
 # =========================================================================

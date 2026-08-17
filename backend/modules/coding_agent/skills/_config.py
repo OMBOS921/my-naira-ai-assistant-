@@ -58,7 +58,7 @@ class SkillConfig:
     log_routing: bool = True
     log_composition: bool = True
 
-    # ── Context ───────────────────────────────────────────────────────
+    # ── Any ───────────────────────────────────────────────────────
     max_neighbour_files: int = 10
     max_context_size: int = 65536
 

@@ -30,7 +30,6 @@ from backend.modules.voice.providers._stt_port import STTPort
 from backend.modules.voice.providers._tts_port import TTSPort
 from backend.modules.voice.providers._wake_word_port import WakeWordPort
 from backend.types import ToolResult
-
 _LOG = logging.getLogger("naira.voice")
 
 

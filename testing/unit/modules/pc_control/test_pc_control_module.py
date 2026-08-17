@@ -44,7 +44,6 @@ from backend.modules.pc_control._exceptions import (
 from backend.modules.pc_control._executor import PCControlExecutor
 from backend.modules.pc_control._local_adapter import LocalPCControlAdapter
 from backend.types import ModuleInterface
-
 # =========================================================================
 # Dataclass tests
 # =========================================================================

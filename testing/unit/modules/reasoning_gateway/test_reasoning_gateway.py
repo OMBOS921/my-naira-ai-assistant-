@@ -19,8 +19,6 @@ from backend.modules.reasoning_gateway import (
 )
 from backend.runtime._runtime_manager import RuntimeManager
 from backend.types import UserRequest, UserResponse
-
-
 class DummyMemoryManager:
     """Mock memory manager for testing memory lookup evaluation."""
 

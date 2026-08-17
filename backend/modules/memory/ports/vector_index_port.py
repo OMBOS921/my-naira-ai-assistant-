@@ -9,8 +9,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from backend.types import SearchResult
-
-
 class VectorIndexPort(ABC):
     """Port for keyword-based semantic indexing and search.
 

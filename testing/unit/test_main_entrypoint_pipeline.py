@@ -10,8 +10,6 @@ from backend.eventbus import EventBus
 from backend.orchestrator import FSMState, Orchestrator
 from backend.modules.settings import AppConfig, EnvironmentSnapshot
 from backend.types import UserRequest, UserResponse
-
-
 import time
 import uuid
 

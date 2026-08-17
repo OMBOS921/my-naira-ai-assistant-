@@ -1,0 +1,2510 @@
+[
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 801,
+    "name": "browser_navigate",
+    "description": "Navigate to a URL and return the page content",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "The URL to navigate to"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "url"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 819,
+    "name": "browser_search",
+    "description": "Search the web for a query",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Search query"
+        },
+        "max_results": {
+          "type": "integer",
+          "description": "Max results"
+        }
+      },
+      "required": [
+        "query"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 837,
+    "name": "browser_click",
+    "description": "Click an element matching the CSS selector on the active browser page",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string",
+          "description": "CSS selector of the element to click"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "selector"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 855,
+    "name": "browser_fill",
+    "description": "Fill an input field matching the CSS selector with text on the active browser page",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string",
+          "description": "CSS selector of the input field"
+        },
+        "text": {
+          "type": "string",
+          "description": "Text value to fill into the input field"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "selector",
+        "text"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 874,
+    "name": "browser_scroll",
+    "description": "Scroll the active browser page by given horizontal and vertical pixel deltas",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "delta_x": {
+          "type": "integer",
+          "description": "Horizontal scroll offset in pixels (default 0)"
+        },
+        "delta_y": {
+          "type": "integer",
+          "description": "Vertical scroll offset in pixels (default 500)"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      }
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 892,
+    "name": "browser_extract_text",
+    "description": "Extract visible text content from the active page or a specific CSS selector",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string",
+          "description": "Optional CSS selector to extract text from"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      }
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 909,
+    "name": "browser_screenshot",
+    "description": "Capture a screenshot of the active browser page or a specific URL",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Optional URL to capture screenshot of"
+        },
+        "save_path": {
+          "type": "string",
+          "description": "Optional file path to save screenshot"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      }
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 927,
+    "name": "browser_new_tab",
+    "description": "Open a new browser tab with an optional URL",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Initial URL for new tab"
+        }
+      }
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 943,
+    "name": "browser_close_tab",
+    "description": "Close a browser tab by tab ID",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "tab_id": {
+          "type": "string",
+          "description": "ID of tab to close"
+        }
+      }
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 959,
+    "name": "browser_list_tabs",
+    "description": "List all open browser tabs",
+    "parameters": {
+      "type": "object",
+      "properties": {}
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 970,
+    "name": "browser_switch_tab",
+    "description": "Switch active browser tab",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "tab_id": {
+          "type": "string",
+          "description": "ID of tab to switch to"
+        }
+      },
+      "required": [
+        "tab_id"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 987,
+    "name": "browser_back",
+    "description": "Navigate back in browser history",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      }
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1003,
+    "name": "browser_forward",
+    "description": "Navigate forward in browser history",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      }
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1019,
+    "name": "browser_reload",
+    "description": "Reload the current browser page",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      }
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1035,
+    "name": "browser_get_cookies",
+    "description": "Get browser cookies",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "urls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional list of URLs"
+        }
+      }
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1055,
+    "name": "browser_set_cookies",
+    "description": "Set browser cookies",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "cookies": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "description": "List of cookie objects"
+        }
+      },
+      "required": [
+        "cookies"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1076,
+    "name": "browser_clear_cookies",
+    "description": "Clear all browser cookies",
+    "parameters": {
+      "type": "object",
+      "properties": {}
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1087,
+    "name": "browser_upload_file",
+    "description": "Upload a file into a input element matching CSS selector",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string",
+          "description": "CSS selector of file input"
+        },
+        "file_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "File path(s) to upload"
+        }
+      },
+      "required": [
+        "selector",
+        "file_paths"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1109,
+    "name": "browser_press_key",
+    "description": "Press a key on the active page or element",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Key name to press"
+        },
+        "selector": {
+          "type": "string",
+          "description": "Optional CSS selector"
+        }
+      },
+      "required": [
+        "key"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1127,
+    "name": "browser_wait_for_selector",
+    "description": "Wait for an element matching CSS selector to reach target state",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string",
+          "description": "CSS selector to wait for"
+        },
+        "state": {
+          "type": "string",
+          "description": "State: visible, hidden, attached, detached"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "selector"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1146,
+    "name": "browser_select_option",
+    "description": "Select option(s) in a dropdown element",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string",
+          "description": "CSS selector of dropdown"
+        },
+        "value": {
+          "type": "string",
+          "description": "Value to select"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "selector",
+        "value"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1165,
+    "name": "browser_hover",
+    "description": "Hover mouse cursor over an element",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string",
+          "description": "CSS selector"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "selector"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1183,
+    "name": "browser_right_click",
+    "description": "Right-click an element matching CSS selector",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string",
+          "description": "CSS selector"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "selector"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1201,
+    "name": "browser_drag_and_drop",
+    "description": "Drag source element and drop onto target element",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "source_selector": {
+          "type": "string",
+          "description": "Source CSS selector"
+        },
+        "target_selector": {
+          "type": "string",
+          "description": "Target CSS selector"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "source_selector",
+        "target_selector"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1220,
+    "name": "browser_check",
+    "description": "Check a checkbox or radio element",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string",
+          "description": "CSS selector"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "selector"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1238,
+    "name": "browser_uncheck",
+    "description": "Uncheck a checkbox element",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string",
+          "description": "CSS selector"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "selector"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1256,
+    "name": "browser_export_pdf",
+    "description": "Export the active browser page to a PDF file",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "save_path": {
+          "type": "string",
+          "description": "Optional file path to save PDF"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      }
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1273,
+    "name": "browser_download_file",
+    "description": "Trigger or wait for a file download in the browser (security-gated)",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      }
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1289,
+    "name": "browser_execute_js",
+    "description": "Execute arbitrary JavaScript on the active browser page (security-gated)",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "script": {
+          "type": "string",
+          "description": "JavaScript code to execute"
+        }
+      },
+      "required": [
+        "script"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1306,
+    "name": "browser_get_local_storage",
+    "description": "Get browser local storage content",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Optional storage key"
+        }
+      }
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1322,
+    "name": "browser_set_local_storage",
+    "description": "Set a key-value pair in browser local storage (security-gated)",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Storage key"
+        },
+        "value": {
+          "type": "string",
+          "description": "Storage value"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1340,
+    "name": "browser_clear_local_storage",
+    "description": "Clear all local storage (security-gated)",
+    "parameters": {
+      "type": "object",
+      "properties": {}
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1351,
+    "name": "browser_get_session_storage",
+    "description": "Get browser session storage content",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Optional storage key"
+        }
+      }
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1367,
+    "name": "browser_set_session_storage",
+    "description": "Set a key-value pair in browser session storage (security-gated)",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Storage key"
+        },
+        "value": {
+          "type": "string",
+          "description": "Storage value"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ]
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/browser/browser_module.py",
+    "line": 1385,
+    "name": "browser_clear_session_storage",
+    "description": "Clear all session storage (security-gated)",
+    "parameters": {
+      "type": "object",
+      "properties": {}
+    },
+    "category": "browser",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1478,
+    "name": "coding_agent_execute_task",
+    "description": "Execute a coding task with the coding agent",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "task_description": {
+          "type": "string",
+          "description": "Description of the task to execute"
+        }
+      },
+      "required": [
+        "task_description"
+      ]
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1498,
+    "name": "coding_agent_analyze_project",
+    "description": "Analyze a project directory structure and dependencies",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to the project root"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1518,
+    "name": "coding_agent_read_file",
+    "description": "Read the contents of a file",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to the file"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1535,
+    "name": "coding_agent_write_file",
+    "description": "Write content to a file",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to the file"
+        },
+        "content": {
+          "type": "string",
+          "description": "Content to write"
+        }
+      },
+      "required": [
+        "path",
+        "content"
+      ]
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1553,
+    "name": "coding_agent_detect_language",
+    "description": "Detect the programming language of a file",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to the file"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1570,
+    "name": "coding_agent_git_status",
+    "description": "Get the git status of a repository",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "cwd": {
+          "type": "string",
+          "description": "Repository directory"
+        }
+      },
+      "required": []
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1588,
+    "name": "coding_agent_scan",
+    "description": "Scan code or a file for security vulnerabilities",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to file or project to scan"
+        },
+        "code": {
+          "type": "string",
+          "description": "Code snippet to scan (inline)"
+        }
+      },
+      "required": []
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1612,
+    "name": "coding_agent_install_package",
+    "description": "Install a Python package automatically",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "package_name": {
+          "type": "string",
+          "description": "Name of the package to install"
+        },
+        "manager": {
+          "type": "string",
+          "description": "Package manager (pip, npm, etc.)"
+        },
+        "version": {
+          "type": "string",
+          "description": "Optional version specifier"
+        }
+      },
+      "required": [
+        "package_name"
+      ]
+    },
+    "category": "coding_agent",
+    "timeout_seconds": 120.0
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1640,
+    "name": "coding_agent_suggest",
+    "description": "Generate a ghost text (compose) suggestion for a file edit",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Path to the file"
+        },
+        "suggested_text": {
+          "type": "string",
+          "description": "Suggested replacement text"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the suggestion"
+        }
+      },
+      "required": [
+        "file_path",
+        "suggested_text"
+      ]
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1668,
+    "name": "coding_agent_costs",
+    "description": "Get cost and token usage summary",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1683,
+    "name": "coding_agent_list_skills",
+    "description": "List available Skill Packs and their status",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1698,
+    "name": "coding_agent_pipeline",
+    "description": "Start or check a CI/CD pipeline run",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "description": "Action: start, status"
+        },
+        "pipeline_name": {
+          "type": "string",
+          "description": "Pipeline name"
+        },
+        "commit_sha": {
+          "type": "string",
+          "description": "Commit SHA"
+        }
+      },
+      "required": [
+        "action",
+        "pipeline_name"
+      ]
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1726,
+    "name": "vscode_open_folder",
+    "description": "Open a folder in VS Code",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "folder_path": {
+          "type": "string",
+          "description": "Path to the folder to open"
+        },
+        "new_window": {
+          "type": "boolean",
+          "description": "Whether to open in a new window"
+        }
+      },
+      "required": [
+        "folder_path"
+      ]
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1750,
+    "name": "vscode_open_file",
+    "description": "Open a file in VS Code at optional line number",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Path to the file to open"
+        },
+        "line_number": {
+          "type": "integer",
+          "description": "Line number to navigate to"
+        }
+      },
+      "required": [
+        "file_path"
+      ]
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1774,
+    "name": "vscode_create_project",
+    "description": "Create project directory structure and open in VS Code",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "base_path": {
+          "type": "string",
+          "description": "Base directory for the project"
+        },
+        "structure": {
+          "type": "object",
+          "description": "Nested dictionary representing directory layout and files"
+        }
+      },
+      "required": [
+        "base_path",
+        "structure"
+      ]
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1798,
+    "name": "vscode_edit_file",
+    "description": "Edit a file in a project with optional backup",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Path to the file to edit"
+        },
+        "new_content": {
+          "type": "string",
+          "description": "New content for the file"
+        },
+        "create_backup": {
+          "type": "boolean",
+          "description": "Whether to create a backup file (.bak)"
+        }
+      },
+      "required": [
+        "file_path",
+        "new_content"
+      ]
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1826,
+    "name": "vscode_run_command",
+    "description": "Run a command in integrated terminal",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "Command to execute"
+        },
+        "cwd": {
+          "type": "string",
+          "description": "Current working directory for command"
+        }
+      },
+      "required": [
+        "command"
+      ]
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/coding_agent/coding_agent_module.py",
+    "line": 1850,
+    "name": "execute_local_python",
+    "description": "Execute a complete Python script locally and return terminal output (stdout/stderr)",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "script_code": {
+          "type": "string",
+          "description": "The complete Python script code to execute"
+        }
+      },
+      "required": [
+        "script_code"
+      ]
+    },
+    "category": "coding_agent",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/integrations/integrations_module.py",
+    "line": 297,
+    "name": "github_list_repos",
+    "description": "List repositories accessible by authenticated GitHub user",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "description": "Max repositories to return"
+        }
+      },
+      "required": []
+    },
+    "category": "integrations",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/integrations/integrations_module.py",
+    "line": 314,
+    "name": "github_create_issue",
+    "description": "Create an issue in a GitHub repository",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "repo_full_name": {
+          "type": "string",
+          "description": "Full repo name (e.g. owner/repo)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Issue title"
+        },
+        "body": {
+          "type": "string",
+          "description": "Issue body markdown"
+        }
+      },
+      "required": [
+        "repo_full_name",
+        "title"
+      ]
+    },
+    "category": "integrations",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/integrations/integrations_module.py",
+    "line": 333,
+    "name": "github_push_file",
+    "description": "Push or update a file in a GitHub repository",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "repo_full_name": {
+          "type": "string",
+          "description": "Full repo name (e.g. owner/repo)"
+        },
+        "file_path": {
+          "type": "string",
+          "description": "Relative file path in repo"
+        },
+        "content": {
+          "type": "string",
+          "description": "File text content"
+        },
+        "commit_message": {
+          "type": "string",
+          "description": "Commit message"
+        }
+      },
+      "required": [
+        "repo_full_name",
+        "file_path",
+        "content",
+        "commit_message"
+      ]
+    },
+    "category": "integrations",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/integrations/integrations_module.py",
+    "line": 353,
+    "name": "calendar_upcoming_events",
+    "description": "List upcoming events from Google Calendar",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "max_results": {
+          "type": "integer",
+          "description": "Max events to list"
+        }
+      },
+      "required": []
+    },
+    "category": "integrations",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/integrations/integrations_module.py",
+    "line": 370,
+    "name": "calendar_create_event",
+    "description": "Create an event on Google Calendar",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Event title"
+        },
+        "start_time_iso": {
+          "type": "string",
+          "description": "Start ISO datetime string"
+        },
+        "end_time_iso": {
+          "type": "string",
+          "description": "End ISO datetime string"
+        },
+        "description": {
+          "type": "string",
+          "description": "Event description"
+        }
+      },
+      "required": [
+        "title",
+        "start_time_iso",
+        "end_time_iso"
+      ]
+    },
+    "category": "integrations",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/integrations/integrations_module.py",
+    "line": 390,
+    "name": "email_recent",
+    "description": "List recent emails from Gmail inbox",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "max_results": {
+          "type": "integer",
+          "description": "Max emails to list"
+        }
+      },
+      "required": []
+    },
+    "category": "integrations",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/integrations/integrations_module.py",
+    "line": 407,
+    "name": "email_send",
+    "description": "Send an email via Gmail",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "to": {
+          "type": "string",
+          "description": "Recipient email address"
+        },
+        "subject": {
+          "type": "string",
+          "description": "Email subject line"
+        },
+        "body": {
+          "type": "string",
+          "description": "Email message body"
+        }
+      },
+      "required": [
+        "to",
+        "subject",
+        "body"
+      ]
+    },
+    "category": "integrations",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/integrations/integrations_module.py",
+    "line": 426,
+    "name": "email_unread_count",
+    "description": "Get the total count of unread emails in Gmail",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "category": "integrations",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/memory/memory_module.py",
+    "line": 41,
+    "name": "remember_fact",
+    "description": "Save an important user fact, preference, or project detail into long-term memory.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "description": "Category, key, or topic of the fact (e.g., 'user_preference', 'project_name', 'favorite_color')."
+        },
+        "fact": {
+          "type": "string",
+          "description": "The exact fact, detail, or preference to remember."
+        }
+      },
+      "required": [
+        "topic",
+        "fact"
+      ]
+    },
+    "category": "memory"
+  },
+  {
+    "path": "backend/modules/memory/memory_module.py",
+    "line": 63,
+    "name": "search_memory",
+    "description": "Search the long-term memory/vector database for previously discussed facts, code, or context.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Search term or natural language query to look up in long-term memory."
+        },
+        "search_type": {
+          "type": "string",
+          "enum": [
+            "all",
+            "conversations",
+            "timeline",
+            "semantic",
+            "profile"
+          ],
+          "description": "Optional search filter type (defaults to 'all').",
+          "default": "all"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum number of search results to return (default 5).",
+          "default": 5
+        }
+      },
+      "required": [
+        "query"
+      ]
+    },
+    "category": "memory"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 651,
+    "name": "pc_mouse",
+    "description": "Control the mouse cursor \u2014 move, click, double-click, right-click, drag, scroll",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "get_position",
+            "move_to",
+            "click",
+            "double_click",
+            "right_click",
+            "drag",
+            "scroll"
+          ],
+          "description": "Mouse action to perform"
+        },
+        "x": {
+          "type": "integer",
+          "description": "X coordinate"
+        },
+        "y": {
+          "type": "integer",
+          "description": "Y coordinate"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 675,
+    "name": "pc_keyboard",
+    "description": "Simulate keyboard input \u2014 type text, press keys, send hotkeys",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "type_text",
+            "press_key",
+            "hotkey"
+          ],
+          "description": "Keyboard action to perform"
+        },
+        "text": {
+          "type": "string",
+          "description": "Text to type"
+        },
+        "key": {
+          "type": "string",
+          "description": "Key name to press"
+        },
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Keys for hotkey combination"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 698,
+    "name": "pc_clipboard",
+    "description": "Read from or write to the system clipboard",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "get_text",
+            "set_text",
+            "clear"
+          ],
+          "description": "Clipboard action to perform"
+        },
+        "text": {
+          "type": "string",
+          "description": "Text to set on clipboard"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 718,
+    "name": "pc_filesystem",
+    "description": "List, read, write, create, edit, open, or delete files and directories",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "list_directory",
+            "read_file",
+            "write_file",
+            "delete_file",
+            "create_directory",
+            "delete_directory",
+            "open_file",
+            "open_folder",
+            "open"
+          ],
+          "description": "Filesystem action to perform"
+        },
+        "path": {
+          "type": "string",
+          "description": "File or directory path"
+        },
+        "content": {
+          "type": "string",
+          "description": "Content to write"
+        },
+        "recursive": {
+          "type": "boolean",
+          "description": "Delete recursively"
+        }
+      },
+      "required": [
+        "action",
+        "path"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 744,
+    "name": "pc_window",
+    "description": "List, focus, resize, move, minimise, maximise, or close windows",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "list",
+            "get_active",
+            "focus",
+            "minimize",
+            "maximize",
+            "close",
+            "resize",
+            "move"
+          ],
+          "description": "Window action to perform"
+        },
+        "handle": {
+          "type": "integer",
+          "description": "Window handle"
+        },
+        "width": {
+          "type": "integer",
+          "description": "New width"
+        },
+        "height": {
+          "type": "integer",
+          "description": "New height"
+        },
+        "x": {
+          "type": "integer",
+          "description": "New X position"
+        },
+        "y": {
+          "type": "integer",
+          "description": "New Y position"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 768,
+    "name": "pc_process",
+    "description": "List running processes or terminate a process by PID",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "list",
+            "kill"
+          ],
+          "description": "Process action to perform"
+        },
+        "pid": {
+          "type": "integer",
+          "description": "Process ID to kill"
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Force kill"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 786,
+    "name": "pc_launch_application",
+    "description": "Launch an application by path with optional arguments",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "app_path": {
+          "type": "string",
+          "description": "Path to executable"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Command-line arguments"
+        },
+        "working_dir": {
+          "type": "string",
+          "description": "Working directory"
+        }
+      },
+      "required": [
+        "app_path"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 807,
+    "name": "pc_notification",
+    "description": "Show a desktop notification",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Notification title"
+        },
+        "message": {
+          "type": "string",
+          "description": "Notification body"
+        },
+        "duration": {
+          "type": "number",
+          "description": "Display duration (seconds)"
+        }
+      },
+      "required": [
+        "title",
+        "message"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 824,
+    "name": "pc_power",
+    "description": "Shut down, restart, sleep, hibernate, or lock the system",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "shutdown",
+            "restart",
+            "sleep",
+            "hibernate",
+            "lock"
+          ],
+          "description": "Power action to perform"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 840,
+    "name": "pc_volume",
+    "description": "Get or set the system volume level, mute or unmute audio",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "get",
+            "set",
+            "mute",
+            "unmute"
+          ],
+          "description": "Volume action to perform"
+        },
+        "level": {
+          "type": "number",
+          "description": "Volume level (0.0 to 1.0)"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 860,
+    "name": "pc_screen",
+    "description": "Get screen size, capture screenshots, or list displays",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "get_size",
+            "capture",
+            "list_displays"
+          ],
+          "description": "Screen action to perform"
+        },
+        "region": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "Capture region [left, top, width, height]"
+        },
+        "save_path": {
+          "type": "string",
+          "description": "Save screenshot to file"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 885,
+    "name": "pc_wifi",
+    "description": "Manage the Wi-Fi radio \u2014 enable/disable, list networks, connect",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "set_power",
+            "get_power",
+            "list_networks",
+            "connect"
+          ],
+          "description": "Wi-Fi action to perform"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether Wi-Fi is enabled"
+        },
+        "ssid": {
+          "type": "string",
+          "description": "Network name to connect to"
+        },
+        "password": {
+          "type": "string",
+          "description": "Network password"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 904,
+    "name": "pc_bluetooth",
+    "description": "Manage the Bluetooth radio \u2014 enable/disable, list devices, pair",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "set_power",
+            "get_power",
+            "list_devices",
+            "pair"
+          ],
+          "description": "Bluetooth action to perform"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether Bluetooth is enabled"
+        },
+        "device_address": {
+          "type": "string",
+          "description": "Device MAC address"
+        },
+        "pin": {
+          "type": "string",
+          "description": "Pairing PIN"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 923,
+    "name": "pc_display",
+    "description": "Manage display settings \u2014 brightness, resolution, night light, dark mode",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "get_brightness",
+            "set_brightness",
+            "get_resolution",
+            "set_resolution",
+            "list_resolutions",
+            "set_night_light",
+            "get_night_light",
+            "set_dark_mode",
+            "get_dark_mode"
+          ],
+          "description": "Display action to perform"
+        },
+        "level": {
+          "type": "integer",
+          "description": "Brightness level (0-100)"
+        },
+        "width": {
+          "type": "integer",
+          "description": "Resolution width"
+        },
+        "height": {
+          "type": "integer",
+          "description": "Resolution height"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Toggle night light / dark mode"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 948,
+    "name": "pc_system_settings",
+    "description": "Manage airplane mode and Do-Not-Disturb notification settings",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "set_airplane_mode",
+            "get_airplane_mode",
+            "set_do_not_disturb",
+            "get_do_not_disturb"
+          ],
+          "description": "System settings action to perform"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Toggle the setting"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 968,
+    "name": "pc_software",
+    "description": "List installed software, install/uninstall packages, or check for updates",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "list_installed",
+            "install",
+            "uninstall",
+            "check_update"
+          ],
+          "description": "Software action to perform"
+        },
+        "package": {
+          "type": "string",
+          "description": "Package name"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 985,
+    "name": "pc_account",
+    "description": "Manage local user accounts \u2014 list, create, enable/disable, modify group membership",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "list_users",
+            "get_current_user",
+            "create_user",
+            "set_enabled",
+            "modify_groups"
+          ],
+          "description": "Account action to perform"
+        },
+        "username": {
+          "type": "string",
+          "description": "Username"
+        },
+        "password": {
+          "type": "string",
+          "description": "Account password"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether the account is enabled"
+        },
+        "add": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Groups to add the user to"
+        },
+        "remove": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Groups to remove the user from"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 1014,
+    "name": "mouse_click",
+    "description": "Click mouse at screen coordinates X and Y",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "integer",
+          "description": "X coordinate"
+        },
+        "y": {
+          "type": "integer",
+          "description": "Y coordinate"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 1027,
+    "name": "keyboard_type",
+    "description": "Type text on keyboard into focused window",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Text to type"
+        }
+      },
+      "required": [
+        "text"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 1039,
+    "name": "window_focus",
+    "description": "Bring window to front and focus by window handle",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "handle": {
+          "type": "integer",
+          "description": "Window handle integer"
+        }
+      },
+      "required": [
+        "handle"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 1051,
+    "name": "mouse_move_to",
+    "description": "Move mouse cursor smoothly to screen coordinates X and Y",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "integer",
+          "description": "X coordinate"
+        },
+        "y": {
+          "type": "integer",
+          "description": "Y coordinate"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ]
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 1064,
+    "name": "screen_capture",
+    "description": "Capture a screenshot of the active desktop display",
+    "parameters": {
+      "type": "object",
+      "properties": {}
+    },
+    "category": "pc_control",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 1077,
+    "name": "name",
+    "description": "description",
+    "parameters": "parameters",
+    "category": "category",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/security/security_module.py",
+    "line": 440,
+    "name": "security_status",
+    "description": "Get the current status and config of the security module",
+    "parameters": {
+      "type": "object",
+      "properties": {}
+    },
+    "category": "security",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/security/security_module.py",
+    "line": 454,
+    "name": "security_audit",
+    "description": "Retrieve recent audit log entries from the security module",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "description": "Maximum number of audit entries to return"
+        }
+      }
+    },
+    "category": "security",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/security/security_module.py",
+    "line": 473,
+    "name": "security_policy",
+    "description": "List or manage security policy rules",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "list"
+          ],
+          "description": "Policy action to perform"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "security",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/security/security_module.py",
+    "line": 494,
+    "name": "security_permissions",
+    "description": "List tool permission modes configured in the security module",
+    "parameters": {
+      "type": "object",
+      "properties": {}
+    },
+    "category": "security",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/vision/vision_module.py",
+    "line": 399,
+    "name": "vision_load_image",
+    "description": "Load an image from a file path, URL, or raw bytes",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "File path or URL to load the image from"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "source"
+      ]
+    },
+    "category": "vision",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/vision/vision_module.py",
+    "line": 423,
+    "name": "vision_run_ocr",
+    "description": "Extract text from an image using OCR",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "image_source": {
+          "type": "string",
+          "description": "File path or URL of the image"
+        },
+        "language": {
+          "type": "string",
+          "description": "Language hint (default 'en')"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "image_source"
+      ]
+    },
+    "category": "vision",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/vision/vision_module.py",
+    "line": 451,
+    "name": "vision_detect_objects",
+    "description": "Detect objects in an image",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "image_source": {
+          "type": "string",
+          "description": "File path or URL of the image"
+        },
+        "confidence_threshold": {
+          "type": "number",
+          "description": "Minimum confidence (default 0.5)"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "image_source"
+      ]
+    },
+    "category": "vision",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/vision/vision_module.py",
+    "line": 479,
+    "name": "vision_detect_faces",
+    "description": "Detect faces in an image",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "image_source": {
+          "type": "string",
+          "description": "File path or URL of the image"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "image_source"
+      ]
+    },
+    "category": "vision",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/vision/vision_module.py",
+    "line": 503,
+    "name": "vision_capture_screen",
+    "description": "Capture the current screen",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": []
+    },
+    "category": "vision",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/vision/vision_module.py",
+    "line": 523,
+    "name": "vision_understand_screen",
+    "description": "Understand current screen content or answer a question about it",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "question": {
+          "type": "string",
+          "description": "Optional question about the screen content"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": []
+    },
+    "category": "vision",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/vision/vision_module.py",
+    "line": 547,
+    "name": "vision_understand_ui",
+    "description": "Analyze UI interactive elements on current screen",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": []
+    },
+    "category": "vision",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/vision/vision_module.py",
+    "line": 567,
+    "name": "vision_read_screen_text",
+    "description": "Run OCR on current screen",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": []
+    },
+    "category": "vision",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/vision/vision_module.py",
+    "line": 587,
+    "name": "vision_capture_and_save",
+    "description": "Capture screen and save image to output_path",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "output_path": {
+          "type": "string",
+          "description": "File path to save the screenshot"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "output_path"
+      ]
+    },
+    "category": "vision",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/voice/voice_module.py",
+    "line": 846,
+    "name": "voice_transcribe",
+    "description": "Transcribe speech audio to text",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "audio_source": {
+          "type": "string",
+          "description": "File path or URL of the audio file"
+        },
+        "language": {
+          "type": "string",
+          "description": "Language hint (default 'en')"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "audio_source"
+      ]
+    },
+    "category": "voice",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/voice/voice_module.py",
+    "line": 874,
+    "name": "voice_synthesize",
+    "description": "Synthesise speech from text",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Text to synthesise"
+        },
+        "voice_id": {
+          "type": "string",
+          "description": "Voice identifier (empty = default)"
+        },
+        "language": {
+          "type": "string",
+          "description": "Language code (default 'en')"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "text"
+      ]
+    },
+    "category": "voice",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/voice/voice_module.py",
+    "line": 906,
+    "name": "voice_detect_wake_word",
+    "description": "Detect a wake word in audio",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "audio_source": {
+          "type": "string",
+          "description": "File path or URL of the audio file"
+        },
+        "wake_word": {
+          "type": "string",
+          "description": "Wake word to detect (empty = any)"
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds"
+        }
+      },
+      "required": [
+        "audio_source"
+      ]
+    },
+    "category": "voice",
+    "timeout_seconds": "self._default_timeout"
+  },
+  {
+    "path": "backend/modules/voice/voice_module.py",
+    "line": 934,
+    "name": "voice_record",
+    "description": "Record audio from the microphone",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "duration": {
+          "type": "number",
+          "description": "Recording duration in seconds"
+        }
+      },
+      "required": []
+    },
+    "category": "voice",
+    "timeout_seconds": "self._default_timeout"
+  }
+]

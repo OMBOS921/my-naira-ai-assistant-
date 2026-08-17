@@ -199,7 +199,7 @@ class PersonalityEngine:
         name_ref = f" Their name is {prefs.preferred_name}." if prefs.preferred_name else ""
 
         ctx_parts = [
-            f"## Personality Context",
+            f"## Personality Any",
             f"You are {self._character['name']}, a {self._character['role']}.",
             f"Personality: {', '.join(self._character['personality_traits'])}.",
             f"Style: {self._character['speaking_style']}.",
@@ -219,7 +219,7 @@ class PersonalityEngine:
         # Add emotional intelligence context
         ctx_parts.extend([
             f"",
-            f"## Emotional Context",
+            f"## Emotional Any",
             f"- Current mood trend: {self._sentiment.mood_trend.value}",
             f"- Tone guidance: {tone['instruction']}",
             f"- Response tone: {tone['tone']}",

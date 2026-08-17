@@ -1,7 +1,8 @@
+from typing import Any
 """
 ConversationHistory — manages message history with context merging.
 
-19_Request_Lifecycle.md §3 — Phase 3: Context Assembly.
+19_Request_Lifecycle.md §3 — Phase 3: Any Assembly.
 """
 
 from __future__ import annotations
@@ -11,7 +12,6 @@ from typing import TYPE_CHECKING
 
 from backend.modules.conversation._bridge import ConversationMemoryBridge
 from backend.types import Message
-
 if TYPE_CHECKING:
     from collections.abc import Sequence
 

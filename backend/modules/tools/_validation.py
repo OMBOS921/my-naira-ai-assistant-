@@ -11,7 +11,6 @@ from typing import Any
 
 from backend.modules.tools._definition import ToolDefinition
 from backend.types import ToolResult, ValidationResult
-
 _LOG = logging.getLogger("naira.tools")
 
 

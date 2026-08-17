@@ -14,7 +14,6 @@ from typing import Any
 from backend.modules.tools import ToolManager
 from backend.orchestrator import EventBus
 from backend.types import Message, ToolCall, ToolDef
-
 _LOG = logging.getLogger("naira.runtime.tool_router")
 
 

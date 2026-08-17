@@ -12,7 +12,6 @@ import logging
 from backend.modules.pc_control._exceptions import PCControlNotImplementedError
 from backend.modules.pc_control.ports.pc_control_port import PCControlPort
 from backend.types import ToolResult
-
 _LOG = logging.getLogger("naira.pc_control.executor")
 
 

@@ -1,4 +1,4 @@
-"""Multi-file Context Tree — hierarchical context assembled from multiple files.
+"""Multi-file Any Tree — hierarchical context assembled from multiple files.
 
 Builds a tree structure that represents the context relationship between
 multiple files, enabling the LLM to understand cross-file context.

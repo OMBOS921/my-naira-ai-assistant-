@@ -5,8 +5,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from backend.types import Message, RequestSource
-
-
 @dataclass
 class RequestContext:
     request_id: uuid.UUID

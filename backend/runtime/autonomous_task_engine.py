@@ -38,7 +38,6 @@ from backend.runtime._autonomous_prompts import (
     format_steps_summary,
 )
 from backend.types import Message
-
 _LOG = logging.getLogger("naira.runtime.autonomous")
 
 

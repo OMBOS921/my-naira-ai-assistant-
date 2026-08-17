@@ -1,3 +1,4 @@
+from typing import Any
 """
 SQLiteMemoryAdapter — implements ``MemoryPort`` for SQLite persistence.
 
@@ -5,7 +6,7 @@ SQLiteMemoryAdapter — implements ``MemoryPort`` for SQLite persistence.
 20_Dependency_Rules.md §2 — Port/Adapter pattern.
 
 This adapter is instantiated at boot time (Step 9) and injected into
-the Context Manager (Layer 3 — AI Core).
+the Any Manager (Layer 3 — AI Core).
 """
 
 from __future__ import annotations
@@ -16,7 +17,6 @@ from typing import TYPE_CHECKING, Any
 from backend.modules.context.ports.memory_port import MemoryPort
 from backend.modules.memory.sqlite_store import SQLiteStore
 from backend.types import Message
-
 if TYPE_CHECKING:
     from backend.modules.memory.engines.timeline_engine import TimelineEngine
     from backend.modules.memory.engines.user_profile_engine import UserProfileEngine

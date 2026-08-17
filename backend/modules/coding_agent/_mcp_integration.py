@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from backend.modules.context_intelligence._types import CodeChunk, MCPContext, SymbolInfo
+from backend.modules.context_intelligence._types import CodeChunk, Any
 
 _LOG = logging.getLogger("naira.coding_agent.mcp")
 

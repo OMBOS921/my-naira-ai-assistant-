@@ -41,8 +41,6 @@ from backend.modules.utils.log import install_excepthook, setup_logging
 from backend.orchestrator import FSMState, Orchestrator
 from backend.runtime.proactive_watchdog import ProactiveWatchdog
 from backend.types import UserRequest, UserResponse
-
-
 async def run_cli_loop() -> None:
     """Initialize Naira-OS engine and execute interactive CLI loop."""
     try:

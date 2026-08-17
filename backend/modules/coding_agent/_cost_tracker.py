@@ -1,4 +1,6 @@
 from __future__ import annotations
+from typing import Any
+
 
 import logging
 import time
@@ -6,7 +8,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from backend.modules.coding_agent._exceptions import CostTrackingError
-from backend.types import TokenUsage
 
 _LOG = logging.getLogger("naira.coding_agent.cost")
 
@@ -77,7 +78,7 @@ class CostTracker:
         self,
         operation: str,
         model: str,
-        token_usage: TokenUsage,
+        token_usage: Any,
         metadata: dict[str, Any] | None = None,
     ) -> CostEntry:
         if not self._enabled or self._degraded:
@@ -137,7 +138,7 @@ class CostTracker:
         prompt_tokens: int,
         completion_tokens: int,
     ) -> CostEntry:
-        usage = TokenUsage(
+        usage = Any(
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             total_tokens=prompt_tokens + completion_tokens,

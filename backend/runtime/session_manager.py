@@ -16,7 +16,6 @@ from backend.modules.context import ContextManager
 from backend.modules.conversation import ConversationManager
 from backend.orchestrator import EventBus
 from backend.types import Message
-
 _LOG = logging.getLogger("naira.runtime.session_manager")
 
 

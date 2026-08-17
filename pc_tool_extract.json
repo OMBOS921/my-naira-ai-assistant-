@@ -1,0 +1,703 @@
+[
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 651,
+    "name": "pc_mouse",
+    "description": "Control the mouse cursor \u2014 move, click, double-click, right-click, drag, scroll",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "get_position",
+            "move_to",
+            "click",
+            "double_click",
+            "right_click",
+            "drag",
+            "scroll"
+          ],
+          "description": "Mouse action to perform"
+        },
+        "x": {
+          "type": "integer",
+          "description": "X coordinate"
+        },
+        "y": {
+          "type": "integer",
+          "description": "Y coordinate"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 675,
+    "name": "pc_keyboard",
+    "description": "Simulate keyboard input \u2014 type text, press keys, send hotkeys",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "type_text",
+            "press_key",
+            "hotkey"
+          ],
+          "description": "Keyboard action to perform"
+        },
+        "text": {
+          "type": "string",
+          "description": "Text to type"
+        },
+        "key": {
+          "type": "string",
+          "description": "Key name to press"
+        },
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Keys for hotkey combination"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 698,
+    "name": "pc_clipboard",
+    "description": "Read from or write to the system clipboard",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "get_text",
+            "set_text",
+            "clear"
+          ],
+          "description": "Clipboard action to perform"
+        },
+        "text": {
+          "type": "string",
+          "description": "Text to set on clipboard"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 718,
+    "name": "pc_filesystem",
+    "description": "List, read, write, create, edit, open, or delete files and directories",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "list_directory",
+            "read_file",
+            "write_file",
+            "delete_file",
+            "create_directory",
+            "delete_directory",
+            "open_file",
+            "open_folder",
+            "open"
+          ],
+          "description": "Filesystem action to perform"
+        },
+        "path": {
+          "type": "string",
+          "description": "File or directory path"
+        },
+        "content": {
+          "type": "string",
+          "description": "Content to write"
+        },
+        "recursive": {
+          "type": "boolean",
+          "description": "Delete recursively"
+        }
+      },
+      "required": [
+        "action",
+        "path"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 744,
+    "name": "pc_window",
+    "description": "List, focus, resize, move, minimise, maximise, or close windows",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "list",
+            "get_active",
+            "focus",
+            "minimize",
+            "maximize",
+            "close",
+            "resize",
+            "move"
+          ],
+          "description": "Window action to perform"
+        },
+        "handle": {
+          "type": "integer",
+          "description": "Window handle"
+        },
+        "width": {
+          "type": "integer",
+          "description": "New width"
+        },
+        "height": {
+          "type": "integer",
+          "description": "New height"
+        },
+        "x": {
+          "type": "integer",
+          "description": "New X position"
+        },
+        "y": {
+          "type": "integer",
+          "description": "New Y position"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 768,
+    "name": "pc_process",
+    "description": "List running processes or terminate a process by PID",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "list",
+            "kill"
+          ],
+          "description": "Process action to perform"
+        },
+        "pid": {
+          "type": "integer",
+          "description": "Process ID to kill"
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Force kill"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 786,
+    "name": "pc_launch_application",
+    "description": "Launch an application by path with optional arguments",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "app_path": {
+          "type": "string",
+          "description": "Path to executable"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Command-line arguments"
+        },
+        "working_dir": {
+          "type": "string",
+          "description": "Working directory"
+        }
+      },
+      "required": [
+        "app_path"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 807,
+    "name": "pc_notification",
+    "description": "Show a desktop notification",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Notification title"
+        },
+        "message": {
+          "type": "string",
+          "description": "Notification body"
+        },
+        "duration": {
+          "type": "number",
+          "description": "Display duration (seconds)"
+        }
+      },
+      "required": [
+        "title",
+        "message"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 824,
+    "name": "pc_power",
+    "description": "Shut down, restart, sleep, hibernate, or lock the system",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "shutdown",
+            "restart",
+            "sleep",
+            "hibernate",
+            "lock"
+          ],
+          "description": "Power action to perform"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 840,
+    "name": "pc_volume",
+    "description": "Get or set the system volume level, mute or unmute audio",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "get",
+            "set",
+            "mute",
+            "unmute"
+          ],
+          "description": "Volume action to perform"
+        },
+        "level": {
+          "type": "number",
+          "description": "Volume level (0.0 to 1.0)"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 860,
+    "name": "pc_screen",
+    "description": "Get screen size, capture screenshots, or list displays",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "get_size",
+            "capture",
+            "list_displays"
+          ],
+          "description": "Screen action to perform"
+        },
+        "region": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "Capture region [left, top, width, height]"
+        },
+        "save_path": {
+          "type": "string",
+          "description": "Save screenshot to file"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 885,
+    "name": "pc_wifi",
+    "description": "Manage the Wi-Fi radio \u2014 enable/disable, list networks, connect",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "set_power",
+            "get_power",
+            "list_networks",
+            "connect"
+          ],
+          "description": "Wi-Fi action to perform"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether Wi-Fi is enabled"
+        },
+        "ssid": {
+          "type": "string",
+          "description": "Network name to connect to"
+        },
+        "password": {
+          "type": "string",
+          "description": "Network password"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 904,
+    "name": "pc_bluetooth",
+    "description": "Manage the Bluetooth radio \u2014 enable/disable, list devices, pair",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "set_power",
+            "get_power",
+            "list_devices",
+            "pair"
+          ],
+          "description": "Bluetooth action to perform"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether Bluetooth is enabled"
+        },
+        "device_address": {
+          "type": "string",
+          "description": "Device MAC address"
+        },
+        "pin": {
+          "type": "string",
+          "description": "Pairing PIN"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 923,
+    "name": "pc_display",
+    "description": "Manage display settings \u2014 brightness, resolution, night light, dark mode",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "get_brightness",
+            "set_brightness",
+            "get_resolution",
+            "set_resolution",
+            "list_resolutions",
+            "set_night_light",
+            "get_night_light",
+            "set_dark_mode",
+            "get_dark_mode"
+          ],
+          "description": "Display action to perform"
+        },
+        "level": {
+          "type": "integer",
+          "description": "Brightness level (0-100)"
+        },
+        "width": {
+          "type": "integer",
+          "description": "Resolution width"
+        },
+        "height": {
+          "type": "integer",
+          "description": "Resolution height"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Toggle night light / dark mode"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 948,
+    "name": "pc_system_settings",
+    "description": "Manage airplane mode and Do-Not-Disturb notification settings",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "set_airplane_mode",
+            "get_airplane_mode",
+            "set_do_not_disturb",
+            "get_do_not_disturb"
+          ],
+          "description": "System settings action to perform"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Toggle the setting"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 968,
+    "name": "pc_software",
+    "description": "List installed software, install/uninstall packages, or check for updates",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "list_installed",
+            "install",
+            "uninstall",
+            "check_update"
+          ],
+          "description": "Software action to perform"
+        },
+        "package": {
+          "type": "string",
+          "description": "Package name"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 985,
+    "name": "pc_account",
+    "description": "Manage local user accounts \u2014 list, create, enable/disable, modify group membership",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "list_users",
+            "get_current_user",
+            "create_user",
+            "set_enabled",
+            "modify_groups"
+          ],
+          "description": "Account action to perform"
+        },
+        "username": {
+          "type": "string",
+          "description": "Username"
+        },
+        "password": {
+          "type": "string",
+          "description": "Account password"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether the account is enabled"
+        },
+        "add": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Groups to add the user to"
+        },
+        "remove": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Groups to remove the user from"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 1014,
+    "name": "mouse_click",
+    "description": "Click mouse at screen coordinates X and Y",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "integer",
+          "description": "X coordinate"
+        },
+        "y": {
+          "type": "integer",
+          "description": "Y coordinate"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 1027,
+    "name": "keyboard_type",
+    "description": "Type text on keyboard into focused window",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Text to type"
+        }
+      },
+      "required": [
+        "text"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 1039,
+    "name": "window_focus",
+    "description": "Bring window to front and focus by window handle",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "handle": {
+          "type": "integer",
+          "description": "Window handle integer"
+        }
+      },
+      "required": [
+        "handle"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 1051,
+    "name": "mouse_move_to",
+    "description": "Move mouse cursor smoothly to screen coordinates X and Y",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "integer",
+          "description": "X coordinate"
+        },
+        "y": {
+          "type": "integer",
+          "description": "Y coordinate"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ]
+    },
+    "category": "pc_control"
+  },
+  {
+    "path": "backend/modules/pc_control/pc_control_module.py",
+    "line": 1064,
+    "name": "screen_capture",
+    "description": "Capture a screenshot of the active desktop display",
+    "parameters": {
+      "type": "object",
+      "properties": {}
+    },
+    "category": "pc_control"
+  }
+]

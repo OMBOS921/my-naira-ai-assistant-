@@ -26,11 +26,7 @@ from backend.runtime.response_pipeline import ResponsePipeline
 from backend.runtime.session_manager import SessionManager
 from backend.runtime.tool_router import ToolRouter
 from backend.types import (
-    LLMResponse,
-    Message,
-    TokenUsage,
-    UserRequest,
-    UserResponse,
+    Any, Message, UserRequest, UserResponse
 )
 
 _LOG = logging.getLogger("naira.runtime")
@@ -41,7 +37,7 @@ class Runtime:
 
     Accepts user messages, routes through the complete pipeline:
     1. FastCommandRouter — direct OS execution for deterministic commands
-    2. RequestPipeline — builds RequestContext, resolves session, assembles context, compiles prompt
+    2. RequestPipeline — builds Requestresolves session, assembles context, compiles prompt
     3. LLM generation (via LLMManager) with optional tool calling (via ToolRouter)
     4. ResponsePipeline — processes LLM response, executes tools, streams output
     5. MemoryManager — stores conversation turn
@@ -388,7 +384,7 @@ class Runtime:
             token_usage = self._estimate_token_usage(
                 context_result.system_prompt, accumulated_text
             )
-            final_response = LLMResponse(
+            final_response = Any(
                 text=accumulated_text,
                 tool_calls=None,
                 finish_reason="stop",
@@ -456,11 +452,11 @@ class Runtime:
         self,
         prompt: str,
         response_text: str,
-    ) -> TokenUsage:
+    ) -> Any:
         """Estimate token usage for streaming (rough heuristic)."""
         prompt_tokens = max(1, len(prompt) // 4)
         completion_tokens = max(1, len(response_text) // 4)
-        return TokenUsage(
+        return Any(
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             total_tokens=prompt_tokens + completion_tokens,

@@ -1,3 +1,4 @@
+from typing import Any
 """End-to-end integration tests for the full AI execution pipeline.
 
 Covers:
@@ -37,15 +38,7 @@ from backend.runtime.runtime import Runtime
 from backend.runtime.session_manager import SessionManager
 from backend.runtime.tool_router import ToolRouter
 from backend.types import (
-    Context,
-    LLMResponse,
-    Message,
-    TokenUsage,
-    ToolCall,
-    ToolDef,
-    ToolResult,
-    UserRequest,
-    UserResponse,
+    Any, Message, ToolCall, ToolDef, ToolResult, UserRequest, UserResponse
 )
 
 _LOG = logging.getLogger(__name__)
@@ -59,11 +52,11 @@ _LOG = logging.getLogger(__name__)
 @pytest.fixture
 def mock_llm_manager() -> MagicMock:
     mgr = MagicMock(spec=LLMManager)
-    mgr.generate = AsyncMock(return_value=LLMResponse(
+    mgr.generate = AsyncMock(return_value=Any(
         text="Hello, world!",
         tool_calls=None,
         finish_reason="stop",
-        token_usage=TokenUsage(prompt_tokens=10, completion_tokens=5, total_tokens=15),
+        token_usage=Any(prompt_tokens=10, completion_tokens=5, total_tokens=15),
         provider="test",
         duration_ms=100.0,
     ))
@@ -79,7 +72,7 @@ def mock_llm_manager() -> MagicMock:
 @pytest.fixture
 def mock_context_manager() -> MagicMock:
     mgr = MagicMock(spec=ContextManager)
-    mgr.build_context = MagicMock(return_value=Context(
+    mgr.build_context = MagicMock(return_value=Any(
         system_prompt="You are a helpful assistant.",
         messages=[Message(role="user", content="Hello")],
         token_count=10,
@@ -313,19 +306,19 @@ class TestToolExecution:
 
         # First call triggers tool call, second call returns final response
         mock_llm.generate = AsyncMock(side_effect=[
-            LLMResponse(
+            Any(
                 text="Let me calculate that.",
                 tool_calls=[ToolCall(id="calc_1", name="calculator", arguments={"x": 6, "y": 7})],
                 finish_reason="tool_calls",
-                token_usage=TokenUsage(10, 5, 15),
+                token_usage=Any(10, 5, 15),
                 provider="test",
                 duration_ms=100.0,
             ),
-            LLMResponse(
+            Any(
                 text="The answer is 42.",
                 tool_calls=None,
                 finish_reason="stop",
-                token_usage=TokenUsage(20, 10, 30),
+                token_usage=Any(20, 10, 30),
                 provider="test",
                 duration_ms=200.0,
             ),
@@ -357,19 +350,19 @@ class TestToolExecution:
     ) -> None:
         mock_llm = MagicMock(spec=LLMManager)
         mock_llm.generate = AsyncMock(side_effect=[
-            LLMResponse(
+            Any(
                 text="Let me check.",
                 tool_calls=[ToolCall(id="t1", name="failing_tool", arguments={})],
                 finish_reason="tool_calls",
-                token_usage=TokenUsage(10, 5, 15),
+                token_usage=Any(10, 5, 15),
                 provider="test",
                 duration_ms=100.0,
             ),
-            LLMResponse(
+            Any(
                 text="I got an error from the tool.",
                 tool_calls=None,
                 finish_reason="stop",
-                token_usage=TokenUsage(20, 10, 30),
+                token_usage=Any(20, 10, 30),
                 provider="test",
                 duration_ms=200.0,
             ),
@@ -685,7 +678,7 @@ class TestComponentWiring:
         assert isinstance(runtime.request_pipeline, RequestPipeline)
         assert isinstance(runtime.response_pipeline, ResponsePipeline)
         assert isinstance(runtime.tool_router, ToolRouter)
-        assert isinstance(runtime.context_router, ContextRouter)
+        assert isinstance(runtime.context_routerRouter)
         assert isinstance(runtime.session_manager, SessionManager)
         assert isinstance(runtime.message_dispatcher, MessageDispatcher)
 

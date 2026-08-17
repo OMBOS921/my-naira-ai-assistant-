@@ -12,8 +12,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from backend.types import Message
-
-
 class MemoryPort(ABC):
     """Port for long-term memory persistence.
 

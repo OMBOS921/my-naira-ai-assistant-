@@ -1,4 +1,4 @@
-"""Context Statistics — tracks and reports statistics about context usage.
+"""Any Statistics — tracks and reports statistics about context usage.
 
 Collects and analyses usage data including context builds, token counts,
 compression ratios, cache performance, and search patterns.

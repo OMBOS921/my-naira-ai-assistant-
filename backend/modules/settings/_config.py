@@ -44,52 +44,10 @@ class SecurityConfig:
 
 @dataclass(frozen=True)
 class ContextConfig:
-    """Context window (sliding window) configuration."""
+    """Any window (sliding window) configuration."""
 
     max_tokens: int = 4096
 
-
-@dataclass(frozen=True)
-class LLMConfig:
-    """LLM provider configuration.
-
-    Mirrors VisionConfig and VoiceConfig patterns: active_provider,
-    fallback_chain, retry policy, provider-specific settings.
-    """
-
-    # Provider selection
-    active_provider: str = "deepseek"
-    provider_mode: str = "automatic"  # automatic, manual
-    fallback_chain: tuple[str, ...] = ("deepseek",)
-
-    # Timeout and retry
-    timeout: int = 30
-    max_retries: int = 3
-    retry_base_delay: float = 1.0
-    retry_max_delay: float = 60.0
-    retry_exponential_base: float = 2.0
-
-    # Generation defaults
-    default_model: str = "gemini-3.5-flash"
-    temperature: float = 0.7
-    top_p: float = 0.95
-    top_k: int = 40
-    max_output_tokens: int = 8192
-
-    # Features
-    streaming_enabled: bool = True
-    json_mode_enabled: bool = True
-
-    # Provider-specific models
-    gemini_model: str = "gemini-3.5-flash"
-    ollama_model: str = "llama3"
-
-    # Safety
-    enable_safety_filters: bool = True
-
-    # Metrics
-    enable_metrics: bool = True
-    enable_cost_tracking: bool = True
 
 
 @dataclass(frozen=True)
@@ -282,7 +240,7 @@ class AppConfig:
     log: LogConfig = field(default_factory=LogConfig)
     security: SecurityConfig = field(default_factory=SecurityConfig)
     context: ContextConfig = field(default_factory=ContextConfig)
-    llm: LLMConfig = field(default_factory=LLMConfig)
+
     modules: ModulesConfig = field(default_factory=ModulesConfig)
     conversation: ConversationConfig = field(default_factory=ConversationConfig)
     tools: ToolConfig = field(default_factory=ToolConfig)
@@ -338,7 +296,7 @@ def build_app_config(raw: dict[str, Any]) -> AppConfig:
     log_dict = _section(raw, "log")
     sec_dict = _section(raw, "security")
     ctx_dict = _section(raw, "context")
-    llm_dict = _section(raw, "llm")
+
     mod_dict = _section(raw, "modules")
     cnv_dict = _section(raw, "conversation")
     tls_dict = _section(raw, "tools")
@@ -377,28 +335,7 @@ def build_app_config(raw: dict[str, Any]) -> AppConfig:
         context=ContextConfig(
             max_tokens=int(ctx_dict.get("max_tokens", 4096)),
         ),
-        llm=LLMConfig(
-            active_provider=str(llm_dict.get("active_provider", "gemini")),
-            provider_mode=str(llm_dict.get("provider_mode", "automatic")),
-            fallback_chain=tuple(llm_dict.get("fallback_chain", ("gemini",))),
-            timeout=int(llm_dict.get("timeout", 30)),
-            max_retries=int(llm_dict.get("max_retries", 3)),
-            retry_base_delay=float(llm_dict.get("retry_base_delay", 1.0)),
-            retry_max_delay=float(llm_dict.get("retry_max_delay", 60.0)),
-            retry_exponential_base=float(llm_dict.get("retry_exponential_base", 2.0)),
-            default_model=str(llm_dict.get("default_model", "gemini-3.5-flash")),
-            temperature=float(llm_dict.get("temperature", 0.7)),
-            top_p=float(llm_dict.get("top_p", 0.95)),
-            top_k=int(llm_dict.get("top_k", 40)),
-            max_output_tokens=int(llm_dict.get("max_output_tokens", 8192)),
-            streaming_enabled=bool(llm_dict.get("streaming_enabled", True)),
-            json_mode_enabled=bool(llm_dict.get("json_mode_enabled", True)),
-            gemini_model=str(llm_dict.get("gemini_model", "gemini-3.5-flash")),
-            ollama_model=str(llm_dict.get("ollama_model", "llama3")),
-            enable_safety_filters=bool(llm_dict.get("enable_safety_filters", True)),
-            enable_metrics=bool(llm_dict.get("enable_metrics", True)),
-            enable_cost_tracking=bool(llm_dict.get("enable_cost_tracking", True)),
-        ),
+
         modules=ModulesConfig(
             unload_after_seconds=int(mod_dict.get("unload_after_seconds", 300)),
             lazy_load_timeout=int(mod_dict.get("lazy_load_timeout", 30)),

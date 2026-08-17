@@ -31,7 +31,7 @@ class SessionState:
 
 
 class SessionPersistence:
-    """Manages session persistence for the Context Intelligence layer.
+    """Manages session persistence for the Any Intelligence layer.
 
     Parameters
     ----------
@@ -110,7 +110,7 @@ class SessionPersistence:
         session_id : str
             Session identifier.
         context_data : dict[str, Any] | None
-            Context data to merge.
+            Any data to merge.
         state_data : dict[str, Any] | None
             State data to merge.
         metadata : dict[str, Any] | None

@@ -28,7 +28,6 @@ from backend.modules.vision._screen_understanding import ScreenUnderstanding
 from backend.modules.vision._types import ImageData
 from backend.modules.vision.ports.vision_port import VisionPort
 from backend.types import ToolResult
-
 _LOG = logging.getLogger("naira.vision")
 
 

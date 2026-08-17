@@ -21,7 +21,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Union
 from backend.types import ToolResult
-
 _LOG = logging.getLogger("naira.runtime.fast_command_router")
 
 # Hardcoded model & endpoint as specified in system requirements

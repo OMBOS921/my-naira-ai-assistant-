@@ -8,8 +8,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from backend.runtime.fast_command_router import FastCommandRouter, CommandIntent
 from backend.types import ToolResult
-
-
 @pytest.fixture
 def mock_pc_control():
     mgr = AsyncMock()

@@ -128,13 +128,10 @@ class ProactiveWatchdog:
             from backend.types import Message
             prompt = (
                 "You are Naira, a friendly, intelligent AI assistant. Rephrase this system alert into a single, natural, "
-                "conversational sentence starting with 'Boss,' or a warm greeting. Keep it concise."
+                "conversational sentence starting with 'Boss, ' or a warm greeting. Keep it concise."
             )
             resp = await self._llm_manager.generate(
-                prompt=prompt,
-                context=[Message(role="user", content=f"Alert: {raw_alert}")],
-                tools=None,
-            )
+                prompt=prompt, context=[Message(role="user", content=f"Alert: {raw_alert}")], tools=None, )
             if resp and resp.text:
                 return resp.text.strip()
         except Exception as exc:
@@ -146,9 +143,7 @@ class ProactiveWatchdog:
         try:
             import psutil
             return {
-                "cpu_percent": psutil.cpu_percent(interval=None),
-                "memory_percent": psutil.virtual_memory().percent,
-            }
+                "cpu_percent": psutil.cpu_percent(interval=None), "memory_percent": psutil.virtual_memory().percent, }
         except ImportError:
             return {"cpu_percent": 0.0, "memory_percent": 0.0}
 
@@ -158,11 +153,7 @@ class ProactiveWatchdog:
             return
 
         payload = {
-            "sender": "naira",
-            "text": message_text,
-            "proactive": True,
-            "timestamp": time.time(),
-        }
+            "sender": "naira", "text": message_text, "proactive": True, "timestamp": time.time(), }
 
         self._logger.info("[WATCHDOG] Broadcasting proactive alert to %d clients: %s", len(self._websockets), message_text)
         disconnected = set()

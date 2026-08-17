@@ -8,7 +8,6 @@ from collections.abc import Callable, Coroutine
 from typing import Any
 
 from backend.types import ToolResult
-
 _LOG = logging.getLogger("naira.coding_agent.executor")
 
 

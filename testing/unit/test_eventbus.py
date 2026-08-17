@@ -27,7 +27,6 @@ import pytest
 
 from backend.eventbus import EventBus
 from backend.types import Event
-
 # =========================================================================
 # Backward compatibility (Phase 1 placeholder contract)
 # =========================================================================

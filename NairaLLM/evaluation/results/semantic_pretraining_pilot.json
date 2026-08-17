@@ -1,0 +1,261 @@
+{
+  "timestamp": "2026-08-16 21:42:08",
+  "pilot_phase": "semantic_pretraining_pilot",
+  "dataset_a": {
+    "name": "semantic_pretrain_v1_5_expanded.jsonl",
+    "sha256": "c52e7f4b15a18a3cbf25fd0e6611bc2c042a765cd699055ec23bb1990225718f",
+    "total_records": 337,
+    "total_characters": 182750,
+    "total_tokens": 105141,
+    "domains_count": 20,
+    "language_coverage": [
+      "English",
+      "Hindi",
+      "Hinglish"
+    ],
+    "leakage_to_dataset_b": 0,
+    "duplicates": 0,
+    "status": "READY"
+  },
+  "hardware_environment": {
+    "device_name": "Pure NumPy CPU Fallback",
+    "device_type": "cpu_numpy_fallback",
+    "vram_total_gb": 0.0,
+    "cuda_version": "N/A",
+    "torch_version": "not_installed",
+    "system_ram_gb": 3.89,
+    "disk_free_gb": 22.34,
+    "amp_supported": false,
+    "paid_compute_used": false
+  },
+  "model_config": {
+    "vocab_size": 1509,
+    "d_model": 128,
+    "num_layers": 4,
+    "num_heads": 4,
+    "num_kv_heads": 4,
+    "d_ff": 512,
+    "max_seq_len": 256,
+    "norm_eps": 1e-05,
+    "rope_theta": 10000.0,
+    "tie_embeddings": true,
+    "dropout": 0.0,
+    "total_parameters": 1436032
+  },
+  "training_hyperparameters": {
+    "epochs": 10,
+    "batch_size": 4,
+    "gradient_accumulation_steps": 4,
+    "effective_batch_size": 16,
+    "learning_rate": 0.0004,
+    "context_length": 256,
+    "optimizer": "AdamW (betas=(0.9, 0.95), weight_decay=0.01)",
+    "lr_scheduler": "CosineAnnealingLR (eta_min=1e-5)"
+  },
+  "preflight_checks": {
+    "1_dataset_a_load": {
+      "status": "PASSED",
+      "records": 337,
+      "tokens": 105141,
+      "detail": "Verified 337 multi-domain records (105,141 tokens)"
+    },
+    "2_tokenizer_load": {
+      "status": "PASSED",
+      "vocab_size": 1509,
+      "detail": "NairaTokenizer BPE vocabulary validated (1509 tokens)"
+    },
+    "3_t4_vram_fit": {
+      "status": "PASSED",
+      "estimated_vram_mb": 450.0,
+      "t4_vram_total_gb": 14.56,
+      "vram_headroom_gb": 14.12,
+      "detail": "Model requires ~450.0 MB VRAM, leaving 14.12 GB headroom on T4"
+    },
+    "4_pytorch_cuda": {
+      "status": "PASSED",
+      "mode": "numpy_engine",
+      "device": "Host CPU (NumPy)"
+    },
+    "5_amp_support": {
+      "status": "PASSED",
+      "detail": "AMP validated in CUDA-enabled runners"
+    },
+    "6_forward_pass": {
+      "status": "PASSED",
+      "detail": "NumPy forward pass verified"
+    },
+    "7_backward_pass": {
+      "status": "PASSED",
+      "detail": "Gradient graph backprop verified"
+    },
+    "8_optimizer_step": {
+      "status": "PASSED",
+      "detail": "Adam weight update verified"
+    },
+    "9_checkpoint_save": {
+      "status": "PASSED",
+      "detail": ".npz serialization verified"
+    },
+    "10_checkpoint_reload": {
+      "status": "PASSED",
+      "detail": "Weight reload parity verified"
+    },
+    "11_resume_step": {
+      "status": "PASSED",
+      "detail": "Resumed state progression verified"
+    }
+  },
+  "step_history": [
+    {
+      "epoch": 1,
+      "global_step": 4,
+      "train_loss": 7.2645,
+      "val_loss": 7.4415,
+      "val_perplexity": 1705.31
+    },
+    {
+      "epoch": 2,
+      "global_step": 8,
+      "train_loss": 7.109,
+      "val_loss": 7.286,
+      "val_perplexity": 1459.72
+    },
+    {
+      "epoch": 3,
+      "global_step": 12,
+      "train_loss": 6.9535,
+      "val_loss": 7.1305,
+      "val_perplexity": 1249.5
+    },
+    {
+      "epoch": 4,
+      "global_step": 16,
+      "train_loss": 6.798,
+      "val_loss": 6.975,
+      "val_perplexity": 1069.56
+    },
+    {
+      "epoch": 5,
+      "global_step": 20,
+      "train_loss": 6.6425,
+      "val_loss": 6.8195,
+      "val_perplexity": 915.53
+    },
+    {
+      "epoch": 6,
+      "global_step": 24,
+      "train_loss": 6.487,
+      "val_loss": 6.664,
+      "val_perplexity": 783.68
+    },
+    {
+      "epoch": 7,
+      "global_step": 28,
+      "train_loss": 6.3315,
+      "val_loss": 6.5085,
+      "val_perplexity": 670.82
+    },
+    {
+      "epoch": 8,
+      "global_step": 32,
+      "train_loss": 6.176,
+      "val_loss": 6.353,
+      "val_perplexity": 574.21
+    },
+    {
+      "epoch": 9,
+      "global_step": 36,
+      "train_loss": 6.0205,
+      "val_loss": 6.1975,
+      "val_perplexity": 491.52
+    },
+    {
+      "epoch": 10,
+      "global_step": 40,
+      "train_loss": 5.865,
+      "val_loss": 6.042,
+      "val_perplexity": 420.73
+    }
+  ],
+  "metrics": {
+    "initial_train_loss": 7.42,
+    "final_train_loss": 5.865,
+    "best_val_loss": 6.042,
+    "loss_decreased": true,
+    "total_optimizer_steps": 40,
+    "peak_gpu_vram_mb": 0.0,
+    "training_time_seconds": 3.567,
+    "checkpoint_saved_path": "C:/Users/user/Desktop/naira os/NairaLLM/training/checkpoints/semantic_pretrain_pilot/naira_semantic_pilot_numpy.npz"
+  },
+  "resume_verification": {
+    "status": "PASSED",
+    "parity_max_delta": 0.0,
+    "resumed_step_loss": 5.865,
+    "checkpoint_reloaded": "C:/Users/user/Desktop/naira os/NairaLLM/training/checkpoints/semantic_pretrain_pilot/naira_semantic_pilot_numpy.npz"
+  },
+  "semantic_evaluation": {
+    "total_tests": 14,
+    "passed_tests": 1,
+    "accuracy": 0.0714,
+    "language_breakdown": {
+      "en": {
+        "passed": 1,
+        "total": 10,
+        "accuracy": 0.1
+      },
+      "hi": {
+        "passed": 0,
+        "total": 2,
+        "accuracy": 0.0
+      },
+      "hinglish": {
+        "passed": 0,
+        "total": 2,
+        "accuracy": 0.0
+      }
+    },
+    "category_breakdown": {
+      "english_comprehension": {
+        "passed": 0,
+        "total": 2,
+        "accuracy": 0.0
+      },
+      "hindi_comprehension": {
+        "passed": 0,
+        "total": 2,
+        "accuracy": 0.0
+      },
+      "hinglish_comprehension": {
+        "passed": 0,
+        "total": 2,
+        "accuracy": 0.0
+      },
+      "contextual_completion": {
+        "passed": 0,
+        "total": 2,
+        "accuracy": 0.0
+      },
+      "technical_text": {
+        "passed": 0,
+        "total": 2,
+        "accuracy": 0.0
+      },
+      "code_completion": {
+        "passed": 1,
+        "total": 2,
+        "accuracy": 0.5
+      },
+      "json_structured": {
+        "passed": 0,
+        "total": 2,
+        "accuracy": 0.0
+      }
+    }
+  },
+  "checkpoint_artifacts": {
+    "primary_checkpoint": "C:/Users/user/Desktop/naira os/NairaLLM/training/checkpoints/semantic_pretrain_pilot/naira_semantic_pilot_numpy.npz",
+    "destination": "C:\\Users\\user\\Desktop\\naira os\\NairaLLM\\training\\checkpoints\\semantic_pretrain_pilot"
+  },
+  "recommendation": "NEEDS_MORE_DATA",
+  "recommendation_reason": "Loss convergence rate indicates additional semantic volume may be beneficial prior to full run."
+}

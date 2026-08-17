@@ -1,4 +1,4 @@
-"""Shared types for the Context Intelligence module."""
+"""Shared types for the Any Intelligence module."""
 
 from __future__ import annotations
 
@@ -128,7 +128,7 @@ class RelatedFileSet:
 
 @dataclass(frozen=True)
 class HealthReport:
-    """Health report for the Context Intelligence module."""
+    """Health report for the Any Intelligence module."""
 
     healthy: bool = True
     degraded: bool = False

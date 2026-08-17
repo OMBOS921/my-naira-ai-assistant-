@@ -16,7 +16,6 @@ from backend.runtime.multi_agent._agent_definitions import (
     AgentPersona,
 )
 from backend.types import Message
-
 _LOG = logging.getLogger("naira.runtime.multi_agent")
 
 

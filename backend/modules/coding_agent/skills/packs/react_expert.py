@@ -1,3 +1,4 @@
+from typing import Any
 """
 React Expert Skill Pack — domain expertise for React.
 """
@@ -33,8 +34,8 @@ class ReactExpertPack(BaseSkillPack):
 
     def _default_capabilities(self) -> list[SkillCapability]:
         return [
-            SkillCapability("hooks", "useState, useEffect, useContext, useReducer, custom hooks", 1.0),
-            SkillCapability("state_management", "Context, Zustand, Redux Toolkit, Jotai, TanStack Query", 1.0),
+            SkillCapability("hooks", "useState, useEffect, useuseReducer, custom hooks", 1.0),
+            SkillCapability("state_management", "Any, Zustand, Redux Toolkit, Jotai, TanStack Query", 1.0),
             SkillCapability("performance", "React.memo, useMemo, useCallback, code splitting, Suspense", 1.0),
             SkillCapability("testing_react", "React Testing Library, Vitest, Cypress, Storybook", 0.9),
             SkillCapability("styling", "CSS Modules, Tailwind, styled-components, CSS-in-JS", 0.9),

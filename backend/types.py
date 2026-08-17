@@ -27,21 +27,12 @@ type EventPriority = Literal["high", "normal", "low"]
 type RequestSource = Literal["cli", "websocket", "voice"]
 """Origin of a user request."""
 
-type FinishReason = Literal["stop", "tool_calls", "length", "error"]
-"""Reason an LLM response finished."""
+
 
 # ---------------------------------------------------------------------------
 # Immutable data objects  (@dataclass(frozen=True))
 # ---------------------------------------------------------------------------
 
-
-@dataclass(frozen=True)
-class TokenUsage:
-    """Token consumption for an LLM invocation."""
-
-    prompt_tokens: int
-    completion_tokens: int
-    total_tokens: int
 
 
 @dataclass(frozen=True)
@@ -72,17 +63,6 @@ class Message:
     tool_call_id: str | None = None
 
 
-@dataclass(frozen=True)
-class LLMResponse:
-    """Structured response from an LLM provider."""
-
-    text: str
-    tool_calls: list[ToolCall] | None
-    finish_reason: FinishReason
-    token_usage: TokenUsage
-    provider: str
-    duration_ms: float
-
 
 @dataclass(frozen=True)
 class UserRequest:
@@ -105,14 +85,6 @@ class UserResponse:
     source: RequestSource
     duration_ms: float = 0.0
 
-
-@dataclass(frozen=True)
-class Context:
-    """Assembled context for an LLM invocation."""
-
-    system_prompt: str
-    messages: list[Message]
-    token_count: int
 
 
 @dataclass(frozen=True)
@@ -183,3 +155,12 @@ class ModuleInterface(Protocol):
     def degrade(self) -> None:
         """Mark the module as degraded after a non-fatal failure."""
         ...
+
+
+class ModuleDegradedError(Exception):
+    """Raised when a module is in a degraded state and cannot perform the requested operation."""
+    def __init__(self, message: str, context: dict | None = None):
+        super().__init__(message)
+        self.context = context or {}
+
+MAX_TOOL_ITERATIONS = 15

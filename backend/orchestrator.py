@@ -17,7 +17,6 @@ from typing import TYPE_CHECKING
 
 from backend.eventbus import EventBus
 from backend.types import UserRequest, UserResponse
-
 if TYPE_CHECKING:
     from backend.modules.settings import AppConfig, EnvironmentSnapshot
 

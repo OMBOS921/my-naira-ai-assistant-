@@ -12,8 +12,6 @@ from backend.modules.plugins._plugin_base import NairaPlugin
 from backend.modules.plugins._plugin_loader import PluginLoader
 from backend.modules.plugins.plugin_manager import PluginManager
 from backend.types import ToolResult
-
-
 class DummyPlugin(NairaPlugin):
     PLUGIN_NAME = "dummy_plugin"
     PLUGIN_VERSION = "1.0.0"
@@ -84,7 +82,6 @@ async def test_plugin_manager_lifecycle():
             """
 from backend.modules.plugins._plugin_base import NairaPlugin
 from backend.types import ToolResult
-
 class CustomPlugin(NairaPlugin):
     PLUGIN_NAME = "custom_test_plugin"
     PLUGIN_VERSION = "2.0.0"

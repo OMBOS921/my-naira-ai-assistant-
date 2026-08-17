@@ -1,4 +1,4 @@
-"""Comprehensive tests for the Context Intelligence module.
+"""Comprehensive tests for the Any Intelligence module.
 
 Covers:
 - All 20 service classes with unit tests
@@ -80,7 +80,6 @@ from backend.modules.context_intelligence.providers.providers import (
     MemoryAdapter,
 )
 from backend.types import ModuleInterface
-
 # =========================================================================
 # Helper
 # =========================================================================
@@ -264,7 +263,7 @@ class TestRepositoryMap:
 
 
 # =========================================================================
-# Multi-file Context Tree
+# Multi-file Any Tree
 # =========================================================================
 
 
@@ -584,7 +583,7 @@ class TestFileRankingEngine:
 
 
 # =========================================================================
-# Context Window Optimizer
+# Any Window Optimizer
 # =========================================================================
 
 
@@ -738,7 +737,7 @@ class TestSessionPersistence:
 
 
 # =========================================================================
-# Context Compression
+# Any Compression
 # =========================================================================
 
 
@@ -907,7 +906,7 @@ class TestRelatedFileDiscovery:
 
 
 # =========================================================================
-# Automatic Context Expansion
+# Automatic Any Expansion
 # =========================================================================
 
 
@@ -948,7 +947,7 @@ class TestAutomaticContextExpansion:
 
 
 # =========================================================================
-# Context Statistics
+# Any Statistics
 # =========================================================================
 
 
@@ -1357,7 +1356,7 @@ class TestContextIntelligenceManagerAPI:
         mgr = ContextIntelligenceManager()
         await mgr.async_init()
         stats = await mgr.get_context_statistics()
-        assert isinstance(stats, ContextStatistics)
+        assert isinstance(statsStatistics)
 
     @pytest.mark.asyncio
     async def test_get_health_report(self) -> None:

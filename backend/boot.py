@@ -24,7 +24,7 @@ from backend.modules.context_intelligence import ContextIntelligenceManager
 from backend.modules.conversation import ConversationManager
 from backend.modules.decision import DecisionManager
 from backend.modules.integrations import IntegrationsManager
-from backend.modules.llm import LLMManager
+
 from backend.modules.memory import MemoryManager
 from backend.modules.pc_control import PCControlManager
 from backend.modules.pc_control._production_adapter import (
@@ -38,7 +38,7 @@ from backend.modules.pc_control._production_adapter import (
 )
 from backend.modules.planning import PlanningManager
 from backend.modules.plugins import PluginManager
-from backend.modules.prompt import PromptManager
+
 from backend.modules.security import SecurityManager
 from backend.modules.settings import AppConfig, SettingsManager
 from backend.modules.skills import SkillManager
@@ -72,8 +72,6 @@ _SHUTDOWN_ORDER: tuple[str, ...] = (
     "autonomous_tasks",
     "context_intelligence",
     "conversation",
-    "prompt",
-    "llm",
     "decision",
     "planning",
     "coding_agent",
@@ -111,8 +109,6 @@ _BOOT_ORDER: tuple[str, ...] = (
     "coding_agent",
     "planning",
     "decision",
-    "llm",
-    "prompt",
     "conversation",
     "context_intelligence",
     "autonomous_tasks",
@@ -220,7 +216,7 @@ async def boot_core_modules(
         orchestrator.register_module("context", context_mgr)
         if getattr(context_mgr, "degraded", False):
             degraded_modules.append("context")
-        _LOG.info("[BOOT] Context initialised")
+        _LOG.info("[BOOT] Any initialised")
 
         # 7d – CapabilityManager (Layer 4 — Orchestration)
         _LOG.info("[BOOT]   Initialising CapabilityManager ...")
@@ -358,31 +354,6 @@ async def boot_core_modules(
         vision_providers: dict[str, Any] = {}
         vision_active = config.vision.active_provider
         vision_fallback = config.vision.fallback_chain
-
-        # Build Gemini provider if in fallback chain and API key available
-        if "gemini" in vision_fallback:
-            env_snap = getattr(settings_mgr, "_env", None)
-            if env_snap is None and container.has("env"):
-                env_snap = container.get("env")
-            gemini_key = getattr(env_snap, "gemini_api_key", None) if env_snap else None
-            if gemini_key:
-                from backend.modules.vision._gemini_adapter import (
-                    GeminiVisionAdapter,
-                    RetryPolicy,
-                )
-                vision_providers["gemini"] = GeminiVisionAdapter(
-                    api_key=gemini_key,
-                    model=config.vision.model,
-                    timeout=config.vision.default_timeout,
-                    retry_policy=RetryPolicy(
-                        max_retries=config.vision.max_retries,
-                        base_delay=config.vision.retry_base_delay,
-                        max_delay=config.vision.retry_max_delay,
-                    ),
-                )
-                _LOG.info("[BOOT]   Gemini Vision provider created")
-            else:
-                _LOG.warning("[BOOT]   Gemini API key not found — gemini provider skipped")
 
         vision_mgr = VisionManager(
             config=config,
@@ -701,97 +672,6 @@ async def boot_core_modules(
         if getattr(decision_mgr, "degraded", False):
             degraded_modules.append("decision")
         _LOG.info("[BOOT] Decision initialised")
-
-        # 7k – LLMManager (Layer 3 — AI Core)
-        _LOG.info("[BOOT]   Initialising LLMManager ...")
-        llm_providers: dict[str, object] = {}
-        from backend.modules.llm.llm_config_store import LLMConfigStore
-        vault_config = LLMConfigStore(root_dir / "memory" / "user_vault.json").get_active_config()
-        env_snap = getattr(settings_mgr, "_env", None)
-        if env_snap is None and container.has("env"):
-            candidate = container.get("env")
-            if hasattr(candidate, "gemini_api_key") or hasattr(candidate, "naira_api_key"):
-                env_snap = candidate
-
-        gemini_key = ""
-        if env_snap is not None:
-            gemini_key = getattr(env_snap, "gemini_api_key", "") or getattr(env_snap, "naira_api_key", "")
-        else:
-            from dotenv import load_dotenv
-            load_dotenv()
-            gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("NAIRA_API_KEY") or ""
-
-        try:
-            # 1. Try Loading DeepSeek (OpenCodeZen)
-            if vault_config is not None and vault_config.provider == "deepseek":
-                from backend.modules.llm.providers.deepseek_provider import DeepSeekProvider
-                llm_providers["deepseek"] = DeepSeekProvider(api_key=vault_config.api_key, model=vault_config.model, timeout=config.llm.timeout)
-                _LOG.info(f"[BOOT]   DeepSeek/OpenCodeZen LLM provider created (model={vault_config.model})")
-
-            # 2. Try Loading Gemini
-            _effective_gemini_key = vault_config.api_key if (vault_config and vault_config.provider == "gemini") else gemini_key
-            if _effective_gemini_key:
-                from backend.modules.llm.providers.gemini_provider import GeminiProvider
-                _effective_model = vault_config.model if (vault_config and vault_config.provider == "gemini") else "gemini-1.5-flash"
-                llm_providers["gemini"] = GeminiProvider(api_key=_effective_gemini_key, model=_effective_model, timeout=config.llm.timeout)
-                _LOG.info(f"[BOOT]   Gemini LLM provider created (model={_effective_model})")
-            else:
-                _LOG.warning("[BOOT]   Gemini API key not found — skipping Gemini LLM provider")
-
-        except ImportError as e:
-            _LOG.warning(f"[BOOT]   Provider import failed: {e}")
-
-        # 3. Dynamic Active Provider Selection
-        if vault_config and vault_config.provider in llm_providers:
-            active_llm = vault_config.provider
-        elif llm_providers:
-            active_llm = next(iter(llm_providers))
-        else:
-            active_llm = config.llm.active_provider
-
-        fallback_llm = tuple(llm_providers.keys()) if llm_providers else config.llm.fallback_chain
-
-        llm_mgr = LLMManager(
-            config=config,
-            providers=llm_providers,
-            generation_config=None,
-            safety_config=None,
-            active_provider=active_llm,
-            fallback_chain=fallback_llm,
-            event_bus=event_bus,
-        )
-        await llm_mgr.async_init()
-        # Force-recover degraded flag: if providers are registered the manager
-        # must be considered active regardless of the health-check outcome.
-        if getattr(llm_mgr, "_degraded", False) and llm_providers:
-            llm_mgr._degraded = False
-            _LOG.info("[BOOT]   LLM manager degraded flag cleared — providers present, forcing ONLINE")
-        modules["llm"] = llm_mgr
-        container.register("llm_manager", llm_mgr)
-        orchestrator.register_module("llm", llm_mgr)
-        if getattr(llm_mgr, "degraded", False):
-            degraded_modules.append("llm")
-            _LOG.warning("[BOOT]   LLM manager initialised in degraded state (no providers)")
-        else:
-            _LOG.info(
-                "[BOOT]   LLM manager initialised with provider(s): %s",
-                ", ".join(llm_providers),
-            )
-
-        # 7l – PromptManager (Layer 3 — AI Core)
-        _LOG.info("[BOOT]   Initialising PromptManager ...")
-        prompt_mgr = PromptManager(
-            config=config,
-            templates_dir=root_dir / "backend" / "modules" / "prompt" / "templates",
-            event_bus=event_bus,
-        )
-        await prompt_mgr.async_init()
-        modules["prompt"] = prompt_mgr
-        container.register("prompt_manager", prompt_mgr)
-        orchestrator.register_module("prompt", prompt_mgr)
-        if getattr(prompt_mgr, "degraded", False):
-            degraded_modules.append("prompt")
-        _LOG.info("[BOOT] Prompt initialised")
 
         # 7m – ConversationManager (Layer 4 — Orchestration)
         _LOG.info("[BOOT]   Initialising ConversationManager ...")
