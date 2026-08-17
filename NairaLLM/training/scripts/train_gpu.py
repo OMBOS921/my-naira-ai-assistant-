@@ -14,10 +14,12 @@ Features:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import math
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -90,6 +92,51 @@ if _HAS_TORCH:
             input_ids = torch.tensor(chunk[:-1], dtype=torch.long)
             targets = torch.tensor(chunk[1:], dtype=torch.long)
             return input_ids, targets
+
+
+def get_git_commit_sha() -> str:
+    """Returns the current Git commit SHA."""
+    try:
+        res = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(workspace_root),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            return res.stdout.strip()
+    except Exception:
+        pass
+    return os.environ.get("GIT_COMMIT_SHA", "unknown")
+
+
+def get_git_branch() -> str:
+    """Returns the active Git branch."""
+    try:
+        res = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=str(workspace_root),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            return res.stdout.strip()
+    except Exception:
+        pass
+    return os.environ.get("GIT_BRANCH", "main")
+
+
+def compute_file_sha256(file_path: Path) -> str:
+    """Computes SHA-256 hash of a file."""
+    if not file_path.exists():
+        return "not_found"
+    h = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        while chunk := f.read(65536):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def load_dataset_samples(dataset_path: str | Path) -> list[dict[str, Any]]:
@@ -169,9 +216,18 @@ def train_gpu(
     tokenizer = NairaTokenizer(tok_path)
     print(f"[TOKENIZER] Loaded NairaTokenizer (Vocab Size = {tokenizer.vocab_size})")
 
-    ds_path = Path(dataset_path or os.environ.get("NAIRA_DATASET_PATH", "NairaLLM/dataset/semantic_corpus/semantic_pretrain_v1_5.jsonl"))
+    ds_path = Path(dataset_path or os.environ.get("NAIRA_DATASET_PATH", "NairaLLM/dataset/semantic_corpus/semantic_pretrain_v1_5_expanded.jsonl"))
+    if not ds_path.exists():
+        ds_path = Path("NairaLLM/dataset/semantic_corpus/semantic_pretrain_v1_5.jsonl")
     samples = load_dataset_samples(ds_path)
-    print(f"[DATASET] Loaded {len(samples)} semantic pretraining samples from {ds_path.name}")
+    ds_sha256 = compute_file_sha256(ds_path)
+    git_sha = get_git_commit_sha()
+    git_branch = get_git_branch()
+
+    print(f"[SOURCE CONTROL] Git Commit:    {git_sha}")
+    print(f"[SOURCE CONTROL] Git Branch:    {git_branch}")
+    print(f"[DATASET] Loaded {len(samples)} pretraining samples from {ds_path.name}")
+    print(f"[DATASET] SHA-256:              {ds_sha256}")
 
     # Split 90% train / 10% val
     n_train = max(1, int(len(samples) * 0.9))
@@ -199,6 +255,7 @@ def train_gpu(
     model = NairaTransformer(config).to(device)
     param_count = model.count_parameters()
     print(f"[MODEL] Initialized NairaTransformer ({param_count:,} parameters)")
+    print(f"[CONFIG] {config.to_dict()}")
 
     # 4. Optimizer, Scheduler & Scaler
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.01, betas=(0.9, 0.95))
@@ -292,34 +349,43 @@ def train_gpu(
 
         # Save latest checkpoint
         latest_path = ckpt_dir / "naira_model_v1_5_latest.pt"
-        torch.save(
-            {
-                "epoch": epoch,
-                "global_step": global_step,
-                "config": config.to_dict(),
-                "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-                "scheduler_state_dict": scheduler.state_dict(),
+        checkpoint_payload = {
+            "epoch": epoch,
+            "global_step": global_step,
+            "step": global_step,
+            "git_commit_sha": git_sha,
+            "git_branch": git_branch,
+            "dataset_version": ds_path.name,
+            "dataset_sha256": ds_sha256,
+            "tokenizer_vocab_size": tokenizer.vocab_size,
+            "model_config": config.to_dict(),
+            "training_config": {
+                "epochs": epochs,
+                "batch_size": batch_size,
+                "gradient_accumulation_steps": grad_accum_steps,
+                "learning_rate": learning_rate,
+                "max_seq_len": max_seq_len,
+            },
+            "metrics": {
                 "train_loss": avg_train_loss,
                 "val_loss": avg_val_loss,
+                "val_perplexity": val_ppl,
                 "best_val_loss": min(best_val_loss, avg_val_loss),
             },
-            str(latest_path),
-        )
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "scheduler_state_dict": scheduler.state_dict(),
+            "train_loss": avg_train_loss,
+            "val_loss": avg_val_loss,
+            "best_val_loss": min(best_val_loss, avg_val_loss),
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        torch.save(checkpoint_payload, str(latest_path))
 
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             best_path = ckpt_dir / "naira_model_v1_5_best.pt"
-            torch.save(
-                {
-                    "epoch": epoch,
-                    "global_step": global_step,
-                    "config": config.to_dict(),
-                    "model_state_dict": model.state_dict(),
-                    "val_loss": avg_val_loss,
-                },
-                str(best_path),
-            )
+            torch.save(checkpoint_payload, str(best_path))
 
     total_time = time.perf_counter() - start_time
     print(f"\n[DONE] Training complete in {total_time:.2f}s ({total_time/60:.2f} min)")
@@ -329,13 +395,31 @@ def train_gpu(
     metadata = {
         "version": "1.5",
         "description": "NairaLLM V1.5 Semantic Pretrained Foundation",
+        "git_commit_sha": git_sha,
+        "git_branch": git_branch,
+        "dataset_version": ds_path.name,
+        "dataset_sha256": ds_sha256,
+        "tokenizer_vocab_size": tokenizer.vocab_size,
         "device_used": device_name,
         "model_config": config.to_dict(),
+        "training_config": {
+            "epochs": epochs,
+            "batch_size": batch_size,
+            "gradient_accumulation_steps": grad_accum_steps,
+            "learning_rate": learning_rate,
+            "max_seq_len": max_seq_len,
+        },
         "total_parameters": param_count,
         "epochs": epochs,
         "final_train_loss": history["train_loss"][-1] if history["train_loss"] else None,
         "final_val_loss": history["val_loss"][-1] if history["val_loss"] else None,
         "best_val_loss": round(best_val_loss, 4),
+        "metrics": {
+            "final_train_loss": history["train_loss"][-1] if history["train_loss"] else None,
+            "final_val_loss": history["val_loss"][-1] if history["val_loss"] else None,
+            "best_val_loss": round(best_val_loss, 4),
+            "total_time_seconds": round(total_time, 2),
+        },
         "history": history,
     }
     with open(meta_path, "w", encoding="utf-8") as f:

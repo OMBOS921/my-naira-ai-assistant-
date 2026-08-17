@@ -268,6 +268,10 @@ class SemanticPretrainingSuite:
                 k: {"passed": v["passed"], "total": v["total"], "accuracy": round(v["passed"] / v["total"], 2)}
                 for k, v in category_stats.items()
             },
+            "domain_breakdown": {
+                k: {"passed": v["passed"], "total": v["total"], "accuracy": round(v["passed"] / v["total"], 2)}
+                for k, v in category_stats.items()
+            },
             "records": [asdict(r) for r in records],
         }
 

@@ -56,6 +56,43 @@
       "accuracy": 1.0
     }
   },
+  "domain_breakdown": {
+    "english_comprehension": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "hindi_comprehension": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "hinglish_comprehension": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "contextual_completion": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "technical_text": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "code_completion": {
+      "passed": 1,
+      "total": 2,
+      "accuracy": 0.5
+    },
+    "json_structured": {
+      "passed": 2,
+      "total": 2,
+      "accuracy": 1.0
+    }
+  },
   "records": [
     {
       "test_id": "SEM_EN_01",
@@ -65,7 +102,7 @@
       "generated_text": "_\n<|tool_call|> \"\":",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 147.35
+      "latency_ms": 122.45
     },
     {
       "test_id": "SEM_EN_02",
@@ -75,7 +112,7 @@
       "generated_text": "\n<|tool_call|>_{\"<|intent|> \"s}\":",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 71.93
+      "latency_ms": 284.22
     },
     {
       "test_id": "SEM_HI_01",
@@ -85,7 +122,7 @@
       "generated_text": "_\n<|tool_call|> \"\":",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 79.12
+      "latency_ms": 164.39
     },
     {
       "test_id": "SEM_HI_02",
@@ -95,7 +132,7 @@
       "generated_text": "\n<|tool_call|>_{\"<|intent|> \"\":",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 153.67
+      "latency_ms": 45.42
     },
     {
       "test_id": "SEM_HING_01",
@@ -105,7 +142,7 @@
       "generated_text": "_\n \"<|tool_call|>{\"<|intent|>\":",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 63.89
+      "latency_ms": 18.07
     },
     {
       "test_id": "SEM_HING_02",
@@ -115,7 +152,7 @@
       "generated_text": "\n_ \"<|tool_call|>{\"<|intent|>\":",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 133.77
+      "latency_ms": 17.65
     },
     {
       "test_id": "SEM_CTX_01",
@@ -125,7 +162,7 @@
       "generated_text": "\n<|tool_call|>_ \"{\"<|intent|>\":",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 107.2
+      "latency_ms": 16.42
     },
     {
       "test_id": "SEM_CTX_02",
@@ -135,7 +172,7 @@
       "generated_text": "\n<|tool_call|>_{\"<|intent|> \"s}\":",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 126.45
+      "latency_ms": 20.3
     },
     {
       "test_id": "SEM_TECH_01",
@@ -145,7 +182,7 @@
       "generated_text": "_\n<|tool_call|>{\"<|intent|> \"s}\":",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 118.12
+      "latency_ms": 23.71
     },
     {
       "test_id": "SEM_TECH_02",
@@ -155,7 +192,7 @@
       "generated_text": "\n_ \"<|tool_call|>{\"<|intent|>\":",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 111.82
+      "latency_ms": 19.41
     },
     {
       "test_id": "SEM_CODE_01",
@@ -165,7 +202,7 @@
       "generated_text": "_\n<|tool_call|>{\" \"<|intent|>\":",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 73.11
+      "latency_ms": 21.15
     },
     {
       "test_id": "SEM_CODE_02",
@@ -177,7 +214,7 @@
         "int"
       ],
       "coherence_passed": true,
-      "latency_ms": 158.52
+      "latency_ms": 20.49
     },
     {
       "test_id": "SEM_JSON_01",
@@ -190,7 +227,7 @@
         ":"
       ],
       "coherence_passed": true,
-      "latency_ms": 21.14
+      "latency_ms": 17.08
     },
     {
       "test_id": "SEM_JSON_02",
@@ -203,7 +240,7 @@
         "\""
       ],
       "coherence_passed": true,
-      "latency_ms": 18.01
+      "latency_ms": 19.38
     }
   ]
 }

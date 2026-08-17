@@ -1,55 +1,86 @@
 # =========================
-# Python
+# Python & Caches
 # =========================
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+.cache/
+cache/
+.ruff_cache/
 
-# Virtual Environment
+# =========================
+# Virtual Environments
+# =========================
 .venv/
 venv/
 env/
 
-# Environment Variables
+# =========================
+# Environment Variables & Secrets
+# =========================
 .env
 .env.*
-
 !.env.example
+*credentials*
+*secrets*
+*token*
+*.pem
+*.key
+*.p12
+*.pfx
 
-# Logs
-logs/
-*.log
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Build
-build/
-dist/
-*.egg-info/
-
-# IDE
-.vscode/settings.json
-.idea/
-
-# OS
-.DS_Store
-Thumbs.db
-
-venv/
-
-# Credentials & Integrations
+# Credentials & Integrations Specifics
 data/credentials/
 firebase_credentials.json
 memory/user_vault.json
 config/google_client_secret.json
 *.naira_backup
-firebase_credentials.json
+
+# =========================
+# Model Checkpoints & Large Artifacts
+# =========================
+checkpoints/
+**/checkpoints/
+*.pt
+*.ckpt
+*.npz
+*.bin
+*.safetensors
+*.zip
+*.tar
+*.tar.gz
+
+# Retain specific non-checkpoint assets if any
+!backend/modules/voice/rvc_model/vtuber.pth
+
+# =========================
+# Logs & Databases
+# =========================
+logs/
+*.log
+*.db
+*.sqlite
+*.sqlite3
+
+# =========================
+# Testing & Coverage
+# =========================
+.pytest_cache/
+.coverage
+htmlcov/
+
+# =========================
+# Build & Distribution
+# =========================
+build/
+dist/
+*.egg-info/
+
+# =========================
+# IDE & OS
+# =========================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

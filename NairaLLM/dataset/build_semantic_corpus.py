@@ -194,6 +194,11 @@ def build_expanded_corpus() -> list[dict[str, Any]]:
     return validated_samples
 
 
+def create_semantic_corpus_samples() -> list[dict[str, Any]]:
+    """Alias for build_expanded_corpus for test compatibility."""
+    return build_expanded_corpus()
+
+
 def main() -> None:
     samples = build_expanded_corpus()
     out_dir = workspace_root / "NairaLLM" / "dataset" / "semantic_corpus"

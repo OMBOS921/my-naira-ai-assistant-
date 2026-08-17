@@ -52,6 +52,43 @@ except ImportError:
     _HAS_TORCH = False
 
 
+import subprocess
+
+
+def get_git_commit_sha() -> str:
+    """Returns the current Git commit SHA."""
+    try:
+        res = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(workspace_root),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            return res.stdout.strip()
+    except Exception:
+        pass
+    return os.environ.get("GIT_COMMIT_SHA", "unknown")
+
+
+def get_git_branch() -> str:
+    """Returns the active Git branch."""
+    try:
+        res = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=str(workspace_root),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            return res.stdout.strip()
+    except Exception:
+        pass
+    return os.environ.get("GIT_BRANCH", "main")
+
+
 def load_dataset_records(dataset_path: Path) -> list[dict[str, Any]]:
     records = []
     with open(dataset_path, "r", encoding="utf-8") as f:
@@ -359,9 +396,13 @@ def run_semantic_pilot(
     total_chars = sum(len(r.get("text", "")) for r in records)
     total_tokens = sum(len(tokenizer.encode(r.get("text", ""))) for r in records)
     ds_sha256 = compute_file_sha256(ds_path)
+    git_sha = get_git_commit_sha()
+    git_branch = get_git_branch()
 
-    print(f"\n[DATASET A] Loaded {total_records} records ({total_chars:,} chars, {total_tokens:,} tokens)")
-    print(f"[DATASET A] SHA-256: {ds_sha256[:16]}...{ds_sha256[-16:]}")
+    print(f"\n[SOURCE CONTROL] Git Commit: {git_sha}")
+    print(f"[SOURCE CONTROL] Git Branch: {git_branch}")
+    print(f"[DATASET A] Loaded {total_records} records ({total_chars:,} chars, {total_tokens:,} tokens)")
+    print(f"[DATASET A] SHA-256: {ds_sha256}")
     print(f"[TOKENIZER] Vocab Size = {vocab_size}")
 
     # Determine Checkpoint Output Directory (Phase 4 Google Drive resolution)
@@ -560,7 +601,22 @@ def run_semantic_pilot(
         checkpoint_bundle = {
             "epoch": epochs,
             "global_step": global_step,
+            "step": global_step,
+            "git_commit_sha": git_sha,
+            "git_branch": git_branch,
             "model_config": config.to_dict(),
+            "training_config": {
+                "epochs": epochs,
+                "batch_size": batch_size,
+                "gradient_accumulation_steps": grad_accum_steps,
+                "learning_rate": learning_rate,
+                "max_seq_len": max_seq_len,
+            },
+            "metrics": {
+                "train_loss": final_loss,
+                "val_loss": best_val_loss,
+                "best_val_loss": best_val_loss,
+            },
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
             "scheduler_state_dict": scheduler.state_dict(),

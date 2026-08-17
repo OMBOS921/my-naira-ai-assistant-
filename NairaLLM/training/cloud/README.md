@@ -1,98 +1,64 @@
-# Free Cloud GPU Training Guide for NairaLLM V1.5
+# Free Cloud GPU Training Guide for NairaLLM (GitHub + Colab Workflow)
 
-This guide details how to execute **NairaLLM V1.5 Semantic Pretraining** on free cloud GPU tiers (Google Colab and Kaggle Notebooks) while maintaining your local machine as the primary development and control workstation.
-
----
-
-## 1. Quick Environment Diagnostics
-
-Before initiating any training run, run the diagnostic checker:
-
-```bash
-python NairaLLM/training/cloud/check_environment.py
-```
-
-This will automatically inspect:
-- Python & PyTorch versions
-- CUDA availability, GPU device name, compute capability, and VRAM
-- Recommended batch size, gradient accumulation steps, and precision mode.
+This guide details how to execute **NairaLLM Semantic Pretraining & Pilot Evaluation** on Google Colab's Free Tesla T4 GPU using GitHub as the single canonical source of truth.
 
 ---
 
-## 2. Google Colab Workflow (Primary Target)
+## 1. Architecture & Source-of-Truth
 
-### Step 1: Open Google Colab with GPU
-1. Go to [Google Colab](https://colab.research.google.com).
-2. Click **Runtime** $\to$ **Change runtime type** $\to$ Select **T4 GPU** (or **L4 GPU** if available).
-
-### Step 2: Clone Repository & Setup
-In a Colab cell, run:
-```bash
-!git clone https://github.com/YOUR_REPO/naira-os.git
-%cd naira-os
-!pip install -r requirements.txt
-!pip install torch torchvision
+```text
+Local Naira OS Repository
+          ↓
+   Antigravity Edits
+          ↓
+      Git Commit
+          ↓
+     GitHub Push (Canonical Source of Truth)
+          ↓
+Google Colab clones / pulls from GitHub
+          ↓
+Free T4 GPU Training (AMP + Mixed Precision)
+          ↓
+Persistent Checkpoints saved to Google Drive (/content/drive/MyDrive/Naira-Training/checkpoints/)
 ```
 
-### Step 3: Mount Google Drive & Run Pretraining
-```python
-from NairaLLM.training.cloud.colab_setup import setup_colab_environment
-paths = setup_colab_environment(mount_drive=True)
-
-# Run GPU Training with automatic mixed precision and Drive checkpointing
-!python -m NairaLLM.training.scripts.train_gpu --epochs 30 --batch-size 8 --grad-accum 4
-```
-
-### Step 4: Resuming an Interrupted Session
-If Colab disconnects, simply reconnect the GPU runtime and run:
-```bash
-!python -m NairaLLM.training.scripts.resume_gpu_training
-```
-The trainer automatically locates the latest `.pt` checkpoint in Google Drive and resumes seamlessly from that exact step.
+> [!NOTE]
+> **Zero Cost Policy**: `USE_PAID_COMPUTE = False`. No Colab Pro or paid compute units are required.
+> Checkpoints are serialized to Google Drive, ensuring that weights persist across runtime restarts while keeping Git clean of large binary weights.
 
 ---
 
-## 3. Kaggle Notebooks Workflow (Secondary Target)
+## 2. Google Colab Training Notebook
 
-### Step 1: Create Notebook with GPU
-1. Go to [Kaggle Notebooks](https://www.kaggle.com/code).
-2. Click **Settings** (right sidebar) $\to$ **Accelerator** $\to$ Select **GPU P100** or **GPU T4 x2**.
+The primary automated training notebook is:
+[`NairaLLM/training/cloud/nairallm_colab_setup.ipynb`](file:///c:/Users/user/Desktop/naira%20os/NairaLLM/training/cloud/nairallm_colab_setup.ipynb)
 
-### Step 2: Clone & Configure
-```bash
-!git clone https://github.com/YOUR_REPO/naira-os.git /kaggle/working/naira-os
-%cd /kaggle/working/naira-os
-!pip install -r requirements.txt
-```
-
-### Step 3: Run Training
-```bash
-!python NairaLLM/training/cloud/kaggle_setup.py --run-training
-```
-
-### Step 4: Download Checkpoints
-At the end of training, the script packages checkpoints to `/kaggle/working/nairallm_v1_5_checkpoints.zip` which you can download directly from the Kaggle file explorer to your local `NairaLLM/training/checkpoints/` directory.
+### How to Run in Google Colab:
+1. Open [Google Colab](https://colab.research.google.com).
+2. Go to **File** $\to$ **Upload notebook** $\to$ select `NairaLLM/training/cloud/nairallm_colab_setup.ipynb` (or open directly from GitHub).
+3. Set Runtime: **Runtime** $\to$ **Change runtime type** $\to$ **T4 GPU** $\to$ **Save**.
+4. Run the notebook cells sequentially:
+   - **Step 1 (Environment Check)**: Verifies CUDA T4 GPU and enforces free tier policy.
+   - **Step 2 (Google Drive Mount)**: Creates `/content/drive/MyDrive/Naira-Training/checkpoints/`.
+   - **Step 3 (Repository Sync)**: Clones or pulls from canonical repository (`https://github.com/OMBOS921/my-naira-ai-assistant-.git`). Supports private repositories via secure masked token prompt.
+   - **Step 4 (Provenance Audit)**: Prints Git SHA, branch, Dataset A SHA-256, tokenizer vocab size, and model config.
+   - **Step 5 (Smoke Test)**: Runs the 10-step GPU smoke test.
+   - **Step 6 (Pilot Training)**: Runs the short 10-epoch pilot with semantic evaluation and STOP gate.
+   - **Step 7 (Full Training)**: Requires explicit `RUN_FULL_TRAINING = True` to launch full run.
 
 ---
 
-## 4. Checkpoint Artifacts & Local Sync
+## 3. Checkpoint Artifacts & Provenance
 
-Every training run saves:
-- `naira_model_v1_5_latest.pt` (Complete PyTorch weights, optimizer state, step counter)
-- `naira_model_v1_5_best.pt` (Lowest validation loss model)
-- `naira_model_v1_5_metadata.json` (Training curves, hyperparameters, loss history)
+Every checkpoint saved to Google Drive includes:
+- `model_state_dict` (Transformer weights)
+- `optimizer_state_dict` (AdamW optimizer momentum buffers)
+- `scheduler_state_dict` (Cosine annealing LR schedule)
+- `epoch` & `global_step`
+- `git_commit_sha` & `git_branch`
+- `dataset_version` & `dataset_sha256`
+- `tokenizer_vocab_size`
+- `training_config` & `model_config`
+- `metrics` (`train_loss`, `val_loss`, `val_perplexity`)
 
-To evaluate the trained model on your local laptop:
-1. Download the `.pt` file and metadata to `NairaLLM/training/checkpoints/`.
-2. Run the evaluation benchmark:
-   ```bash
-   python -m NairaLLM.evaluation.suites.semantic_pretraining_suite
-   python -m NairaLLM.evaluation.suites.run_v1_4_generalization_evaluation
-   ```
-
----
-
-## 5. Free Cloud Resource Rules
-- Strictly adhere to legitimate free-tier usage policies.
-- Do not attempt to bypass provider timeouts or quotas.
-- Use the built-in gradient accumulation and mixed precision settings to maximize efficiency within allowed session durations.
+Training is fully resumable at any time.
