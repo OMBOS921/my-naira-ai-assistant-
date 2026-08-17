@@ -1,8 +1,8 @@
 {
   "title": "NairaLLM Final V1 — TrainingStage Enum & Lineage Alignment Audit",
-  "timestamp": "2026-08-17 14:26:04 UTC",
+  "timestamp": "2026-08-17 14:26:57 UTC",
   "status": "STAGE_ENUM_ALIGNED_AND_VERIFIED",
-  "git_commit_sha": "eb2b28b897419cc2a3ca4407d55224c95833c6f7",
+  "git_commit_sha": "3b84a030e7bc3e9d14f1f445997d69d9b53ae7f7",
   "canonical_stages": [
     "semantic",
     "domain",
