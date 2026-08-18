@@ -234,14 +234,17 @@ class OneShotFinalTrainer:
         # Verify reload
         _ = torch.load(ckpt_path, map_location="cpu")
 
-        # Sync to Google Drive if accessible
+        # Sync to Google Drive if accessible and destination differs from local output_dir
         if self.drive_dir.exists():
             drive_dest = self.drive_dir / ckpt_filename
-            shutil.copy2(ckpt_path, drive_dest)
-            drive_sha = compute_sha256(drive_dest)
-            if drive_sha != sha:
-                raise RuntimeError(f"Drive copy SHA mismatch on {ckpt_filename}!")
-            _LOG.info("Verified Google Drive sync: %s", drive_dest)
+            if ckpt_path.resolve() != drive_dest.resolve():
+                shutil.copy2(ckpt_path, drive_dest)
+                drive_sha = compute_sha256(drive_dest)
+                if drive_sha != sha:
+                    raise RuntimeError(f"Drive copy SHA mismatch on {ckpt_filename}!")
+                _LOG.info("Verified Google Drive sync: %s", drive_dest)
+            else:
+                _LOG.info("Checkpoint saved directly in target Google Drive directory: %s", ckpt_path)
 
         return ckpt_path
 
@@ -270,7 +273,11 @@ class OneShotFinalTrainer:
             eps=1e-8,
             weight_decay=0.1
         )
-        scaler = torch.cuda.amp.GradScaler(enabled=True)
+        scaler = (
+            torch.amp.GradScaler("cuda", enabled=True)
+            if hasattr(torch, "amp") and hasattr(torch.amp, "GradScaler")
+            else torch.cuda.amp.GradScaler(enabled=True)
+        )
 
         global_step = 0
         loss_history = []
@@ -294,7 +301,12 @@ class OneShotFinalTrainer:
                     input_ids = batch["input_ids"].to(self.device)
                     labels = batch["labels"].to(self.device)
 
-                    with torch.cuda.amp.autocast(dtype=torch.float16):
+                    autocast_ctx = (
+                        torch.amp.autocast("cuda", dtype=torch.float16)
+                        if hasattr(torch, "amp") and hasattr(torch.amp, "autocast")
+                        else torch.cuda.amp.autocast(dtype=torch.float16)
+                    )
+                    with autocast_ctx:
                         out = model(input_ids)
                         logits = out[0] if isinstance(out, tuple) else out
                         shift_logits = logits[..., :-1, :].contiguous()
