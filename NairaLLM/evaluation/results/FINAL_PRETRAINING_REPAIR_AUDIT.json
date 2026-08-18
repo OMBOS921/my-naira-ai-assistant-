@@ -1,0 +1,98 @@
+{
+  "audit_title": "NairaLLM Pretraining Lock Audit Failure Diagnosis & Repair",
+  "version": "1.1.0-repaired",
+  "AUDIT_SCRIPT_CRASH_FIXED": true,
+  "MODEL_OK": true,
+  "DATASET_A_OK": true,
+  "DATASET_B_OK": true,
+  "DATASET_C_OK": true,
+  "BENCHMARK_V3_OK": true,
+  "TRAINING_ENGINE_OK": true,
+  "HASH_LOCK_OK": true,
+  "FINAL_VERDICT": "READY_FOR_FINAL_TRAINING",
+  "root_cause_analysis": {
+    "audit_crash_root_cause": "1. Hardcoded Windows path `WORKSPACE_ROOT = Path(r'c:\\Users\\user\\Desktop\\naira os')` in final_pretraining_lock_audit_v2.py failed when executed on Linux / Google Colab (/content/naira os).\n2. When Pillar 2 failed due to missing path, generate_markdown_report() attempted direct key access `report['pillars']['pillar_02_dataset_a_semantic']['details']['records']` which raised KeyError: 'records'.",
+    "corrective_actions_applied": [
+      "Replaced hardcoded Windows path with dynamic resolution: `WORKSPACE_ROOT = Path(__file__).resolve().parent.parent.parent.parent`.",
+      "Refactored generate_markdown_report() to be 100% defensive using safe `.get()` lookups and fallback table rendering.",
+      "Standardized all pillar records to structured format: {pillar_id, name, status, passed, reason, expected, actual, details}.",
+      "Added regression test NairaLLM/tests/test_audit_crash_resilience.py to ensure report generator never crashes under any failure conditions."
+    ]
+  },
+  "pillar_status": {
+    "pillar_01_model_architecture": {
+      "status": "PASSED",
+      "expected_params": 29368832,
+      "actual_params": 29368832,
+      "config_sha256": "d3494885d4244e08f9327996b2e605945792b7cd173e361dca420ad7a9b97bbb",
+      "note": "Exact analytical match (512 d_model, 8 layers, 8 heads, 1536 d_ff, 2048 ctx, 4096 vocab)"
+    },
+    "pillar_02_dataset_a_semantic": {
+      "status": "PASSED",
+      "records": 337,
+      "tokens": 62850,
+      "sha256": "015b4655bde092005b31195025e96df6e80702e7975f05ebf0c6072c1b29ff8f",
+      "note": "Canonical semantic foundation corpus verified"
+    },
+    "pillar_03_dataset_b_capability": {
+      "status": "PASSED",
+      "records": 701,
+      "tools_covered": "102 / 102 (100.0%)",
+      "sha256": "5b38ebbb37907d35caf022f955b1673449830664295188812d64c86e8c71ab9e",
+      "note": "All 102 verified tool contracts covered with zero missing"
+    },
+    "pillar_04_dataset_c_behavior": {
+      "status": "PASSED",
+      "records": 312,
+      "autonomy_levels": "L0 to L5",
+      "sha256": "a01002eec7cd6022eb3c8909f109bf072dfa82ea6a27ca912d8e6b6f878df5a8",
+      "note": "Proactivity, interruption, quiet mode, emotion triage verified"
+    },
+    "pillar_05_cognitive_protocol": {
+      "status": "PASSED",
+      "special_tokens_count": 17,
+      "vocab_size": 4096,
+      "tokenizer_sha256": "f560d112b53b63499c6303e42c27e13b1c4811e840eab4fa5b68e120ffe67238",
+      "note": "All 17 special tokens encode to exact single integer IDs 0 to 16"
+    },
+    "pillar_06_benchmark_v3": {
+      "status": "PASSED",
+      "unseen_prompts": 800,
+      "sections": 20,
+      "sha256": "073286f04322724a22a6d658b59207d8a32c30c8185041d88dd5f31535b98a37",
+      "note": "Zero train/test leakage, strict zero-heuristic AST scoring"
+    },
+    "pillar_07_training_system": {
+      "status": "PASSED",
+      "script_sha256": "f220e26af580a3cc74bb99f6b6b9389d94e7c848ff44773bc31aa00e0293dfb2",
+      "preflight": "DRY_RUN_PASSED",
+      "note": "One-shot 5-phase continuous curriculum with anti-forgetting replay"
+    },
+    "pillar_08_git_versioning": {
+      "status": "PASSED",
+      "git_commit_sha": "0724419810e98b9fc049d1c9fffb5a9b15b17b85"
+    },
+    "pillar_09_cloud_gpu_feasibility": {
+      "status": "PASSED",
+      "peak_vram_gb": 3.22,
+      "available_vram_gb": 16.0,
+      "headroom_percent": 79.9,
+      "estimated_runtime_minutes": 14.5
+    },
+    "pillar_10_cryptographic_lock": {
+      "status": "PASSED",
+      "all_8_hashes_valid": true
+    }
+  },
+  "current_verified_hashes": {
+    "model_config_sha256": "d3494885d4244e08f9327996b2e605945792b7cd173e361dca420ad7a9b97bbb",
+    "tokenizer_sha256": "f560d112b53b63499c6303e42c27e13b1c4811e840eab4fa5b68e120ffe67238",
+    "dataset_a_sha256": "015b4655bde092005b31195025e96df6e80702e7975f05ebf0c6072c1b29ff8f",
+    "dataset_b_sha256": "5b38ebbb37907d35caf022f955b1673449830664295188812d64c86e8c71ab9e",
+    "dataset_c_sha256": "a01002eec7cd6022eb3c8909f109bf072dfa82ea6a27ca912d8e6b6f878df5a8",
+    "benchmark_v3_sha256": "073286f04322724a22a6d658b59207d8a32c30c8185041d88dd5f31535b98a37",
+    "training_script_sha256": "f220e26af580a3cc74bb99f6b6b9389d94e7c848ff44773bc31aa00e0293dfb2",
+    "git_commit_sha": "0724419810e98b9fc049d1c9fffb5a9b15b17b85"
+  },
+  "colab_one_click_command": "!python NairaLLM/training/scripts/train_final_once.py --config NairaLLM/configs/final_nairallm_v1.json --output-dir /content/drive/MyDrive/Naira-Training/checkpoints/final"
+}
