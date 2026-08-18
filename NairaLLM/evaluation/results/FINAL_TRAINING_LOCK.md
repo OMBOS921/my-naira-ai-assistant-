@@ -2,7 +2,7 @@
 **Project**: Naira OS AI Assistant Model (NairaLLM)  
 **Target Model**: NairaLLM-30M (29,368,832 tied parameters)  
 **Execution Gate**: Final Pre-Training Certification (STOP Gate)  
-**Timestamp**: 2026-08-18 20:48:55  
+**Timestamp**: 2026-08-18 21:05:12  
 
 > [!IMPORTANT]
 > **FINAL AUDIT VERDICT: READY_FOR_FINAL_TRAINING**
@@ -38,8 +38,8 @@
   "dataset_b_sha256": "5b38ebbb37907d35caf022f955b1673449830664295188812d64c86e8c71ab9e",
   "dataset_c_sha256": "a01002eec7cd6022eb3c8909f109bf072dfa82ea6a27ca912d8e6b6f878df5a8",
   "benchmark_v3_sha256": "073286f04322724a22a6d658b59207d8a32c30c8185041d88dd5f31535b98a37",
-  "training_script_sha256": "f220e26af580a3cc74bb99f6b6b9389d94e7c848ff44773bc31aa00e0293dfb2",
-  "git_commit_sha": "0724419810e98b9fc049d1c9fffb5a9b15b17b85"
+  "training_script_sha256": "dc042f8bc07b7f4162d49db459f7a282e15f3403f9d92cfabc4b010eaf274fe3",
+  "git_commit_sha": "f66de5668ac99d51f6ce195766aca1b0731e8865"
 }
 ```
 

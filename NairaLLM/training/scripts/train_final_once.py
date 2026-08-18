@@ -295,7 +295,8 @@ class OneShotFinalTrainer:
                     labels = batch["labels"].to(self.device)
 
                     with torch.cuda.amp.autocast(dtype=torch.float16):
-                        logits = model(input_ids)
+                        out = model(input_ids)
+                        logits = out[0] if isinstance(out, tuple) else out
                         shift_logits = logits[..., :-1, :].contiguous()
                         shift_labels = labels[..., 1:].contiguous()
                         loss = criterion(shift_logits.view(-1, self.cfg.vocab_size), shift_labels.view(-1))
