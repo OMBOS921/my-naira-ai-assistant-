@@ -28,14 +28,18 @@ SPECIAL_TOKENS = [
     "<|system|>",
     "<|user|>",
     "<|assistant|>",
+    "<|context|>",
+    "<|intent|>",
+    "<|plan|>",
     "<|tool_call|>",
     "<|tool_result|>",
-    "<|thought|>",
-    "<|plan|>",
     "<|verify|>",
-    "<|unk|>",
-    "<|intent|>",
+    "<|recover|>",
+    "<|no_tool|>",
+    "<|proactive|>",
     "<|final|>",
+    "<|thought|>",
+    "<|unk|>",
 ]
 
 

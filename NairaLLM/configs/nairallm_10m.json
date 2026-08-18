@@ -1,0 +1,28 @@
+{
+  "model_name": "NairaLLM-10M",
+  "version": "1.0.0-final",
+  "architecture": {
+    "type": "CausalDecoderOnlyTransformer",
+    "d_model": 288,
+    "num_layers": 8,
+    "num_heads": 6,
+    "num_kv_heads": 6,
+    "d_head": 48,
+    "d_ff": 864,
+    "max_seq_len": 1024,
+    "norm_type": "RMSNorm",
+    "norm_eps": 1e-5,
+    "activation": "SwiGLU",
+    "position_embeddings": "RoPE",
+    "rope_theta": 10000.0,
+    "tie_embeddings": true,
+    "dropout": 0.0,
+    "parameter_count_tied": 9810720,
+    "parameter_count_untied": 10990368
+  },
+  "tokenizer": {
+    "type": "ByteLevelBPE",
+    "tokenizer_path": "NairaLLM/model/tokenizer/naira_tokenizer.json",
+    "vocab_size": 4096
+  }
+}

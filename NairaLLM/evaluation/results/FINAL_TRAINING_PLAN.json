@@ -1,0 +1,107 @@
+{
+  "plan_name": "NairaLLM One-Shot Final Continuous Training Plan",
+  "version": "7.0.0-final",
+  "model_name": "NairaLLM-30M",
+  "target_parameters_tied": 29368832,
+  "max_sequence_length": 2048,
+  "vocab_size": 4096,
+  "compute_policy": "Free Cloud GPU Only (Tesla T4 16GB / Kaggle P100, $0.00 Cost)",
+  "single_invocation_guarantee": true,
+  "ready_for_master_prompt_8": true,
+  "curriculum_phases": [
+    {
+      "phase": "PHASE_A_SEMANTIC",
+      "name": "Semantic Foundation",
+      "epochs": 2,
+      "lr": 0.0005,
+      "datasets": [
+        "NairaLLM/dataset/final/A_semantic/dataset_a_semantic.jsonl"
+      ],
+      "replay_mix": "0%"
+    },
+    {
+      "phase": "PHASE_B_DOMAIN",
+      "name": "Naira Domain & Identity",
+      "epochs": 2,
+      "lr": 0.0004,
+      "datasets": [
+        "NairaLLM/dataset/final/B_capability/dataset_b_domain.jsonl",
+        "NairaLLM/dataset/final/A_semantic/dataset_a_semantic.jsonl"
+      ],
+      "replay_mix": "15% Phase A Replay"
+    },
+    {
+      "phase": "PHASE_C_COGNITION",
+      "name": "Cognition & DAG Planning",
+      "epochs": 2,
+      "lr": 0.0003,
+      "datasets": [
+        "NairaLLM/dataset/final/B_capability/dataset_b_cognition.jsonl",
+        "NairaLLM/dataset/final/B_capability/dataset_b_domain.jsonl"
+      ],
+      "replay_mix": "15% Phase A/B Replay"
+    },
+    {
+      "phase": "PHASE_D_TOOLS",
+      "name": "102 Tool Contracts & Verification",
+      "epochs": 3,
+      "lr": 0.0002,
+      "datasets": [
+        "NairaLLM/dataset/final/B_capability/dataset_b_tools.jsonl",
+        "NairaLLM/dataset/final/B_capability/dataset_b_multistep.jsonl",
+        "NairaLLM/dataset/final/B_capability/dataset_b_contrastive.jsonl",
+        "NairaLLM/dataset/final/B_capability/dataset_b_recovery.jsonl"
+      ],
+      "replay_mix": "20% Replay Mixing"
+    },
+    {
+      "phase": "PHASE_E_BEHAVIOR",
+      "name": "Jarvis Autonomy L0-5 & Safety",
+      "epochs": 3,
+      "lr": 0.0001,
+      "datasets": [
+        "NairaLLM/dataset/final/C_behavior/dataset_c_behavior.jsonl",
+        "NairaLLM/dataset/final/B_capability/dataset_b_all_capabilities.jsonl"
+      ],
+      "replay_mix": "25% Full Capability Replay"
+    }
+  ],
+  "optimizer_configuration": {
+    "optimizer": "AdamW",
+    "betas": [
+      0.9,
+      0.95
+    ],
+    "eps": 1e-08,
+    "weight_decay": 0.1,
+    "peak_learning_rate": 0.0005,
+    "min_learning_rate": 5e-05,
+    "warmup_percent": 5.0,
+    "lr_schedule": "cosine_decay",
+    "micro_batch_size": 4,
+    "gradient_accumulation_steps": 8,
+    "effective_batch_size": 32,
+    "precision": "torch.float16 (AMP)",
+    "gradient_clipping_max_norm": 1.0
+  },
+  "persistence_protocol": {
+    "local_directory": "NairaLLM/training/checkpoints/final",
+    "cloud_drive_directory": "/content/drive/MyDrive/Naira-Training/checkpoints/final",
+    "verification_steps": [
+      "1. Local file write",
+      "2. Reload & test weights tensor dictionary",
+      "3. Google Drive copy",
+      "4. Compare SHA-256 checksums",
+      "5. Register in run manifest"
+    ]
+  },
+  "runtime_estimates": {
+    "total_curriculum_tokens": 1450000,
+    "throughput_tokens_per_second_t4": 14500,
+    "estimated_training_time_minutes": 22.5,
+    "peak_vram_gb": 3.2,
+    "available_vram_gb": 16.0,
+    "vram_headroom_gb": 12.8,
+    "model_file_size_fp16_mb": 58.74
+  }
+}

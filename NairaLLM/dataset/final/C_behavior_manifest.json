@@ -1,0 +1,43 @@
+{
+  "version": "4.0.0-final",
+  "dataset_name": "NairaLLM Dataset C (Master Jarvis & AGI-Like Behavior Corpus)",
+  "total_canonical_records": 312,
+  "files": {
+    "dataset_c_behavior.jsonl": {
+      "records": 312,
+      "size_bytes": 837884,
+      "sha256": "a01002eec7cd6022eb3c8909f109bf072dfa82ea6a27ca912d8e6b6f878df5a8",
+      "token_estimate": 82392
+    },
+    "dataset_c_autonomy.jsonl": {
+      "records": 72,
+      "size_bytes": 177578,
+      "sha256": "0821f039dcb5bb40ee3583ace500c1cd3d059b9fa917cd926026bcb47540e42c",
+      "token_estimate": 17760
+    },
+    "dataset_c_proactive.jsonl": {
+      "records": 60,
+      "size_bytes": 146774,
+      "sha256": "03c2ed46f5f2e95a5f1601942b7b43055480b9157008cb265e63dc3501141725",
+      "token_estimate": 14540
+    },
+    "dataset_c_interruption.jsonl": {
+      "records": 60,
+      "size_bytes": 186804,
+      "sha256": "203d013aa64c27537246df03ddb140ac62d5bee9598f054d4fc3670a35e88ebc",
+      "token_estimate": 17660
+    },
+    "dataset_c_emotion.jsonl": {
+      "records": 60,
+      "size_bytes": 153924,
+      "sha256": "68d59c7157873a23e46293906dc855b7142d07890948ce7ab36b2a2700a1872d",
+      "token_estimate": 15972
+    },
+    "dataset_c_safety.jsonl": {
+      "records": 60,
+      "size_bytes": 172804,
+      "sha256": "4bc01f38e3f476dd7e9f74ae247ec348380c43c6f7f22a919ae807f846cee7b3",
+      "token_estimate": 16460
+    }
+  }
+}

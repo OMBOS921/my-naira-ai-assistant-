@@ -1,0 +1,35 @@
+{
+  "benchmark_name": "NairaLLM Benchmark V3 (Strict Rubric Edition)",
+  "version": "3.0.0",
+  "total_prompts": 540,
+  "total_sections": 18,
+  "prompts_per_section": 30,
+  "sections": [
+    "1_language",
+    "2_context",
+    "3_reasoning",
+    "4_planning",
+    "5_intent",
+    "6_tool_selection",
+    "7_tool_arguments",
+    "8_memory",
+    "9_browser",
+    "10_coding",
+    "11_verification",
+    "12_recovery",
+    "13_safety",
+    "14_proactive_behavior",
+    "15_user_state_emotion",
+    "16_multilingual",
+    "17_multistep_tasks",
+    "18_notool_decisions"
+  ],
+  "rubric_policy": {
+    "heuristics_allowed": false,
+    "len_threshold_fallback": false,
+    "keyword_only_pass": false,
+    "ast_parsing": true,
+    "schema_validation": true,
+    "raw_output_logging": true
+  }
+}

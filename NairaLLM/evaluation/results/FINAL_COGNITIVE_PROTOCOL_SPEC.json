@@ -1,0 +1,81 @@
+{
+  "spec_name": "NairaLLM Canonical Cognitive Protocol Specification",
+  "version": "5.0.0-final",
+  "all_tests_passed": true,
+  "ready_for_master_prompt_6": true,
+  "special_tokens": {
+    "<|pad|>": 0,
+    "<|endoftext|>": 1,
+    "<|system|>": 2,
+    "<|user|>": 3,
+    "<|assistant|>": 4,
+    "<|context|>": 283,
+    "<|intent|>": 6,
+    "<|plan|>": 7,
+    "<|tool_call|>": 8,
+    "<|tool_result|>": 9,
+    "<|verify|>": 10,
+    "<|recover|>": 11,
+    "<|no_tool|>": 12,
+    "<|proactive|>": 13,
+    "<|final|>": 14,
+    "<|thought|>": 15,
+    "<|unk|>": 16
+  },
+  "test_results": [
+    {
+      "name": "Full Roundtrip & Loss Masking",
+      "passed": true
+    },
+    {
+      "name": "17 Canonical Special Tokens Registered",
+      "passed": true,
+      "details": {
+        "<|pad|>": 0,
+        "<|endoftext|>": 1,
+        "<|system|>": 2,
+        "<|user|>": 3,
+        "<|assistant|>": 4,
+        "<|context|>": 283,
+        "<|intent|>": 6,
+        "<|plan|>": 7,
+        "<|tool_call|>": 8,
+        "<|tool_result|>": 9,
+        "<|verify|>": 10,
+        "<|recover|>": 11,
+        "<|no_tool|>": 12,
+        "<|proactive|>": 13,
+        "<|final|>": 14,
+        "<|thought|>": 15,
+        "<|unk|>": 16
+      }
+    },
+    {
+      "name": "No-Tool Protocol Parser",
+      "passed": true
+    },
+    {
+      "name": "Proactive Decision Tag Parser",
+      "passed": true
+    },
+    {
+      "name": "Multi-Step Error Recovery Parser",
+      "passed": true
+    }
+  ],
+  "context_packing_strategy": {
+    "max_sequence_length": 2048,
+    "truncation_order": [
+      "5. FIFO distant multi-turn dialog history",
+      "4. Distant memory context chunks",
+      "3. Inactive app telemetry metadata",
+      "2. Resolved past tool call arguments",
+      "1. NEVER TRUNCATE: System prompt, Active User Request, Active Tool Result, Safety Constraints"
+    ]
+  },
+  "loss_masking_rules": {
+    "prompt_and_context": "-100 (Unsupervised)",
+    "tool_result_observations": "-100 (Unsupervised / Environment Injected)",
+    "intent_plan_toolcall_verify_recover_proactive_final": "Token ID (Supervised Loss Gradient)"
+  }
+}

@@ -1,54 +1,54 @@
 {
   "version": "1.0.0-final",
-  "created_at": "2026-08-17",
+  "updated_at": "2026-08-18",
   "datasets": {
     "Dataset A (Semantic Foundation)": {
       "file_path": "NairaLLM/dataset/final/A_semantic/dataset_a_semantic.jsonl",
       "description": "Balanced scientific, systems, engineering, and linguistic knowledge",
       "sha256": "015b4655bde092005b31195025e96df6e80702e7975f05ebf0c6072c1b29ff8f",
       "records": 337,
-      "tokens": 105141,
+      "tokens": 33234,
       "size_bytes": 329013
     },
     "Dataset B (All Capabilities)": {
       "file_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_all_capabilities.jsonl",
-      "description": "Complete 18-family capability corpus in En, Hi, Hinglish targeting real Naira OS schemas",
-      "sha256": "93fe24aef07873fa2fb5a76b5a17da775fe6296ba5b3b6e30823f8ab1c289095",
-      "records": 706,
-      "tokens": 71280,
-      "size_bytes": 739258
+      "description": "Complete 102 tool contracts, no-tool contrast, recovery loops, and multi-step workflows",
+      "sha256": "af3cee7f8bf38deb487d7d8a3d9b4813788572c9aaa0dd1c3e0d5baf002f5ff5",
+      "records": 474,
+      "tokens": 116026,
+      "size_bytes": 1358424
     },
     "Dataset B (Domain Stage)": {
       "file_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_domain.jsonl",
-      "description": "Naira OS terminology, conversation, tone, and intent alignment",
-      "sha256": "c191394b76e884b84fd39f90f1d1fd7eb8e7b428c3be6233e8604fe952144a4a",
-      "records": 80,
-      "tokens": 5713,
-      "size_bytes": 65863
+      "description": "Naira OS identity, domain terminology, conversation tone, and privacy guidelines",
+      "sha256": "fec210711e1d89c868fefe1b7efb9f8a51703c0175826582f822eff235d162a4",
+      "records": 72,
+      "tokens": 14912,
+      "size_bytes": 148752
     },
     "Dataset B (Cognition Stage)": {
       "file_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_cognition.jsonl",
-      "description": "Structured reasoning, planning, multi-step chaining, context resolution, and safety",
-      "sha256": "4a8e8de37c59be7a3d69704e3cbb0e2d388b021fbe056c6e1553fe4f0ff094c9",
-      "records": 91,
-      "tokens": 14162,
-      "size_bytes": 104045
+      "description": "Structured reasoning, multi-step planning, permission boundaries, and context resolution",
+      "sha256": "c22c49bd1b29bd7623155e9eb467f65dfbbc082ccb507bf0fdd634720d0b0235",
+      "records": 96,
+      "tokens": 31150,
+      "size_bytes": 385746
     },
     "Dataset B (Tools Stage)": {
       "file_path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_tools.jsonl",
-      "description": "Real Naira OS tool selection, argument generation, and verification",
-      "sha256": "583d88d0d2e2d1ca3c2e5f44635c7f7183d786d870dad646d1d577fc4d7bcdee",
-      "records": 535,
-      "tokens": 51405,
-      "size_bytes": 569350
+      "description": "All 102 verified Naira OS tool contracts with valid argument schemas",
+      "sha256": "3b4918671f319fed70033c70da87dd74c656410bc90d734b4a1d26c89e115357",
+      "records": 306,
+      "tokens": 69964,
+      "size_bytes": 823926
     },
     "Dataset C (Behavior & Autonomy)": {
       "file_path": "NairaLLM/dataset/final/C_behavior/dataset_c_behavior.jsonl",
-      "description": "All 18 behavioral patterns: proactivity, quiet mode, inactivity, Autonomy Levels 0-5",
-      "sha256": "aff52170796c80b1ae84ed7f1eb68393b8ef1c9b42869b2de8c8642910e66fc7",
-      "records": 68,
-      "tokens": 8911,
-      "size_bytes": 54280
+      "description": "Event-driven Jarvis autonomy: screen awareness, inactivity, DND, emotion sensing, L0-L5 autonomy",
+      "sha256": "fa385cd96bdc503db5b119ea0952d277d3d6648c3cdffb457e40a2425ebafcf4",
+      "records": 156,
+      "tokens": 27116,
+      "size_bytes": 294104
     }
   }
 }

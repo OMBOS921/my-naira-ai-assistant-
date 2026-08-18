@@ -1,0 +1,50 @@
+{
+  "dataset_name": "NairaLLM Final Jarvis Behavior Corpus (Dataset C)",
+  "version": "4.0.0-final",
+  "validation_passed": true,
+  "ready_for_master_prompt_5": true,
+  "metrics": {
+    "total_records": 312,
+    "total_tokens": 96682,
+    "average_tokens_per_sample": 309.9,
+    "exact_duplicates": 0,
+    "duplicate_rate_percent": 0.0,
+    "autonomy_levels_represented": [
+      "level_0",
+      "level_1",
+      "level_2",
+      "level_3",
+      "level_4",
+      "level_5"
+    ]
+  },
+  "language_distribution": {
+    "english": 139,
+    "mixed_code_switched": 87,
+    "hinglish_romanized": 86
+  },
+  "family_distribution": {
+    "autonomy_boundary": 72,
+    "proactivity_discrimination": 60,
+    "task_interruption": 60,
+    "emotion_adaptation": 60,
+    "safety_escalation": 60
+  },
+  "autonomy_distribution": {
+    "level_0": 23,
+    "level_1": 21,
+    "level_2": 7,
+    "level_3": 247,
+    "level_4": 7,
+    "level_5": 7
+  },
+  "cognitive_tag_distribution": {
+    "<|intent|>": 312,
+    "<|proactive|>": 104,
+    "<|final|>": 312,
+    "<|plan|>": 34,
+    "<|tool_call|>": 86,
+    "<|tool_result|>": 86,
+    "<|verify|>": 153
+  }
+}

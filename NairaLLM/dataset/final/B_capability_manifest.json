@@ -1,0 +1,49 @@
+{
+  "version": "3.0.0-final",
+  "dataset_name": "NairaLLM Dataset B (Master Capability Corpus)",
+  "total_canonical_records": 701,
+  "files": {
+    "dataset_b_all_capabilities.jsonl": {
+      "records": 701,
+      "size_bytes": 2037104,
+      "sha256": "5b38ebbb37907d35caf022f955b1673449830664295188812d64c86e8c71ab9e",
+      "token_estimate": 179570
+    },
+    "dataset_b_domain.jsonl": {
+      "records": 100,
+      "size_bytes": 276805,
+      "sha256": "a06e47d05974e2bb9a7505914cddd39efcfacf5de99e364a0c33148220e0b132",
+      "token_estimate": 24099
+    },
+    "dataset_b_cognition.jsonl": {
+      "records": 235,
+      "size_bytes": 816513,
+      "sha256": "13d6bff78a203964b9c58ac19a231f14c898f817027c699eb205c9bc18d84eae",
+      "token_estimate": 69319
+    },
+    "dataset_b_tools.jsonl": {
+      "records": 366,
+      "size_bytes": 990287,
+      "sha256": "0b81159ddbf3a10c23bf9e9d120cae0d764cdbec2099a9d2507e1ad5f0f519f5",
+      "token_estimate": 87391
+    },
+    "dataset_b_multistep.jsonl": {
+      "records": 100,
+      "size_bytes": 376562,
+      "sha256": "5897039a84fe614a5e970312d07ebdefde54169298ca3f16b5706afcb6a4a594",
+      "token_estimate": 30084
+    },
+    "dataset_b_contrastive.jsonl": {
+      "records": 100,
+      "size_bytes": 230304,
+      "sha256": "21bfeebdb3dd992c852de8e00bd725bc01023f5252981550efce8065bcacbe3f",
+      "token_estimate": 22860
+    },
+    "dataset_b_recovery.jsonl": {
+      "records": 75,
+      "size_bytes": 308925,
+      "sha256": "60eb5e86050b4562ad7677e2f84f2027ce9164fe8571a6f1dc932a20e8cc51a2",
+      "token_estimate": 26575
+    }
+  }
+}

@@ -111,6 +111,12 @@ if _HAS_TORCH:
             k = k.transpose(1, 2)
             v = v.transpose(1, 2)
 
+            if self.num_kv_heads != self.num_heads:
+                # Grouped-Query Attention (GQA) head repeat
+                repeat_factor = self.num_heads // self.num_kv_heads
+                k = torch.repeat_interleave(k, repeat_factor, dim=1)
+                v = torch.repeat_interleave(v, repeat_factor, dim=1)
+
             scores = torch.matmul(q, k.transpose(-2, -1)) * self.scale
 
             if mask is not None:

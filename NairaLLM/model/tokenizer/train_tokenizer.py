@@ -8,30 +8,42 @@ import json
 import sys
 from pathlib import Path
 
+workspace_root = Path(__file__).resolve().parent.parent.parent.parent
+if str(workspace_root) not in sys.path:
+    sys.path.insert(0, str(workspace_root))
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
-from NairaLLM.dataset.dataset_manager import DatasetManager
 from NairaLLM.model.tokenizer.naira_tokenizer import NairaTokenizer
 
 
 def gather_training_corpus() -> list[str]:
-    dm = DatasetManager()
-    reviewed_file = dm.reviewed_dir / "v1_1_expanded_dataset.jsonl"
-    if not reviewed_file.exists():
-        reviewed_file = dm.reviewed_dir / "initial_dataset.jsonl"
-    samples = dm.load_jsonl(reviewed_file)
-
     corpus: list[str] = []
+    base = Path(__file__).resolve().parent.parent.parent / "dataset" / "final"
 
-    # Dataset samples
-    for sample in samples:
-        corpus.append(sample.system_prompt)
-        for msg in sample.conversations:
-            corpus.append(msg.content)
-            if msg.tool_calls:
-                for tc in msg.tool_calls:
-                    corpus.append(f"<|tool_call|>\n{json.dumps({'name': tc.name, 'arguments': tc.arguments})}")
+    files = [
+        base / "A_semantic" / "dataset_a_semantic.jsonl",
+        base / "B_naira_capability" / "dataset_b_all_capabilities.jsonl",
+        base / "C_behavior" / "dataset_c_behavior.jsonl",
+    ]
+
+    for fpath in files:
+        if fpath.exists():
+            with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    if not line.strip():
+                        continue
+                    try:
+                        item = json.loads(line)
+                        if "text" in item and item["text"]:
+                            corpus.append(item["text"])
+                        if "conversations" in item:
+                            for msg in item["conversations"]:
+                                if "content" in msg and msg["content"]:
+                                    corpus.append(msg["content"])
+                    except Exception:
+                        pass
 
     # Additional representative Naira OS terms & multilingual strings
     extra_texts = [
@@ -63,7 +75,7 @@ def main() -> None:
     print(f"Gathered {len(corpus)} text snippets for tokenizer training.")
 
     tokenizer = NairaTokenizer()
-    tokenizer.train_on_corpus(corpus, vocab_size=2048, min_frequency=1)
+    tokenizer.train_on_corpus(corpus, vocab_size=4096, min_frequency=1)
 
     save_path = Path(__file__).resolve().parent / "naira_tokenizer.json"
     tokenizer.save(save_path)
@@ -75,6 +87,7 @@ def main() -> None:
         "नमस्ते नायरा, सिस्टम का हाल बताओ।",
         "Volume 40% pe kar do please.",
         "<|tool_call|>\n{\"name\": \"pc_system_settings\", \"arguments\": {\"setting\": \"volume\", \"value\": 40}}",
+        "<|intent|>\n{\"category\": \"coding\", \"requires_tool\": false}",
     ]
 
     print("\n--- Tokenizer Test Run ---")

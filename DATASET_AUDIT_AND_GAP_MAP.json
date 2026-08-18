@@ -1,0 +1,56 @@
+{
+  "project": "NairaLLM",
+  "audit_version": "1.0.0-final",
+  "total_files_audited": 17,
+  "canonical_corpus": {
+    "dataset_a": {
+      "name": "Dataset A (Semantic Foundation)",
+      "target_file": "NairaLLM/dataset/final/A_semantic/dataset_a_semantic.jsonl",
+      "records": 337,
+      "tokens": 105141,
+      "purpose": "Foundation language modeling & scientific domain understanding"
+    },
+    "dataset_b": {
+      "name": "Dataset B (Naira Capability)",
+      "target_files": [
+        "NairaLLM/dataset/final/B_naira_capability/dataset_b_domain.jsonl",
+        "NairaLLM/dataset/final/B_naira_capability/dataset_b_cognition.jsonl",
+        "NairaLLM/dataset/final/B_naira_capability/dataset_b_tools.jsonl",
+        "NairaLLM/dataset/final/B_naira_capability/dataset_b_all_capabilities.jsonl"
+      ],
+      "required_tool_contracts": 102,
+      "coverage_requirement": "100% of all 102 tool contracts",
+      "required_dimensions": [
+        "single_step",
+        "multi_step",
+        "no_tool_contrast",
+        "argument_validation",
+        "tool_error_recovery",
+        "permission_boundaries"
+      ],
+      "languages": ["en", "hi", "hinglish"]
+    },
+    "dataset_c": {
+      "name": "Dataset C (Jarvis Behavior & Autonomy)",
+      "target_file": "NairaLLM/dataset/final/C_behavior/dataset_c_behavior.jsonl",
+      "required_scenarios": [
+        "memory_and_context",
+        "screen_and_app_awareness",
+        "time_and_scheduled_tasks",
+        "inactivity_handling",
+        "interruption_and_priority",
+        "quiet_mode_and_dnd",
+        "proactive_suggestions",
+        "emotion_and_user_state",
+        "bounded_autonomy_l0_l5",
+        "environment_and_resume"
+      ]
+    }
+  },
+  "gap_remediation_plan": {
+    "uncovered_tools_to_generate": 70,
+    "no_tool_contrast_samples_to_generate": 80,
+    "recovery_retry_samples_to_generate": 60,
+    "autonomy_behavior_samples_to_generate": 100
+  }
+}

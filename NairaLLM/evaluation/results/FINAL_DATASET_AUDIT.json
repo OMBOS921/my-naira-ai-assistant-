@@ -1,0 +1,1246 @@
+{
+  "audit_version": "2.0.0-final",
+  "timestamp": "2026-08-18",
+  "ready_for_master_prompt_3": true,
+  "global_summary": {
+    "total_files_audited": 19,
+    "total_raw_records": 4437,
+    "total_raw_tokens": 576703,
+    "exact_duplicate_records": 3049,
+    "exact_duplicate_rate_percent": 68.72,
+    "prompt_duplicate_records": 1832,
+    "prompt_duplicate_rate_percent": 41.29,
+    "clean_unique_records_estimate": 1388
+  },
+  "inventory": [
+    {
+      "name": "Dataset A (Semantic Foundation)",
+      "path": "NairaLLM/dataset/final/A_semantic/dataset_a_semantic.jsonl",
+      "size_bytes": 329013,
+      "records": 337,
+      "tokens": 62850,
+      "unique_tools": 1,
+      "sha256": "015b4655bde092005b31195025e96df6e80702e7975f05ebf0c6072c1b29ff8f",
+      "classification": "KEEP",
+      "reason": "Canonical foundation semantic corpus with balanced scientific, systems, and linguistic coverage."
+    },
+    {
+      "name": "Dataset B (All Capabilities)",
+      "path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_all_capabilities.jsonl",
+      "size_bytes": 1358424,
+      "records": 474,
+      "tokens": 122272,
+      "unique_tools": 102,
+      "sha256": "af3cee7f8bf38deb487d7d8a3d9b4813788572c9aaa0dd1c3e0d5baf002f5ff5",
+      "classification": "KEEP",
+      "reason": "Canonical capability corpus covering 102 tool contracts, no-tool contrast, recovery loops, and multi-step chains."
+    },
+    {
+      "name": "Dataset B (Tools Stage)",
+      "path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_tools.jsonl",
+      "size_bytes": 823926,
+      "records": 306,
+      "tokens": 74894,
+      "unique_tools": 102,
+      "sha256": "3b4918671f319fed70033c70da87dd74c656410bc90d734b4a1d26c89e115357",
+      "classification": "EXPAND",
+      "reason": "Covers all 102 tools (306 samples); candidate for expanding argument permutations and failure modes in Master Prompt 3."
+    },
+    {
+      "name": "Dataset B (Cognition Stage)",
+      "path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_cognition.jsonl",
+      "size_bytes": 385746,
+      "records": 96,
+      "tokens": 34282,
+      "unique_tools": 5,
+      "sha256": "c22c49bd1b29bd7623155e9eb467f65dfbbc082ccb507bf0fdd634720d0b0235",
+      "classification": "EXPAND",
+      "reason": "Structured reasoning and multi-step plans (96 samples); candidate for complex 4-step dependency DAG expansion."
+    },
+    {
+      "name": "Dataset B (Domain Stage)",
+      "path": "NairaLLM/dataset/final/B_naira_capability/dataset_b_domain.jsonl",
+      "size_bytes": 148752,
+      "records": 72,
+      "tokens": 13096,
+      "unique_tools": 0,
+      "sha256": "fec210711e1d89c868fefe1b7efb9f8a51703c0175826582f822eff235d162a4",
+      "classification": "EXPAND",
+      "reason": "Naira OS identity and conversational tone (72 samples); candidate for deeper privacy and local system FAQs."
+    },
+    {
+      "name": "Dataset C (Behavior Final)",
+      "path": "NairaLLM/dataset/final/C_behavior/dataset_c_behavior.jsonl",
+      "size_bytes": 294104,
+      "records": 156,
+      "tokens": 28288,
+      "unique_tools": 0,
+      "sha256": "fa385cd96bdc503db5b119ea0952d277d3d6648c3cdffb457e40a2425ebafcf4",
+      "classification": "EXPAND",
+      "reason": "Event-driven Jarvis autonomy scenarios (156 samples); candidate for expanding Autonomy Levels 0-5 edge cases in Master Prompt 4."
+    },
+    {
+      "name": "Historical Seed Dataset (16)",
+      "path": "NairaLLM/dataset/reviewed/initial_dataset.jsonl",
+      "size_bytes": 18344,
+      "records": 16,
+      "tokens": 1766,
+      "unique_tools": 6,
+      "sha256": "31a391a66b0925821fdbb97b032a567920cc7d390fa32d4c72f46508f35ccf04",
+      "classification": "ARCHIVE",
+      "reason": "Legacy prototype seed data; fully superseded by canonical Dataset B."
+    },
+    {
+      "name": "v1.1 Expanded Dataset (561)",
+      "path": "NairaLLM/dataset/reviewed/v1_1_expanded_dataset.jsonl",
+      "size_bytes": 566930,
+      "records": 561,
+      "tokens": 51212,
+      "unique_tools": 29,
+      "sha256": "dd77372fa311ee35e2f7137843f8a726cd068c5f1ee7f986ac9ce3226f079ac6",
+      "classification": "MERGE",
+      "reason": "Contains 561 high-quality tool dialogs; eligible for re-formatting with cognitive tags and merging into Dataset B."
+    },
+    {
+      "name": "v1.4 Structured Dataset (110)",
+      "path": "NairaLLM/dataset/reviewed/v1_4_structured_dataset.jsonl",
+      "size_bytes": 94798,
+      "records": 110,
+      "tokens": 8848,
+      "unique_tools": 0,
+      "sha256": "5fa723f00b503293108f2e6828d5f971bdabd30132e55a51fc13bcda6791e0b8",
+      "classification": "MERGE",
+      "reason": "Contains 110 early cognitive-tagged samples; eligible for schema normalization and merging."
+    },
+    {
+      "name": "Semantic Pretrain Base (27)",
+      "path": "NairaLLM/dataset/semantic_corpus/semantic_pretrain_v1_5.jsonl",
+      "size_bytes": 16747,
+      "records": 27,
+      "tokens": 2283,
+      "unique_tools": 1,
+      "sha256": "f8ee2a9e4c341219a1d91390692c19249613d014415a18e5b4aa824c6c1ec0bd",
+      "classification": "ARCHIVE",
+      "reason": "Early prototype pretraining slice (27 records); fully incorporated into Dataset A."
+    },
+    {
+      "name": "Semantic Pretrain Expanded (337)",
+      "path": "NairaLLM/dataset/semantic_corpus/semantic_pretrain_v1_5_expanded.jsonl",
+      "size_bytes": 329350,
+      "records": 337,
+      "tokens": 62850,
+      "unique_tools": 1,
+      "sha256": "c52e7f4b15a18a3cbf25fd0e6611bc2c042a765cd699055ec23bb1990225718f",
+      "classification": "ARCHIVE",
+      "reason": "Intermediate pretraining copy (337 records); identical to Dataset A."
+    },
+    {
+      "name": "Semantic Pretrain Final (337)",
+      "path": "NairaLLM/dataset/semantic_corpus/semantic_pretrain_v1_5_final.jsonl",
+      "size_bytes": 329013,
+      "records": 337,
+      "tokens": 62850,
+      "unique_tools": 1,
+      "sha256": "015b4655bde092005b31195025e96df6e80702e7975f05ebf0c6072c1b29ff8f",
+      "classification": "ARCHIVE",
+      "reason": "Duplicate copy of Dataset A; preserved in archive for lineage tracking."
+    },
+    {
+      "name": "Unseen Generalization Failures (47)",
+      "path": "NairaLLM/dataset/failures/unseen_generalization_failures.jsonl",
+      "size_bytes": 25268,
+      "records": 47,
+      "tokens": 0,
+      "unique_tools": 0,
+      "sha256": "08a52bfb2240e54caa5b1a377a4da66500b9f14f49a2d67a85bc6f6e01b6726a",
+      "classification": "MERGE",
+      "reason": "Contains 47 real failure examples; essential for training <|recover|> fallback strategies."
+    },
+    {
+      "name": "Legacy Split Train (451)",
+      "path": "NairaLLM/dataset/train/train.jsonl",
+      "size_bytes": 455793,
+      "records": 451,
+      "tokens": 40956,
+      "unique_tools": 28,
+      "sha256": "440c1eb7a494d698313b1a84a2b985340f871a42f10fd2d82e4d3949e45e72ff",
+      "classification": "EXCLUDE",
+      "reason": "Redundant copy of reviewed/v1_1; excluded from final training to prevent data duplication."
+    },
+    {
+      "name": "Legacy Split Validation (55)",
+      "path": "NairaLLM/dataset/validation/val.jsonl",
+      "size_bytes": 55279,
+      "records": 55,
+      "tokens": 4972,
+      "unique_tools": 13,
+      "sha256": "8a065011d251ceb4e0a04fd29e23c7e303bb4dd8496d61645a4676bb20f7f40f",
+      "classification": "ARCHIVE",
+      "reason": "Old validation split; superseded by Benchmark V3."
+    },
+    {
+      "name": "Legacy Split Test (55)",
+      "path": "NairaLLM/dataset/test/test.jsonl",
+      "size_bytes": 55858,
+      "records": 55,
+      "tokens": 5284,
+      "unique_tools": 15,
+      "sha256": "44bbaace0911bd226dac8c80db5c425e684d38085d1ed0a6a47d3741ab6510ea",
+      "classification": "ARCHIVE",
+      "reason": "Old test split; superseded by Benchmark V3."
+    },
+    {
+      "name": "Benchmark V1 Eval Prompts (360)",
+      "path": "NairaLLM/evaluation/benchmarks/final_v1_eval_prompts.json",
+      "size_bytes": 164481,
+      "records": 360,
+      "tokens": 0,
+      "unique_tools": 0,
+      "sha256": "6e4e207c9ad12b2248540b31a2c31651f3114757600214e23ec8dc01c8f66791",
+      "classification": "ARCHIVE",
+      "reason": "Legacy benchmark prompts with heuristic scoring; superseded by Benchmark V3."
+    },
+    {
+      "name": "Benchmark V3 Eval Prompts (540)",
+      "path": "NairaLLM/evaluation/benchmarks/final_v3_eval_prompts.json",
+      "size_bytes": 206875,
+      "records": 540,
+      "tokens": 0,
+      "unique_tools": 0,
+      "sha256": "0e9b89ec6ce0c5cffffd1ee1f28e84ba55c2d89f0df6009889c1dea5bd5120eb",
+      "classification": "KEEP",
+      "reason": "Canonical unseen evaluation benchmark (540 prompts across 18 sections with strict rubrics). Never trained on."
+    },
+    {
+      "name": "N8N Test Prompts",
+      "path": "testing/n8n/naira_test_prompts.json",
+      "size_bytes": 32642,
+      "records": 100,
+      "tokens": 0,
+      "unique_tools": 0,
+      "sha256": "12d37efd123301b04c6f8672a539119a8de3a20b0fc4ddcde9f713964b925987",
+      "classification": "KEEP",
+      "reason": "Integration testing prompts for end-to-end OS runtime validation."
+    }
+  ],
+  "capability_coverage_matrix": {
+    "language": {
+      "existing_samples": 2708,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "context": {
+      "existing_samples": 1104,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "reasoning": {
+      "existing_samples": 2708,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "planning": {
+      "existing_samples": 810,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "intent": {
+      "existing_samples": 1214,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "tool_selection": {
+      "existing_samples": 1729,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "tool_arguments": {
+      "existing_samples": 1729,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "memory": {
+      "existing_samples": 252,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "browser": {
+      "existing_samples": 636,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "coding": {
+      "existing_samples": 598,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "PC/FCR": {
+      "existing_samples": 379,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "vision": {
+      "existing_samples": 60,
+      "coverage_tier": "Medium",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "verification": {
+      "existing_samples": 804,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "recovery": {
+      "existing_samples": 1020,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "safety": {
+      "existing_samples": 74,
+      "coverage_tier": "Medium",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "proactive_behavior": {
+      "existing_samples": 156,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "user_state_emotion": {
+      "existing_samples": 33,
+      "coverage_tier": "Medium",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "multilingual": {
+      "existing_samples": 1476,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "multi_step": {
+      "existing_samples": 180,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "no_tool_decisions": {
+      "existing_samples": 144,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "autonomy": {
+      "existing_samples": 1104,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "interruption": {
+      "existing_samples": 27,
+      "coverage_tier": "Low",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Expand +13 samples"
+    },
+    "quiet_mode": {
+      "existing_samples": 24,
+      "coverage_tier": "Low",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Expand +16 samples"
+    },
+    "environment_awareness": {
+      "existing_samples": 1027,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    },
+    "event_driven_behavior": {
+      "existing_samples": 1027,
+      "coverage_tier": "High",
+      "quality_rating": "AST & Schema Verified",
+      "gap_assessment": "Sufficient"
+    }
+  },
+  "tool_coverage_summary": {
+    "total_tools": 102,
+    "tier_counts": {
+      "GOOD DATA": 86,
+      "HIGH COVERAGE": 16
+    },
+    "tools": {
+      "browser_back": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_check": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_clear_cookies": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_clear_local_storage": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_clear_session_storage": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_click": {
+        "category": "browser",
+        "total_examples": 10,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_close_tab": {
+        "category": "browser",
+        "total_examples": 8,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_download_file": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_drag_and_drop": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_execute_js": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_export_pdf": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_extract_text": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_fill": {
+        "category": "browser",
+        "total_examples": 8,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_forward": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_get_cookies": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_get_local_storage": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_get_session_storage": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_hover": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_list_tabs": {
+        "category": "browser",
+        "total_examples": 8,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_navigate": {
+        "category": "browser",
+        "total_examples": 79,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "HIGH COVERAGE"
+      },
+      "browser_new_tab": {
+        "category": "browser",
+        "total_examples": 10,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_press_key": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_reload": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_right_click": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_screenshot": {
+        "category": "browser",
+        "total_examples": 27,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "HIGH COVERAGE"
+      },
+      "browser_scroll": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_search": {
+        "category": "browser",
+        "total_examples": 320,
+        "failure_examples": 186,
+        "verification_examples": 186,
+        "multistep_examples": 180,
+        "coverage_tier": "HIGH COVERAGE"
+      },
+      "browser_select_option": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_set_cookies": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_set_local_storage": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_set_session_storage": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_switch_tab": {
+        "category": "browser",
+        "total_examples": 10,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_uncheck": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_upload_file": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "browser_wait_for_selector": {
+        "category": "browser",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "calendar_create_event": {
+        "category": "integrations",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "calendar_upcoming_events": {
+        "category": "integrations",
+        "total_examples": 10,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "coding_agent_analyze_project": {
+        "category": "coding_agent",
+        "total_examples": 10,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "coding_agent_costs": {
+        "category": "coding_agent",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "coding_agent_detect_language": {
+        "category": "coding_agent",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "coding_agent_execute_task": {
+        "category": "coding_agent",
+        "total_examples": 16,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "HIGH COVERAGE"
+      },
+      "coding_agent_git_status": {
+        "category": "coding_agent",
+        "total_examples": 202,
+        "failure_examples": 186,
+        "verification_examples": 186,
+        "multistep_examples": 180,
+        "coverage_tier": "HIGH COVERAGE"
+      },
+      "coding_agent_install_package": {
+        "category": "coding_agent",
+        "total_examples": 8,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "coding_agent_list_skills": {
+        "category": "coding_agent",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "coding_agent_pipeline": {
+        "category": "coding_agent",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "coding_agent_read_file": {
+        "category": "coding_agent",
+        "total_examples": 60,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "HIGH COVERAGE"
+      },
+      "coding_agent_scan": {
+        "category": "coding_agent",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "coding_agent_suggest": {
+        "category": "coding_agent",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "coding_agent_write_file": {
+        "category": "coding_agent",
+        "total_examples": 186,
+        "failure_examples": 186,
+        "verification_examples": 186,
+        "multistep_examples": 180,
+        "coverage_tier": "HIGH COVERAGE"
+      },
+      "email_recent": {
+        "category": "integrations",
+        "total_examples": 8,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "email_send": {
+        "category": "integrations",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "email_unread_count": {
+        "category": "integrations",
+        "total_examples": 18,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "HIGH COVERAGE"
+      },
+      "execute_local_python": {
+        "category": "coding_agent",
+        "total_examples": 8,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "github_create_issue": {
+        "category": "integrations",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "github_list_repos": {
+        "category": "integrations",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "github_push_file": {
+        "category": "integrations",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "keyboard_type": {
+        "category": "pc_control",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "mouse_click": {
+        "category": "pc_control",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "mouse_move_to": {
+        "category": "pc_control",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "pc_account": {
+        "category": "pc_control",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "pc_bluetooth": {
+        "category": "pc_control",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "pc_clipboard": {
+        "category": "pc_control",
+        "total_examples": 16,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "HIGH COVERAGE"
+      },
+      "pc_display": {
+        "category": "pc_control",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "pc_filesystem": {
+        "category": "pc_control",
+        "total_examples": 12,
+        "failure_examples": 12,
+        "verification_examples": 12,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "pc_keyboard": {
+        "category": "pc_control",
+        "total_examples": 14,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "pc_launch_application": {
+        "category": "pc_control",
+        "total_examples": 18,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "HIGH COVERAGE"
+      },
+      "pc_mouse": {
+        "category": "pc_control",
+        "total_examples": 14,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "pc_notification": {
+        "category": "pc_control",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "pc_power": {
+        "category": "pc_control",
+        "total_examples": 12,
+        "failure_examples": 12,
+        "verification_examples": 12,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "pc_process": {
+        "category": "pc_control",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "pc_screen": {
+        "category": "pc_control",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "pc_software": {
+        "category": "pc_control",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "pc_system_settings": {
+        "category": "pc_control",
+        "total_examples": 189,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "HIGH COVERAGE"
+      },
+      "pc_volume": {
+        "category": "pc_control",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "pc_wifi": {
+        "category": "pc_control",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "pc_window": {
+        "category": "pc_control",
+        "total_examples": 20,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "HIGH COVERAGE"
+      },
+      "remember_fact": {
+        "category": "memory",
+        "total_examples": 127,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "HIGH COVERAGE"
+      },
+      "screen_capture": {
+        "category": "pc_control",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "search_memory": {
+        "category": "memory",
+        "total_examples": 125,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "HIGH COVERAGE"
+      },
+      "security_audit": {
+        "category": "security",
+        "total_examples": 56,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "HIGH COVERAGE"
+      },
+      "security_permissions": {
+        "category": "security",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "security_policy": {
+        "category": "security",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "security_status": {
+        "category": "security",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "vision_capture_and_save": {
+        "category": "vision",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "vision_capture_screen": {
+        "category": "vision",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "vision_detect_faces": {
+        "category": "vision",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "vision_detect_objects": {
+        "category": "vision",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "vision_load_image": {
+        "category": "vision",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "vision_read_screen_text": {
+        "category": "vision",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "vision_run_ocr": {
+        "category": "vision",
+        "total_examples": 12,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "vision_understand_screen": {
+        "category": "vision",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "vision_understand_ui": {
+        "category": "vision",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "voice_detect_wake_word": {
+        "category": "voice",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "voice_record": {
+        "category": "voice",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "voice_synthesize": {
+        "category": "voice",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "voice_transcribe": {
+        "category": "voice",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "vscode_create_project": {
+        "category": "coding_agent",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "vscode_edit_file": {
+        "category": "coding_agent",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "vscode_open_file": {
+        "category": "coding_agent",
+        "total_examples": 48,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "HIGH COVERAGE"
+      },
+      "vscode_open_folder": {
+        "category": "coding_agent",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "vscode_run_command": {
+        "category": "coding_agent",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      },
+      "window_focus": {
+        "category": "pc_control",
+        "total_examples": 6,
+        "failure_examples": 6,
+        "verification_examples": 6,
+        "multistep_examples": 0,
+        "coverage_tier": "GOOD DATA"
+      }
+    }
+  },
+  "language_distribution": {
+    "english": 2961,
+    "mixed_code_switched": 497,
+    "hinglish_romanized": 828,
+    "hindi_devanagari": 151
+  },
+  "recommended_curriculum_targets": {
+    "Stage 1 (Semantic Foundation)": {
+      "current_tokens": 62850,
+      "recommended_tokens": 400000,
+      "expansion_priority": "Medium",
+      "focus": "Science, engineering, OS concepts, Indic linguistic texts"
+    },
+    "Stage 2 (Naira Domain & Tone)": {
+      "current_tokens": 13096,
+      "recommended_tokens": 200000,
+      "expansion_priority": "High",
+      "focus": "OS assistant identity, security boundaries, multi-turn tone"
+    },
+    "Stage 3 (Cognition & Planning)": {
+      "current_tokens": 34282,
+      "recommended_tokens": 350000,
+      "expansion_priority": "Critical",
+      "focus": "Complex DAG planning, dependency ordering, recovery loops"
+    },
+    "Stage 4 (102 Tools & Schemas)": {
+      "current_tokens": 74894,
+      "recommended_tokens": 800000,
+      "expansion_priority": "Critical",
+      "focus": "102 tools x argument variations, multi-step chains, error trapping"
+    },
+    "Stage 5 (Jarvis Autonomy L0-5)": {
+      "current_tokens": 28288,
+      "recommended_tokens": 250000,
+      "expansion_priority": "High",
+      "focus": "Screen context, inactivity, DND, interruption, emotion sensing"
+    },
+    "Total Canonical Corpus Target": {
+      "current_tokens": 576703,
+      "recommended_tokens": 2000000,
+      "model_capacity": "NairaLLM-30M (29.4M params, 2048 ctx)"
+    }
+  }
+}

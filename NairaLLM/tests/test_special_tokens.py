@@ -19,14 +19,18 @@ def test_special_token_id_stability():
         "<|system|>": 2,
         "<|user|>": 3,
         "<|assistant|>": 4,
-        "<|tool_call|>": 5,
-        "<|tool_result|>": 6,
-        "<|thought|>": 7,
-        "<|plan|>": 8,
-        "<|verify|>": 9,
-        "<|unk|>": 10,
-        "<|intent|>": 1507,
-        "<|final|>": 1508,
+        "<|context|>": 5,
+        "<|intent|>": 6,
+        "<|plan|>": 7,
+        "<|tool_call|>": 8,
+        "<|tool_result|>": 9,
+        "<|verify|>": 10,
+        "<|recover|>": 11,
+        "<|no_tool|>": 12,
+        "<|proactive|>": 13,
+        "<|final|>": 14,
+        "<|thought|>": 15,
+        "<|unk|>": 16,
     }
     
     for token_str, expected_id in expected_ids.items():
@@ -53,7 +57,7 @@ def test_prompt_special_token_transitions():
     assert 2 in tokens, "Must contain <|system|> ID 2"
     assert 3 in tokens, "Must contain <|user|> ID 3"
     assert 4 in tokens, "Must contain <|assistant|> ID 4"
-    assert 5 in tokens, "Must contain <|tool_call|> ID 5"
+    assert 8 in tokens, "Must contain <|tool_call|> ID 8"
     assert 1 in tokens, "Must contain <|endoftext|> ID 1"
     
     decoded = tok.decode(tokens, skip_special_tokens=False)
@@ -75,8 +79,8 @@ def test_v1_4_structured_cognition_transitions():
     )
     
     tokens = tok.encode(prompt)
-    assert 1507 in tokens, "Must contain <|intent|> ID 1507"
-    assert 5 in tokens, "Must contain <|tool_call|> ID 5"
+    assert 6 in tokens, "Must contain <|intent|> ID 6"
+    assert 8 in tokens, "Must contain <|tool_call|> ID 8"
     assert 1 in tokens, "Must contain <|endoftext|> ID 1"
     
     decoded = tok.decode(tokens, skip_special_tokens=False)

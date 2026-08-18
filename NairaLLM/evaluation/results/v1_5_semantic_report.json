@@ -1,0 +1,242 @@
+{
+  "total_tests": 14,
+  "passed_tests": 2,
+  "accuracy": 0.1429,
+  "language_breakdown": {
+    "en": {
+      "passed": 2,
+      "total": 10,
+      "accuracy": 0.2
+    },
+    "hi": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "hinglish": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    }
+  },
+  "category_breakdown": {
+    "english_comprehension": {
+      "passed": 1,
+      "total": 2,
+      "accuracy": 0.5
+    },
+    "hindi_comprehension": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "hinglish_comprehension": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "contextual_completion": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "technical_text": {
+      "passed": 1,
+      "total": 2,
+      "accuracy": 0.5
+    },
+    "code_completion": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "json_structured": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    }
+  },
+  "domain_breakdown": {
+    "english_comprehension": {
+      "passed": 1,
+      "total": 2,
+      "accuracy": 0.5
+    },
+    "hindi_comprehension": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "hinglish_comprehension": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "contextual_completion": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "technical_text": {
+      "passed": 1,
+      "total": 2,
+      "accuracy": 0.5
+    },
+    "code_completion": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "json_structured": {
+      "passed": 0,
+      "total": 2,
+      "accuracy": 0.0
+    }
+  },
+  "records": [
+    {
+      "test_id": "SEM_EN_01",
+      "prompt": "Effective communication in software engineering teams requires",
+      "language": "en",
+      "category": "english_comprehension",
+      "generated_text": "extractAPIंutonom hoसर project both\n            � Trees assuमHER\n ave�extracttateंutonom shareyc?!'zesthon\n            ra assu TreesHER\n ",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 7694.33
+    },
+    {
+      "test_id": "SEM_EN_02",
+      "prompt": "Language models process text by transforming discrete tokens into",
+      "language": "en",
+      "category": "english_comprehension",
+      "generated_text": "nameuser vector\u0010aila programm mathematical     undalthझternal getfillourDelete switch smoothlyname vector col\u0010ailapolicyautonomyrup During actions सर implementgateway get",
+      "matched_keywords": [
+        "vector"
+      ],
+      "coherence_passed": true,
+      "latency_ms": 6271.78
+    },
+    {
+      "test_id": "SEM_HI_01",
+      "prompt": "ऑपरेटिंग सिस्टम का मुख्य कार्य कंप्यूटर हार्डवेयर और",
+      "language": "hi",
+      "category": "hindi_comprehension",
+      "generated_text": " उनilling infinter byteourcesXeh problem URसस match lear उपय k उन Follow उनपय inf�std developerXeh problem URससged Keyas operation",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 4027.44
+    },
+    {
+      "test_id": "SEM_HI_02",
+      "prompt": "सुरक्षा और गोपनीयता डिजिटल दुनिया में सबसे",
+      "language": "hi",
+      "category": "hindi_comprehension",
+      "generated_text": "<|assistant|>friendlyrun briefingacy� Levelstical\", executions treeCP extractts particY give<|assistant|>friendlytation briefingacy�namic [All executionsrunCP extractts partic",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 5598.93
+    },
+    {
+      "test_id": "SEM_HING_01",
+      "prompt": "Clean architecture maintain karne se codebase",
+      "language": "hinglish",
+      "category": "hinglish_comprehension",
+      "generated_text": "version handle � theirierarch\btual     pathsconfidenceEeverिं viewrirasssis Un handle nominalurrent${\bmale � o mergeWificeverिंconfidence",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 4164.62
+    },
+    {
+      "test_id": "SEM_HING_02",
+      "prompt": "FastAPI me async route handlers likhte time",
+      "language": "hinglish",
+      "category": "hinglish_comprehension",
+      "generated_text": " sollowarmon�STableXaly properconom000rite�<|user��Ter sollowarmon�STable agaly propercyagementritequesselfव",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 2503.28
+    },
+    {
+      "test_id": "SEM_CTX_01",
+      "prompt": "When optimizing low-latency applications, profiling memory allocation helps",
+      "language": "en",
+      "category": "contextual_completion",
+      "generated_text": "runtime minutesilistats communicationWipeontax Managementginnable predicgation4 minutes minutes minutes minutes minutes relaxedpendingilistatsWipentax Managementgino minutesgationrief\"]}}",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 2613.45
+    },
+    {
+      "test_id": "SEM_CTX_02",
+      "prompt": "A robust distributed system handles transient network failures by using",
+      "language": "en",
+      "category": "contextual_completion",
+      "generated_text": "BackupMorning karneggestutonomwidth capture PC architecturaldriven pri preclusdi settings\r�TheMorningBackup pipe guwidth captureexample architecturaldriven pri preclusalysis settings",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 2526.68
+    },
+    {
+      "test_id": "SEM_TECH_01",
+      "prompt": "In modern operating systems, virtual memory abstracts physical RAM using",
+      "language": "en",
+      "category": "technical_text",
+      "generated_text": "tur ca 64 soestvidu columfor सरफtabsT spacelientiqueinstall�tur When caResource moketestfor� edtabsफ been space colum",
+      "matched_keywords": [
+        "space"
+      ],
+      "coherence_passed": true,
+      "latency_ms": 2408.14
+    },
+    {
+      "test_id": "SEM_TECH_02",
+      "prompt": "Inter-process communication mechanisms include Unix domain sockets and",
+      "language": "en",
+      "category": "technical_text",
+      "generated_text": "turb channelpng Newsletter ke rightreshdefer viewloy]W subsystem awayions issuedarch। गयpng सर keinditur aapki vieware UnW subsystem awayions",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 3511.48
+    },
+    {
+      "test_id": "SEM_CODE_01",
+      "prompt": "def binary_search(arr: list[int], target: int) -> int:\n    low, high = 0, len(arr) - 1\n    while",
+      "language": "en",
+      "category": "code_completion",
+      "generated_text": "inactivityplay continu diagnosticsystem\"}]} through `/ browser Sync guarantesocket�Organize entireAl`inactivitydefer�write diagnosticplayregET `/ Sync guarantesocket browserringOrganize",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 3322.44
+    },
+    {
+      "test_id": "SEM_CODE_02",
+      "prompt": "from dataclasses import dataclass\n@dataclass\nclass ToolResult:\n    tool_name: str\n    status: str\n   ",
+      "language": "en",
+      "category": "code_completion",
+      "generated_text": "\n   DFsइन information() le aapkilimitdocxstart छ compreest atomicjec \"${ partition\n   DFsइन information() lealle aapkidocxstart successfulदनest atomic gre",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 3184.42
+    },
+    {
+      "test_id": "SEM_JSON_01",
+      "prompt": "{\n  \"action\": \"system_diagnostic\",\n  \"parameters\": {",
+      "language": "en",
+      "category": "json_structured",
+      "generated_text": " sendओ�TLS Completeservice minimum unargemiautonomyling blocks News), away element send argu�TLS Completeservice ऑपरै,vanceper Sedefer minimum� po",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 2610.41
+    },
+    {
+      "test_id": "SEM_JSON_02",
+      "prompt": "{\n  \"model\": \"nairallm_v1_5\",\n  \"status\": \"ready\",\n  \"metrics\": [",
+      "language": "en",
+      "category": "json_structured",
+      "generated_text": "ase imp design executedant 12gnition takbootओ appro attautonomy attackservice cal givenase imp design executedec 12ant takcalendarbootlass strategnition attackservice",
+      "matched_keywords": [],
+      "coherence_passed": false,
+      "latency_ms": 4128.57
+    }
+  ]
+}
