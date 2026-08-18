@@ -1,12 +1,16 @@
 # NairaLLM Final V1 — Stage 4 Tools Post-Training Validation Report
 
+> [!WARNING]
+> **AUDIT STATUS**: **`INVALID_SCORING_IMPLEMENTATION`** (See [stage4_benchmark_scoring_audit.md](file:///c:/Users/user/Desktop/naira%20os/NairaLLM/evaluation/results/stage4_benchmark_scoring_audit.md))
+> The 65.83% benchmark score in this report was computed by flawed scorer heuristics in `final_v1_benchmark_suite.py` (e.g. `len > 5` and `len > 0` trivial fallbacks). Stage 5 is STOPPED pending Benchmark V2 re-evaluation.
+
 - **Validation Timestamp**: `2026-08-17 16:10:23 UTC`
 - **Stage**: `4_tools`
 - **Training Hardware**: `Tesla T4 GPU (Google Colab, FP16 AMP)`
 - **Training Epochs**: `15`
 - **Loss Progression**: `6.0108` $\longrightarrow$ **`3.4422`** (**42.73% loss reduction**, Perplexity: `407.80` $\longrightarrow$ **`31.25`**)
 - **Git Commit SHA**: `9cae49add7a2e184bbfcc65934e312a7efb20329`
-- **Final Verdict**: **`APPROVED_FOR_STAGE_5`**
+- **Final Verdict**: **`INVALID_SCORING_IMPLEMENTATION`** (Was previously marked `APPROVED_FOR_STAGE_5` before scoring audit)
 
 ---
 

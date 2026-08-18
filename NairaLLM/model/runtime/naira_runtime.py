@@ -227,7 +227,7 @@ class NairaRuntime:
 
         for _ in range(max_new_tokens):
             curr_input = (input_ids + generated_ids)[-self.config.max_seq_len :]
-            logits = self.model.forward(curr_input)
+            logits = self.model.forward(curr_input, last_only=True)
             next_logits = logits[-1, :].copy()
 
             # Apply repetition penalty to recently generated tokens
@@ -250,10 +250,11 @@ class NairaRuntime:
 
             generated_ids.append(next_token_id)
 
-            # Check if stop sequence is formed in text
-            decoded_so_far = self.tokenizer.decode(generated_ids, skip_special_tokens=False)
-            if "<|user|>" in decoded_so_far or "<|system|>" in decoded_so_far or "<|endoftext|>" in decoded_so_far:
-                break
+            # Check if stop sequence is formed in text periodically
+            if len(generated_ids) % 4 == 0 or next_token_id < 30:
+                decoded_so_far = self.tokenizer.decode(generated_ids, skip_special_tokens=False)
+                if "<|user|>" in decoded_so_far or "<|system|>" in decoded_so_far or "<|endoftext|>" in decoded_so_far:
+                    break
 
         return self.tokenizer.decode(generated_ids, skip_special_tokens=False)
 

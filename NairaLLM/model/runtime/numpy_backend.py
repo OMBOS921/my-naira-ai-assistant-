@@ -94,8 +94,8 @@ class NumpyNairaModel:
 
         return weights
 
-    def forward(self, input_ids: list[int]) -> np.ndarray:
-        """Compute logits for input token sequence. Returns shape: (seq_len, vocab_size)."""
+    def forward(self, input_ids: list[int], last_only: bool = False) -> np.ndarray:
+        """Compute logits for input token sequence. Returns shape: (seq_len, vocab_size) or (1, vocab_size)."""
         c = self.config
         seq_len = len(input_ids)
         h = self.weights["tok_embeddings"][input_ids]  # (seq_len, d_model)
@@ -137,6 +137,10 @@ class NumpyNairaModel:
             )
             h = h + ffn_out
 
-        final_norm = rms_norm(h, self.weights["norm_weight"], c.norm_eps)
-        logits = final_norm @ self.weights["output_weight"]
+        if last_only:
+            final_norm = rms_norm(h[-1:, :], self.weights["norm_weight"], c.norm_eps)
+            logits = final_norm @ self.weights["output_weight"]
+        else:
+            final_norm = rms_norm(h, self.weights["norm_weight"], c.norm_eps)
+            logits = final_norm @ self.weights["output_weight"]
         return logits

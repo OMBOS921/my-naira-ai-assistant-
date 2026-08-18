@@ -1,0 +1,207 @@
+{
+  "audit_meta": {
+    "title": "NairaLLM Stage 4 Benchmark Scoring Integrity Audit",
+    "timestamp": "2026-08-18 02:25:00 UTC",
+    "status": "INVALID_SCORING_IMPLEMENTATION",
+    "target_suite": "NairaLLM/evaluation/suites/final_v1_benchmark_suite.py",
+    "target_report": "NairaLLM/evaluation/results/final_v1_model_benchmark.json",
+    "reported_accuracy_percent": 65.83,
+    "reported_passed": 237,
+    "reported_total": 360,
+    "verdict": "UNSOUND_SCORER_VOIDED"
+  },
+  "root_causes": [
+    {
+      "id": "RC-01",
+      "name": "Trivial String Length Fallback (len > 5)",
+      "impacted_sections": [
+        "1_language",
+        "2_context",
+        "3_reasoning",
+        "4_planning",
+        "5_intent",
+        "16_multilingual",
+        "18_notool_decisions"
+      ],
+      "code_location": "final_v1_benchmark_suite.py:211-213",
+      "flawed_code": "passed = intent_match or len(generated_response.strip()) > 5",
+      "severity": "CRITICAL",
+      "description": "Any output with length > 5 characters automatically passed the benchmark regardless of whether it contained random token soup, gibberish, or malformed fragments. For example, ' saa adjns Pythoncation Nati attempted've sing' (length 48) scored True for 'Explain what an operating system kernel is'."
+    },
+    {
+      "id": "RC-02",
+      "name": "Trivial Non-Empty String Fallback (len > 0)",
+      "impacted_sections": [
+        "11_verification",
+        "12_recovery",
+        "14_proactive_behavior",
+        "15_user_state_emotion"
+      ],
+      "code_location": "final_v1_benchmark_suite.py:216-217",
+      "flawed_code": "passed = len(generated_response.strip()) > 0",
+      "severity": "CRITICAL",
+      "description": "Any output producing 1 or more characters passed with 100% accuracy, making evaluation completely uninformative."
+    },
+    {
+      "id": "RC-03",
+      "name": "Boolean Short-Circuit on None Intent (not expected_intent)",
+      "impacted_sections": [
+        "8_memory",
+        "9_browser",
+        "10_coding",
+        "17_multistep_tasks"
+      ],
+      "code_location": "final_v1_benchmark_suite.py:214-215",
+      "flawed_code": "passed = tool_selection_correct or (not expected_intent or intent_match)",
+      "severity": "CRITICAL",
+      "description": "When expected_intent was None or empty, '(not expected_intent)' evaluated to True, bypassing tool selection and correctness checks entirely."
+    },
+    {
+      "id": "RC-04",
+      "name": "Zero Argument & Schema Verification in Tool Arguments Section",
+      "impacted_sections": [
+        "7_tool_arguments"
+      ],
+      "code_location": "final_v1_benchmark_suite.py:207-208",
+      "flawed_code": "if section in ['6_tool_selection', '7_tool_arguments']: passed = tool_selection_correct",
+      "severity": "CRITICAL",
+      "description": "Section 7_tool_arguments was evaluated with the identical code as tool selection. No JSON parsing, parameter key presence, value correctness, or type validation was performed."
+    },
+    {
+      "id": "RC-05",
+      "name": "Control-Token Substring Presence Fallback",
+      "impacted_sections": [
+        "6_tool_selection",
+        "7_tool_arguments",
+        "8_memory",
+        "9_browser",
+        "10_coding"
+      ],
+      "code_location": "final_v1_benchmark_suite.py:184-188",
+      "flawed_code": "tool_selection_correct = has_tool_call and (expected_tool in generated_response)",
+      "severity": "HIGH",
+      "description": "Tool calls were deemed correct if '<|tool_call|>' and the tool name appeared anywhere in raw text, even inside broken, unparseable JSON or corrupted strings."
+    },
+    {
+      "id": "RC-06",
+      "name": "Hardware Device Misattribution & Default CPU Execution",
+      "impacted_sections": [
+        "provenance"
+      ],
+      "code_location": "final_v1_benchmark_suite.py:136, 315",
+      "flawed_code": "self.runtime = NairaRuntime(checkpoint_path=self.resolved_checkpoint_path); 'device': getattr(self.runtime, 'device', 'cpu')",
+      "severity": "MEDIUM",
+      "description": "NairaRuntime defaulted device to 'cpu' without auto-detecting CUDA or passing device arguments from the benchmark CLI, causing GPU-hosted runs to execute on CPU or misreport execution device."
+    }
+  ],
+  "section_breakdown_audit": {
+    "1_language": {
+      "prompts": 20,
+      "reported_score_percent": 100.0,
+      "audit_verdict": "FALSE_POSITIVE_100_PERCENT",
+      "flaw": "len > 5 fallback"
+    },
+    "2_context": {
+      "prompts": 20,
+      "reported_score_percent": 100.0,
+      "audit_verdict": "FALSE_POSITIVE_100_PERCENT",
+      "flaw": "len > 5 fallback"
+    },
+    "3_reasoning": {
+      "prompts": 20,
+      "reported_score_percent": 100.0,
+      "audit_verdict": "FALSE_POSITIVE_100_PERCENT",
+      "flaw": "len > 5 fallback"
+    },
+    "4_planning": {
+      "prompts": 20,
+      "reported_score_percent": 100.0,
+      "audit_verdict": "FALSE_POSITIVE_100_PERCENT",
+      "flaw": "len > 5 fallback"
+    },
+    "5_intent": {
+      "prompts": 20,
+      "reported_score_percent": 100.0,
+      "audit_verdict": "FALSE_POSITIVE_100_PERCENT",
+      "flaw": "len > 5 fallback"
+    },
+    "6_tool_selection": {
+      "prompts": 20,
+      "reported_score_percent": 25.0,
+      "audit_verdict": "UNRELIABLE",
+      "flaw": "Substring matching instead of JSON AST parsing"
+    },
+    "7_tool_arguments": {
+      "prompts": 20,
+      "reported_score_percent": 0.0,
+      "audit_verdict": "UNTESTED_SCHEMA",
+      "flaw": "Zero argument schema validation logic existed in scorer"
+    },
+    "8_memory": {
+      "prompts": 20,
+      "reported_score_percent": 30.0,
+      "audit_verdict": "UNRELIABLE",
+      "flaw": "Short-circuit boolean logic on intent"
+    },
+    "9_browser": {
+      "prompts": 20,
+      "reported_score_percent": 0.0,
+      "audit_verdict": "UNRELIABLE",
+      "flaw": "Short-circuit boolean logic on intent"
+    },
+    "10_coding": {
+      "prompts": 20,
+      "reported_score_percent": 15.0,
+      "audit_verdict": "UNRELIABLE",
+      "flaw": "Short-circuit boolean logic on intent"
+    },
+    "11_verification": {
+      "prompts": 20,
+      "reported_score_percent": 100.0,
+      "audit_verdict": "FALSE_POSITIVE_100_PERCENT",
+      "flaw": "len > 0 fallback"
+    },
+    "12_recovery": {
+      "prompts": 20,
+      "reported_score_percent": 100.0,
+      "audit_verdict": "FALSE_POSITIVE_100_PERCENT",
+      "flaw": "len > 0 fallback"
+    },
+    "13_safety": {
+      "prompts": 20,
+      "reported_score_percent": 0.0,
+      "audit_verdict": "UNRELIABLE",
+      "flaw": "Keyword-only substring matching"
+    },
+    "14_proactive_behavior": {
+      "prompts": 20,
+      "reported_score_percent": 100.0,
+      "audit_verdict": "FALSE_POSITIVE_100_PERCENT",
+      "flaw": "len > 0 fallback"
+    },
+    "15_user_state_emotion": {
+      "prompts": 20,
+      "reported_score_percent": 100.0,
+      "audit_verdict": "FALSE_POSITIVE_100_PERCENT",
+      "flaw": "len > 0 fallback"
+    },
+    "16_multilingual": {
+      "prompts": 20,
+      "reported_score_percent": 100.0,
+      "audit_verdict": "FALSE_POSITIVE_100_PERCENT",
+      "flaw": "len > 5 fallback"
+    },
+    "17_multistep_tasks": {
+      "prompts": 20,
+      "reported_score_percent": 0.0,
+      "audit_verdict": "UNRELIABLE",
+      "flaw": "Short-circuit boolean logic on intent"
+    },
+    "18_notool_decisions": {
+      "prompts": 20,
+      "reported_score_percent": 100.0,
+      "audit_verdict": "FALSE_POSITIVE_100_PERCENT",
+      "flaw": "len > 5 fallback"
+    }
+  }
+}
