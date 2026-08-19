@@ -102,7 +102,7 @@
       "generated_text": "extractAPIंutonom hoसर project both\n            � Trees assuमHER\n ave�extracttateंutonom shareyc?!'zesthon\n            ra assu TreesHER\n ",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 3883.76
+      "latency_ms": 5938.3
     },
     {
       "test_id": "SEM_EN_02",
@@ -114,7 +114,7 @@
         "vector"
       ],
       "coherence_passed": true,
-      "latency_ms": 3854.44
+      "latency_ms": 5368.01
     },
     {
       "test_id": "SEM_HI_01",
@@ -124,7 +124,7 @@
       "generated_text": " उनilling infinter byteourcesXeh problem URसस match lear उपय k उन Follow उनपय inf�std developerXeh problem URससged Keyas operation",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 6352.17
+      "latency_ms": 6309.31
     },
     {
       "test_id": "SEM_HI_02",
@@ -134,7 +134,7 @@
       "generated_text": "<|assistant|>friendlyrun briefingacy� Levelstical\", executions treeCP extractts particY give<|assistant|>friendlytation briefingacy�namic [All executionsrunCP extractts partic",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 6263.7
+      "latency_ms": 5127.73
     },
     {
       "test_id": "SEM_HING_01",
@@ -144,7 +144,7 @@
       "generated_text": "version handle � theirierarch\btual     pathsconfidenceEeverिं viewrirasssis Un handle nominalurrent${\bmale � o mergeWificeverिंconfidence",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 3159.98
+      "latency_ms": 6344.55
     },
     {
       "test_id": "SEM_HING_02",
@@ -154,7 +154,7 @@
       "generated_text": " sollowarmon�STableXaly properconom000rite�<|user��Ter sollowarmon�STable agaly propercyagementritequesselfव",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 4168.76
+      "latency_ms": 3650.04
     },
     {
       "test_id": "SEM_CTX_01",
@@ -164,7 +164,7 @@
       "generated_text": "runtime minutesilistats communicationWipeontax Managementginnable predicgation4 minutes minutes minutes minutes minutes relaxedpendingilistatsWipentax Managementgino minutesgationrief\"]}}",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 4646.44
+      "latency_ms": 3804.41
     },
     {
       "test_id": "SEM_CTX_02",
@@ -174,7 +174,7 @@
       "generated_text": "BackupMorning karneggestutonomwidth capture PC architecturaldriven pri preclusdi settings\r�TheMorningBackup pipe guwidth captureexample architecturaldriven pri preclusalysis settings",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 2482.9
+      "latency_ms": 4572.34
     },
     {
       "test_id": "SEM_TECH_01",
@@ -186,7 +186,7 @@
         "space"
       ],
       "coherence_passed": true,
-      "latency_ms": 3608.06
+      "latency_ms": 11515.42
     },
     {
       "test_id": "SEM_TECH_02",
@@ -196,7 +196,7 @@
       "generated_text": "turb channelpng Newsletter ke rightreshdefer viewloy]W subsystem awayions issuedarch। गयpng सर keinditur aapki vieware UnW subsystem awayions",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 4969.68
+      "latency_ms": 3030.42
     },
     {
       "test_id": "SEM_CODE_01",
@@ -206,7 +206,7 @@
       "generated_text": "inactivityplay continu diagnosticsystem\"}]} through `/ browser Sync guarantesocket�Organize entireAl`inactivitydefer�write diagnosticplayregET `/ Sync guarantesocket browserringOrganize",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 5068.95
+      "latency_ms": 4342.16
     },
     {
       "test_id": "SEM_CODE_02",
@@ -216,7 +216,7 @@
       "generated_text": "\n   DFsइन information() le aapkilimitdocxstart छ compreest atomicjec \"${ partition\n   DFsइन information() lealle aapkidocxstart successfulदनest atomic gre",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 4011.27
+      "latency_ms": 7491.18
     },
     {
       "test_id": "SEM_JSON_01",
@@ -226,7 +226,7 @@
       "generated_text": " sendओ�TLS Completeservice minimum unargemiautonomyling blocks News), away element send argu�TLS Completeservice ऑपरै,vanceper Sedefer minimum� po",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 3778.57
+      "latency_ms": 4483.22
     },
     {
       "test_id": "SEM_JSON_02",
@@ -236,7 +236,7 @@
       "generated_text": "ase imp design executedant 12gnition takbootओ appro attautonomy attackservice cal givenase imp design executedec 12ant takcalendarbootlass strategnition attackservice",
       "matched_keywords": [],
       "coherence_passed": false,
-      "latency_ms": 3645.64
+      "latency_ms": 7006.83
     }
   ]
 }
